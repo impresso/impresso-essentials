@@ -1,0 +1,3 @@
+[submodule "impresso_essentials/schemas"]
+	path = impresso_essentials/schemas
+	url = https://github.com/impresso/impresso-schemas
