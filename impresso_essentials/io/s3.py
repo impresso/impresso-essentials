@@ -8,23 +8,31 @@ import json
 import logging
 import os
 import warnings
-from typing import Union
+from typing import Generator, Union
 
 import boto3
+from boto3.resources.base import ServiceResource
 import botocore
+from botocore.client import BaseClient
 from dotenv import load_dotenv
 from smart_open import open as s_open
 from smart_open.s3 import iter_bucket
 from collections import namedtuple
 
-from impresso_essentials.utils import _get_cores
 from impresso_essentials.utils import bytes_to
 
 logger = logging.getLogger(__name__)
 
 
-def get_storage_options():
-    # load environment variables from local .env files
+def get_storage_options() -> dict[str, dict | str]:
+    """Load environment variables from local .env files
+
+    Assumes that two environment variables are set:
+    `SE_ACCESS_KEY` and `SE_SECRET_KEY`.
+
+    Returns:
+        dict[str, dict | str]: Credentials to access a S3 endpoint.
+    """
     load_dotenv()
     return {
         "client_kwargs": {"endpoint_url": "https://os.zhdk.cloud.switch.ch"},
@@ -35,38 +43,41 @@ def get_storage_options():
 
 IMPRESSO_STORAGEOPT = get_storage_options()
 
-_WARNING = """As the boto library is being removed from this package the 
-    following functions are depreciated and should be replaced:
-    - get_s3_connection, to be replaced by get_s3_resource.
-    - get_bucket_boto3 and get_bucket, to be replaced by get_or_create_bucket.
-    
-    The objects returned by boto3 differ from the ones returned by boto, which 
-    might cause issues in the code. Please refer to this migration guide:
-    https://boto3.amazonaws.com/v1/documentation/api/latest/guide/migrations3.html
-"""
-_WARNED = False
-
 IssueDir = namedtuple("IssueDirectory", ["journal", "date", "edition", "path"])
 
 
-def get_s3_client(host_url="https://os.zhdk.cloud.switch.ch/"):
+def get_s3_client(
+    host_url: str | None = "https://os.zhdk.cloud.switch.ch/",
+) -> BaseClient:
+    """Create S3 boto3 client using environment variables from local .env files.
+
+    Assumes that two environment variables are set:
+    `SE_ACCESS_KEY` and `SE_SECRET_KEY`.
+
+    Args:
+        host_url (str | None, optional): _description_. Defaults to
+            "https://os.zhdk.cloud.switch.ch/".
+
+    Raises:
+        e: Argument `host_url` was not provided and `SE_HOST_URL` was not in the env.
+        e: `SE_ACCESS_KEY` or `SE_SECRET_KEY` was not in the environment variables.
+
+    Returns:
+        BaseClient: The S3 boto3 client.
+    """
     # load environment variables from local .env files
     load_dotenv()
     if host_url is None:
         try:
             host_url = os.environ["SE_HOST_URL"]
-        except Exception:
-            raise
+        except Exception as e:
+            raise e
 
     try:
         access_key = os.environ["SE_ACCESS_KEY"]
-    except Exception:
-        raise
-
-    try:
         secret_key = os.environ["SE_SECRET_KEY"]
-    except Exception:
-        raise
+    except Exception as e:
+        raise e
 
     return boto3.client(
         "s3",
@@ -76,34 +87,38 @@ def get_s3_client(host_url="https://os.zhdk.cloud.switch.ch/"):
     )
 
 
-def get_s3_resource(host_url="https://os.zhdk.cloud.switch.ch/"):
+def get_s3_resource(
+    host_url: str | None = "https://os.zhdk.cloud.switch.ch/",
+) -> ServiceResource:
     """Get a boto3 resource object related to an S3 drive.
 
     Assumes that two environment variables are set:
     `SE_ACCESS_KEY` and `SE_SECRET_KEY`.
 
-    :param host_url: the s3 endpoint's URL
-    :type host_url: string
-    :rtype: `boto3.resources.factory.s3.ServiceResource`
-    """
+    Args:
+        host_url (str | None, optional): _description_. Defaults to
+            "https://os.zhdk.cloud.switch.ch/".
 
+    Raises:
+        e: Argument `host_url` was not provided and `SE_HOST_URL` was not in the env.
+        e: `SE_ACCESS_KEY` or `SE_SECRET_KEY` was not in the environment variables.
+
+    Returns:
+        ServiceResource: S3 resource associated to the endpoint.
+    """
     # load environment variables from local .env files
     load_dotenv()
     if host_url is None:
         try:
             host_url = os.environ["SE_HOST_URL"]
-        except Exception:
-            raise
+        except Exception as e:
+            raise e
 
     try:
         access_key = os.environ["SE_ACCESS_KEY"]
-    except Exception:
-        raise
-
-    try:
         secret_key = os.environ["SE_SECRET_KEY"]
-    except Exception:
-        raise
+    except Exception as e:
+        raise e
 
     return boto3.resource(
         "s3",
@@ -159,43 +174,56 @@ def get_or_create_bucket(name, create=False, versioning=True):
     return bucket
 
 
-def read_jsonlines(key_name, bucket_name):
-    """
-    Given an S3 key pointing to a jsonl.bz2 archives, extracts and returns lines (=one json doc per line).
+def read_jsonlines(key_name: str, bucket_name: str) -> Generator:
+    """Given the S3 key of a jsonl.bz2 archive, extract and return its lines.
+
     Usage example:
     >>> lines = db.from_sequence(read_jsonlines(s3r, key_name , bucket_name))
-    >>> print(lines.count().compute())
-    >>> lines.map(json.loads).pluck('ft').take(10)
-    :param bucket_name: name of bucket
-    :type bucket_name: str
-    :param key_name: name of key, without S3 prefix
-    :type key_name: str
-    :return:
+    >>> lines.map(json.loads).pluck('id').take(10)
+
+    Args:
+        key_name (str): S3 key, without S3 prefix, but with partitions within.
+        bucket_name (str): Name of S3 bucket to use.
+
+    Yields:
+        Generator: generator yielding lines within the archive one by one.
     """
     s3r = get_s3_resource()
     body = s3r.Object(bucket_name, key_name).get()["Body"]
     data = body.read()
     text = bz2.decompress(data).decode("utf-8")
+
     for line in text.split("\n"):
         if line != "":
             yield line
 
 
-def readtext_jsonlines(key_name, bucket_name):
-    """
-    Given an S3 key pointing to a jsonl.bz2 archives, extracts and returns lines (=one json doc per line)
-    with limited textual information, leaving out OCR metadata (box, offsets).
-    This can serve as the starting point for pure textual processing (NE, text-reuse, topics)
+def readtext_jsonlines(
+    key_name: str,
+    bucket_name: str,
+    fields_to_keep: list[str] | None = None,
+) -> Generator:
+    """Given the S3 key of a jsonl.bz2 archive, return its lines textual information.
+
+    Only the provided fields (or default ones) will be kept in the returned lines.
+    By default, fields_to_keep = ["id", "pp", "ts", "lg", "tp", "t", "ft"].
+
+    This can serve as the starting point for pure textual processing.
     Usage example:
     >>> lines = db.from_sequence(readtext_jsonlines(s3r, key_name , bucket_name))
-    >>> print(lines.count().compute())
     >>> lines.map(json.loads).pluck('ft').take(10)
-    :param bucket_name: name of bucket
-    :type bucket_name: str
-    :param key_name: name of key, without S3 prefix
-    :type key_name: str
-    :return: JSON formatted str
+
+    Args:
+        key_name (str): S3 key, without S3 prefix, but with partitions within.
+        bucket_name (str): Name of S3 bucket to use.
+
+    Yields:
+        Generator: generator yielding reformated lines within the archive one by one.
     """
+    if fields_to_keep is None:
+        # if no fields were provided
+        fields_to_keep = ["id", "pp", "ts", "lg", "tp", "t", "ft"]
+
     s3r = get_s3_resource()
     body = s3r.Object(bucket_name, key_name).get()["Body"]
     data = body.read()
@@ -206,16 +234,7 @@ def readtext_jsonlines(key_name, bucket_name):
             text = article_json["ft"]
             if len(text) != 0:
                 article_reduced = {
-                    k: article_json[k]
-                    for k in article_json
-                    if k == "id"
-                    or k == "s3v"
-                    or k == "ts"
-                    or k == "ft"
-                    or k == "tp"
-                    or k == "pp"
-                    or k == "lg"
-                    or k == "t"
+                    k: article_json[k] for k in article_json if k in fields_to_keep
                 }
                 yield json.dumps(article_reduced)
 
@@ -236,15 +255,23 @@ def upload_to_s3(local_path: str, path_within_bucket: str, bucket_name: str) -> 
         # ensure the path within the bucket is only the key
         path_within_bucket = path_within_bucket.replace("s3://", "")
         bucket.upload_file(local_path, path_within_bucket)
-        logger.info(f"Uploaded {path_within_bucket} to s3://{bucket_name}.")
+        logger.info("Uploaded %s to s3://%s.", path_within_bucket, bucket_name)
         return True
     except Exception as e:
         logger.error(e)
-        logger.error(f"The upload of {local_path} failed with error {e}")
+        logger.error("The upload of %s failed with error %s", local_path, e)
         return False
 
 
 def get_boto3_bucket(bucket_name: str):
+    """_summary_
+
+    Args:
+        bucket_name (str): _description_
+
+    Returns:
+        _type_: _description_
+    """
     s3 = get_s3_resource()
     return s3.Bucket(bucket_name)
 
