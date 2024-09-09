@@ -1,10 +1,13 @@
 #!/usr/bin/env python
 # coding: utf-8
 
+import sys
 import json
 import os
 import logging
 import pathlib
+import time
+from datetime import datetime, timedelta
 from contextlib import ExitStack
 from typing import Any, Optional
 import jsonschema
@@ -98,6 +101,79 @@ KNOWN_JOURNALS = [
     "VDR",
     "VHT",
 ]
+
+
+def user_confirmation(question, default=None):
+    """
+    Ask a yes/no question via raw_input() and return their answer.
+
+    @param question: a string that is presented to the user.
+    @param default: the presumed answer if the user just hits <Enter>.
+        It must be "yes" (the default), "no" or None (meaning
+        an answer is required of the user).
+    @return: True for "yes" or False for "no".
+    """
+    valid = {"yes": True, "y": True, "no": False, "n": False}
+    if default is None:
+        prompt = " [y/n] "
+    elif default == "yes":
+        prompt = " [Y/n] "
+    elif default == "no":
+        prompt = " [y/N] "
+    else:
+        raise ValueError("invalid default answer: '%s'" % default)
+
+    while True:
+        sys.stdout.write(question + prompt)
+        choice = input().lower()
+        if default is not None and choice == "":
+            return valid[default]
+        elif choice in valid:
+            return valid[choice]
+        else:
+            sys.stdout.write("Please respond with 'yes' or 'no' (or 'y' or 'n').\n")
+
+
+def user_question(variable_to_confirm):
+    answer = user_confirmation(
+        f"\tIs the following the correct item to work with?\n" f"{variable_to_confirm}",
+        None,
+    )
+
+    if not answer:
+        logger.info("Variable not confirmed, exiting.")
+        sys.exit()
+    else:
+        logger.info("Variable confirmed.")
+
+
+def timestamp():
+    """Returns an iso-formatted timestamp.
+
+    :return: a timestamp
+    :rtype: str
+    """
+    utcnow = datetime.utcnow()
+    ts = int(utcnow.timestamp())
+    d = datetime.fromtimestamp(ts)
+    return d.isoformat() + "Z"
+
+
+class Timer:
+    """Basic timer"""
+
+    def __init__(self):
+        self.start = time.time()
+        self.intermediate = time.time()
+
+    def tick(self):
+        elapsed_time = time.time() - self.intermediate
+        self.intermediate = time.time()
+        return str(timedelta(seconds=elapsed_time))
+
+    def stop(self):
+        elapsed_time = time.time() - self.start
+        return str(timedelta(seconds=elapsed_time))
 
 
 def parse_json(filename):

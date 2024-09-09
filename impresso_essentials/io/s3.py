@@ -7,8 +7,8 @@ import bz2
 import json
 import logging
 import os
-import warnings
-from typing import Generator, Union
+from typing import Generator
+from collections import namedtuple
 
 import boto3
 from boto3.resources.base import ServiceResource
@@ -16,8 +16,6 @@ import botocore
 from botocore.client import BaseClient
 from dotenv import load_dotenv
 from smart_open import open as s_open
-from smart_open.s3 import iter_bucket
-from collections import namedtuple
 
 from impresso_essentials.utils import bytes_to
 
@@ -128,24 +126,21 @@ def get_s3_resource(
     )
 
 
-def get_or_create_bucket(name, create=False, versioning=True):
-    """Create a boto3 s3 connection and returns the requested bucket.
+def get_or_create_bucket(name: str, create: bool = False):
+    """Create a boto3 s3 connection and create or return the requested bucket.
 
     It is possible to ask for creating a new bucket
-    with the specified name (in case it does not exist), and (optionally)
-    to turn on the versioning on the newly created bucket.
+    with the specified name (in case it does not exist):
     >>> b = get_bucket('testb', create=False)
     >>> b = get_bucket('testb', create=True)
-    >>> b = get_bucket('testb', create=True, versioning=False)
 
-    :param name: the bucket's name
-    :type name: string
-    :param create: creates the bucket if not yet existing
-    :type create: boolean
-    :param versioning: whether the new bucket should be versioned
-    :type versioning: boolean
-    :return: an s3 bucket
-    :rtype: `boto3.resources.factory.s3.Bucket`
+    Args:
+        name (str): Name of thebucket to get of create.
+        create (bool, optional): Whether to create the bucket if it doesn't exist.
+            Defaults to False.
+
+    Returns:
+        boto3.resources.factory.s3.Bucket: S3 bucket, fetched or created.
     """
     s3r = get_s3_resource()
     # try to fetch the specified bucket -- may return an empty list
@@ -163,13 +158,6 @@ def get_or_create_bucket(name, create=False, versioning=True):
         else:
             print(f"Bucket {name} not found")
             return None
-
-    # enable versioning
-    if versioning:
-        bucket_versioning = s3r.BucketVersioning(name)
-        bucket_versioning.enable()
-
-    print(f"Versioning: {bucket_versioning.status}")
 
     return bucket
 
@@ -250,7 +238,7 @@ def upload_to_s3(local_path: str, path_within_bucket: str, bucket_name: str) -> 
     Returns:
         bool: True if the upload is successful, False otherwise.
     """
-    bucket = get_boto3_bucket(bucket_name)
+    bucket = get_bucket(bucket_name)
     try:
         # ensure the path within the bucket is only the key
         path_within_bucket = path_within_bucket.replace("s3://", "")
@@ -263,36 +251,58 @@ def upload_to_s3(local_path: str, path_within_bucket: str, bucket_name: str) -> 
         return False
 
 
-def get_boto3_bucket(bucket_name: str):
-    """_summary_
+def get_bucket(bucket_name: str):
+    """Create a boto3 connection and return the desired bucket.
+
+    Note:
+        This function does not ensure that the bucket exists. If this verification
+        is necessary, please prefer using `get_or_create_bucket()` instead.
 
     Args:
-        bucket_name (str): _description_
+        bucket_name (str): Name of the S3 bucket to use.
 
     Returns:
-        _type_: _description_
+        boto3.resources.factory.s3.Bucket: Desired S3 bucket.
     """
     s3 = get_s3_resource()
     return s3.Bucket(bucket_name)
 
 
-def fixed_s3fs_glob(path: str, boto3_bucket=None):
-    """
-    From Benoit, impresso-pyimages package
-    A custom glob function as the s3fs one seems to be unable to list more than 1000 elements on the switch S3
-    :param path:
-    :return:
+def s3fs_glob(path: str, suffix: str | None = None, boto3_bucket=None) -> list[str]:
+    """Custom glob function able to list more than 1000 elements on s3 (fix of s3fs).
+
+    Note:
+        `path` should be of the form "[partition]*[suffix or file extensions]", with
+        the partition potentially including the bucket name.
+        If all files within the partitions should be considered, regardeless of their
+        extension, "*" can be omitted.
+        Conversely, `path` can be of the form "[partition]" if `suffix` is defined.
+
+    Args:
+        path (str): Glob path to the files, optionally including the bucket name.
+            If the bucket name is not included, `boto3_bucket` should be defined.
+        suffix (str | None, optional): Suffix or extension of the paths to consider
+            within the bucket. Only used if "*" not found in `path`. Defaults to None.
+        boto3_bucket (boto3.resources.factory.s3.Bucket, optional): S3 bucket to look
+            into. Defaults to None.
+
+    Returns:
+        list[str]: List of filenames within the bucket corresponding to the provided path.
     """
     if boto3_bucket is None:
         if path.startswith("s3://"):
             path = path[len("s3://") :]
         bucket_name = path.split("/")[0]
         base_path = "/".join(path.split("/")[1:])  # Remove bucket name
-        boto3_bucket = get_boto3_bucket(bucket_name)
+        boto3_bucket = get_bucket(bucket_name)
     else:
         bucket_name = boto3_bucket.name
         base_path = path
-    base_path, suffix_path = base_path.split("*")
+
+    if "*" in base_path:
+        base_path, suffix_path = base_path.split("*")
+    else:
+        suffix_path = suffix
 
     filenames = [
         "s3://"
@@ -327,7 +337,7 @@ def s3_glob_with_size(path: str, boto3_bucket=None):
             path = path[len("s3://") :]
         bucket_name = path.split("/")[0]
         base_path = "/".join(path.split("/")[1:])  # Remove bucket name
-        boto3_bucket = get_boto3_bucket(bucket_name)
+        boto3_bucket = get_bucket(bucket_name)
     else:
         bucket_name = boto3_bucket.name
         base_path = path
@@ -345,15 +355,24 @@ def s3_glob_with_size(path: str, boto3_bucket=None):
 
 def alternative_read_text(
     s3_key: str, s3_credentials: dict, line_by_line: bool = True
-) -> Union[list[str], str]:
+) -> list[str] | str:
     """Read from S3 a line-separated text file (e.g. `*.jsonl.bz2`).
 
-    Note:
+     Note:
         The reason for this function is a bug in `dask.bag.read_text()`
         which breaks on buckets having >= 1000 keys.
         It raises a `FileNotFoundError`.
+
+    Args:
+        s3_key (str): Full S3 path to the file to read.
+        s3_credentials (dict): S3 credentials, `IMPRESSO_STORAGEOPT`.
+        line_by_line (bool, optional): Whether to read the file line by line.
+            Defaults to True.
+
+    Returns:
+        list[str] | str: Contents of the file, as a list of strings or as one string.
     """
-    logger.info(f"reading {s3_key}")
+    logger.info("reading the text of %s", s3_key)
     session = boto3.Session(
         aws_access_key_id=s3_credentials["key"],
         aws_secret_access_key=s3_credentials["secret"],
@@ -373,10 +392,8 @@ def alternative_read_text(
     return text
 
 
-def list_s3_directories(bucket_name, prefix=""):
-    """
-    Retrieve the 'directory' names (media titles) in an S3 bucket after a
-    given path prefix.
+def list_s3_directories(bucket_name: str, prefix: str = "") -> list[str]:
+    """Retrieve 'directory' names (media titles) in an S3 bucket given a path prefix.
 
     Args:
         bucket_name (str): The name of the S3 bucket.
@@ -387,7 +404,7 @@ def list_s3_directories(bucket_name, prefix=""):
         list: A list of 'directory' names found in the specified bucket
               and prefix.
     """
-    logger.info(f"Listing 'folders'' of '{bucket_name}' under prefix '{prefix}'")
+    logger.info("Listing 'folders'' of '%s' under prefix '%s'", bucket_name, prefix)
     s3 = get_s3_client()
     result = s3.list_objects_v2(Bucket=bucket_name, Prefix=prefix, Delimiter="/")
 
@@ -396,13 +413,12 @@ def list_s3_directories(bucket_name, prefix=""):
         directories = [
             prefix["Prefix"][:-1].split("/")[-1] for prefix in result["CommonPrefixes"]
         ]
-    logger.info(f"Returning {len(directories)} directories.")
+    logger.info("Returning %s directories.", len(directories))
     return directories
 
 
-def get_s3_object_size(bucket_name, key):
-    """
-    Get the size of an object (key) in an S3 bucket.
+def get_s3_object_size(bucket_name: str, key: str) -> int:
+    """Get the size of an object (key) in an S3 bucket.
 
     Args:
         bucket_name (str): The name of the S3 bucket.
@@ -419,5 +435,5 @@ def get_s3_object_size(bucket_name, key):
         size = response["ContentLength"]
         return int(size)
     except botocore.exceptions.ClientError as err:
-        logger.error(f"Error: {err} for {key} in {bucket_name}")
+        logger.error("Error: %s for %s in %s", err, key, bucket_name)
         return None
