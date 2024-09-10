@@ -7,12 +7,15 @@ import os
 import logging
 import pathlib
 import time
-from datetime import datetime, timedelta
+from typing import Any, Generator, Optional
+from datetime import timedelta
 from contextlib import ExitStack
-from typing import Any, Optional
 import jsonschema
 import importlib_resources
-import glob
+import numpy as np
+
+from dask.bag.core import Bag
+from dask.diagnostics import ProgressBar
 
 logger = logging.getLogger(__name__)
 
@@ -101,17 +104,22 @@ KNOWN_JOURNALS = [
     "VDR",
     "VHT",
 ]
+# TODO add new titles to this list
 
 
-def user_confirmation(question, default=None):
-    """
-    Ask a yes/no question via raw_input() and return their answer.
+def user_confirmation(question: str, default: str | None = None) -> bool:
+    """Ask a yes/no question via raw_input() and return their answer.
 
-    @param question: a string that is presented to the user.
-    @param default: the presumed answer if the user just hits <Enter>.
-        It must be "yes" (the default), "no" or None (meaning
-        an answer is required of the user).
-    @return: True for "yes" or False for "no".
+    Args:
+        question (str): String question presented to the user.
+        default (str | None, optional): Presumed answer if the user just hits <Enter>.
+            Should be one of "yes", "no" and None. Defaults to None.
+
+    Raises:
+        ValueError: The default value provided is not valid.
+
+    Returns:
+        bool: User's answer to the asked question.
     """
     valid = {"yes": True, "y": True, "no": False, "n": False}
     if default is None:
@@ -121,22 +129,27 @@ def user_confirmation(question, default=None):
     elif default == "no":
         prompt = " [y/N] "
     else:
-        raise ValueError("invalid default answer: '%s'" % default)
+        err_msg = f"Invalid default answer: '{default}'"
+        raise ValueError(err_msg)
 
     while True:
         sys.stdout.write(question + prompt)
         choice = input().lower()
         if default is not None and choice == "":
             return valid[default]
-        elif choice in valid:
+        if choice in valid:
             return valid[choice]
-        else:
-            sys.stdout.write("Please respond with 'yes' or 'no' (or 'y' or 'n').\n")
+        sys.stdout.write("Please respond with 'yes' or 'no' (or 'y' or 'n').\n")
 
 
-def user_question(variable_to_confirm):
+def user_question(variable_to_confirm: str) -> None:
+    """Ask the user if the identified variable is correct.
+
+    Args:
+        variable_to_confirm (str): Variable to be checked by the user.
+    """
     answer = user_confirmation(
-        f"\tIs the following the correct item to work with?\n" f"{variable_to_confirm}",
+        f"\tIs the following the correct item to work with?\n  {variable_to_confirm}",
         None,
     )
 
@@ -147,16 +160,21 @@ def user_question(variable_to_confirm):
         logger.info("Variable confirmed.")
 
 
-def timestamp():
-    """Returns an iso-formatted timestamp.
+def timestamp(ts_format: str = "%Y-%m-%dT%H:%M:%SZ", with_space: bool = False) -> str:
+    """Return an iso-formatted timestamp.
 
-    :return: a timestamp
-    :rtype: str
+    Args:
+        ts_format (str, optional): Timestamp format to use for the returned timestamp.
+            Defaults to "%Y-%m-%dT%H:%M:%SZ".
+        with_space (bool, optional): Format the timestamp with spaces. If True, the
+            format used will be "%Y-%m-%d %H:%M:%S". Defaults to False.
+
+    Returns:
+        str: Timestamp formatted according to a provided format.
     """
-    utcnow = datetime.utcnow()
-    ts = int(utcnow.timestamp())
-    d = datetime.fromtimestamp(ts)
-    return d.isoformat() + "Z"
+    if with_space:
+        ts_format = "%Y-%m-%d %H:%M:%S"
+    return time.strftime(ts_format)
 
 
 class Timer:
@@ -166,28 +184,38 @@ class Timer:
         self.start = time.time()
         self.intermediate = time.time()
 
-    def tick(self):
+    def tick(self) -> str:
+        """Perform a tick with the timer.
+
+        Returns:
+            str: Elapsed time since last tick in seconds.
+        """
         elapsed_time = time.time() - self.intermediate
         self.intermediate = time.time()
         return str(timedelta(seconds=elapsed_time))
 
-    def stop(self):
+    def stop(self) -> str:
+        """Stop the timer.
+
+        Returns:
+            str: Elapsed time since the start tick in seconds.
+        """
         elapsed_time = time.time() - self.start
         return str(timedelta(seconds=elapsed_time))
 
 
-def parse_json(filename):
-    if os.path.isfile(filename):
-        with open(filename, "r") as f:
-            return json.load(f)
-    else:
-        logger.info(f"File {filename} does not exist.")
+def chunk(l_to_chunk: list, chunksize: int) -> Generator:
+    """Yield successive n-sized chunks from list.
 
+    Args:
+        l_to_chunk (list): List to chunk down.
+        chunksize (int): Size of each chunk.
 
-def chunk(list, chunksize):
-    """Yield successive n-sized chunks from list."""
-    for i in range(0, len(list), chunksize):
-        yield list[i : i + chunksize]
+    Yields:
+        Generator: Each chunk of the list.
+    """
+    for i in range(0, len(l_to_chunk), chunksize):
+        yield l_to_chunk[i : i + chunksize]
 
 
 def get_pkg_resource(
@@ -293,31 +321,35 @@ def bytes_to(bytes_nb: int, to_unit: str, bsize: int = 1024) -> float:
     return float(bytes_nb) / (bsize ** units[to_unit])
 
 
-def glob_with_size(directory: str, file_suffix: str) -> list[str]:
-    """
-    List all files in a directory with a given suffix and their size in MB.
+def get_list_intersection(list1: list, list2: list) -> list:
+    """Compute the intersection between two lists.
 
     Args:
-        directory (str): The directory path to search for files.
-        file_suffix (str): The file extension or suffix to match.
+        list1 (list): First list to intersect.
+        list2 (list): First list to intersect.
 
     Returns:
-        list[str]: A list of tuples, each containing the file path and its
-                   size in megabytes, rounded to six decimal places.
+        list: List of intersection of both arguments.
     """
-    file_paths = glob.glob(os.path.join(directory, "*"), include_hidden=False)
-    files = [
-        (path, round(bytes_to(os.path.getsize(path), "m"), 6))
-        for path in file_paths
-        if path.endswith(file_suffix)
-    ]
-
-    return files
-
-
-def list_local_directories(path):
-    return [d for d in os.listdir(path) if os.path.isdir(os.path.join(path, d))]
-
-
-def get_list_intersection(list1, list2):
     return list(set(list1).intersection(list2))
+
+
+def partitioner(bag: Bag, path: str, nb_partitions: int) -> None:
+    """
+    Partition a Dask bag into n partitions and write each to a separate file.
+
+    Args:
+        bag (dask.bag.core.Bag): The Dask bag to be partitioned.
+        path (str): Directory path where partitioned files will be saved.
+        nb_partitions (int): Number of partitions to create.
+
+    Returns:
+        None: The function writes partitioned files to the specified path.
+    """
+    grouped_items = bag.groupby(
+        lambda x: np.random.randint(500), npartitions=nb_partitions
+    )
+    items = grouped_items.map(lambda x: x[1]).flatten()
+    path = os.path.join(path, "*.jsonl.bz2")
+    with ProgressBar():
+        items.to_textfiles(path)

@@ -1,5 +1,5 @@
 """
-Simple CLI script to delete versioned keys from S3
+Simple CLI script to delete versioned keys from S3.
 
 Usage:
     impresso_commons/utils/s3_delete.py --bucket=<b> --prefix=<p>
@@ -10,20 +10,34 @@ Options:
 """
 
 from docopt import docopt
-
+from botocore.client import BaseClient
 from impresso_essentials.io.s3 import get_s3_resource
 from impresso_essentials.utils import user_confirmation
 
+# from impresso_commons.utils.s3 import get_s3_resource
+# from impresso_commons.utils import user_confirmation
+
 
 def delete_versioned_keys(
-    client, bucket, prefix, is_truncated=True, max_keys=1000, next_token=None
+    client: BaseClient,
+    bucket: str,
+    prefix: str,
+    max_keys: int = 1000,
 ):
-    """TODO"""
+    """Delete all the keys within a bucket based on a given prefix.
+
+    Args:
+        client (BaseClient): S3 client.
+        bucket (str): Name of the bucket to delete keys from.
+        prefix (str): Prefix to the partition from which to delete keys.
+        max_keys (int, optional): Max number of keys to delete at once. Defaults to 1000.
+    """
+    # initialize the first values of is_truncated and next_token.
+    next_token = None
+    is_truncated = True
     while is_truncated:
+        # list the objects to delete from the bucket's partition
         if not next_token:
-            """version_list = client.list_object_versions(
-                Bucket=bucket, MaxKeys=max_keys, Prefix=prefix
-            )"""
             objects_list = client.list_objects_v2(
                 Bucket=bucket, MaxKeys=max_keys, Prefix=prefix
             )
@@ -31,33 +45,19 @@ def delete_versioned_keys(
             objects_list = client.list_objects_v2(
                 Bucket=bucket, MaxKeys=max_keys, Prefix=prefix, StartAfter=next_token
             )
-            """version_list = client.list_object_versions(
-                Bucket=bucket, MaxKeys=max_keys, Prefix=prefix, KeyMarker=key_marker
-            )"""
 
+        # delete identified objects
         try:
             objects = [{"Key": c["Key"]} for c in objects_list["Contents"]]
-            # versions = version_list["Versions"]
-            # for v in versions:
-            #    objects.append({"VersionId": v["VersionId"], "Key": v["Key"]})
             response = client.delete_objects(Bucket=bucket, Delete={"Objects": objects})
             print(f"Deleted {len(response['Deleted'])} keys")
         except Exception:
             pass
 
-        """try:
-            objects = []
-            delete_markers = objects_list["DeleteMarkers"]  # todo fix
-            for d in delete_markers:
-                objects.append({"VersionId": d["VersionId"], "Key": d["Key"]})
-            response = client.delete_objects(Bucket=bucket, Delete={"Objects": objects})
-            print(f"Deleted {len(response['Deleted'])} keys")
-        except Exception:
-            pass"""
-
+        # if more keys remain in the partition, continue process
         is_truncated = objects_list["IsTruncated"]
         try:
-            next_token = objects_list["NextContinuationToken"]  # todo fix!
+            next_token = objects_list["NextContinuationToken"]
         except KeyError:
             print("Done!")
 

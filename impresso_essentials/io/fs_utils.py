@@ -1,12 +1,15 @@
 """Code for parsing impresso's canonical directory structures."""
 
 import os
+import json
 import logging
 from datetime import date, datetime
 from collections import namedtuple
 import re
+import glob
+from typing import Any
 
-from impresso_essentials.utils import KNOWN_JOURNALS
+from impresso_essentials.utils import KNOWN_JOURNALS, bytes_to
 
 logger = logging.getLogger(__name__)
 
@@ -17,6 +20,56 @@ IssueDir = namedtuple("IssueDir", ["journal", "date", "edition", "path"])
 ContentItem = namedtuple(
     "Item", ["journal", "date", "edition", "number", "path", "type"]
 )
+
+
+def parse_json(filename: str) -> dict[str, Any]:
+    """Load the contents of a JSON file.
+
+    Args:
+        filename (str): Path to the json file.
+
+    Returns:
+        dict[str, Any]: Resulting json, contained inside the file
+    """
+    if os.path.isfile(filename):
+        with open(filename, "r", encoding="utf-8") as f:
+            return json.load(f)
+    else:
+        logger.info("File %s does not exist.", filename)
+
+
+def glob_with_size(directory: str, file_suffix: str) -> list[str]:
+    """
+    List all files in a directory with a given suffix and their size in MB.
+
+    Args:
+        directory (str): The directory path to search for files.
+        file_suffix (str): The file extension or suffix to match.
+
+    Returns:
+        list[str]: A list of tuples, each containing the file path and its
+                   size in megabytes, rounded to six decimal places.
+    """
+    file_paths = glob.glob(os.path.join(directory, "*"), include_hidden=False)
+    files = [
+        (path, round(bytes_to(os.path.getsize(path), "m"), 6))
+        for path in file_paths
+        if path.endswith(file_suffix)
+    ]
+
+    return files
+
+
+def list_local_directories(path: str) -> list[str]:
+    """List the directories present at a local path.
+
+    Args:
+        path (str): Local path from which to list the directories.
+
+    Returns:
+        list[str]: List of subdirectories in `path`.
+    """
+    return [d for d in os.listdir(path) if os.path.isdir(os.path.join(path, d))]
 
 
 def pair_issue(issue_list1, issue_list2):
