@@ -44,7 +44,7 @@ class DataStage(StrEnum):
 
     CANONICAL = "canonical"
     REBUILT = "rebuilt"
-    EVENIZED = "evenized-rebuilt"
+    # EVENIZED = "evenized-rebuilt"  # TODO remove?
     PASSIM = "passim"
     EMBEDDINGS = "embeddings"
     ENTITIES = "entities"
@@ -263,7 +263,7 @@ def find_s3_data_manifest_path(
     if partition is None and stage_value in [
         DataStage.CANONICAL.value,  # "canonical"
         DataStage.REBUILT.value,  # "rebuilt"
-        DataStage.EVENIZED.value,  # "evenized-rebuilt"
+        # DataStage.EVENIZED.value,  # "evenized-rebuilt"
         DataStage.PASSIM.value,  # "passim"
         DataStage.SOLR_TEXT.value,  # "solr-ingestion-text"
     ]:

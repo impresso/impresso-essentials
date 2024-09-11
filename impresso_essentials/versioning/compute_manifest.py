@@ -22,17 +22,16 @@ from docopt import docopt
 
 import dask.bag as db
 from dask.distributed import Client
-from impresso_commons.utils.s3 import fixed_s3fs_glob, IMPRESSO_STORAGEOPT
-from impresso_commons.utils.utils import init_logger
-from impresso_commons.versioning.helpers import (
-    validate_stage,
-    DataStage,
+from impresso_essentials.io.s3 import fixed_s3fs_glob, IMPRESSO_STORAGEOPT
+from impresso_essentials.utils import init_logger
+from impresso_essentials.versioning.helpers import validate_stage, DataStage
+from impresso_essentials.versioning.aggregators import (
     compute_stats_in_canonical_bag,
     compute_stats_in_rebuilt_bag,
     compute_stats_in_entities_bag,
     compute_stats_in_langident_bag,
 )
-from impresso_commons.versioning.data_manifest import DataManifest
+from impresso_essentials.versioning.data_manifest import DataManifest
 
 logger = logging.getLogger(__name__)
 
@@ -156,6 +155,9 @@ def compute_stats_for_stage(
             )
         case DataStage.LANGIDENT:
             return compute_stats_in_langident_bag(files_bag, client=client)
+        case DataStage.TEXT_REUSE:
+            return None  # TODO add aggregator for TR
+            # return compute_stats_in_langident_bag(files_bag, client=client)
     raise NotImplementedError(
         "The function computing statistics for this DataStage is not yet implemented."
     )
@@ -193,7 +195,7 @@ def create_manifest(
     """Given its configuration, generate the manifest for a given s3 bucket partition.
 
     TODO: add option to agg for all titles together if desired
-    TODO: add iptions to exclude NP for all agg types
+    TODO: add options to exclude NP for all agg types
     TODO: separate further into functions
 
     Note:

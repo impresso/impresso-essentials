@@ -13,13 +13,13 @@ from typing import Any, Union, Optional
 
 from git import Repo
 
-from impresso_commons.utils.s3 import get_storage_options, upload_to_s3
-from impresso_commons.utils.utils import validate_against_schema
-from impresso_commons.versioning.data_statistics import (
+from impresso_essentials.io.s3 import get_storage_options, upload_to_s3
+from impresso_essentials.utils import validate_against_schema
+from impresso_essentials.versioning.data_statistics import (
     NewspaperStatistics,
     DataStatistics,
 )
-from impresso_commons.versioning.helpers import (
+from impresso_essentials.versioning.helpers import (
     DataStage,
     read_manifest_from_s3,
     validate_stage,
@@ -64,7 +64,7 @@ class DataManifest:
         previous_mft_path: Optional[str] = None,
         only_counting: Optional[bool] = False,
         notes: Optional[str] = None,
-        push_to_git: Optional[bool] = False,
+        push_to_git: Optional[bool] = None,
     ) -> None:
 
         # TODO when integrating radio data: init a media_type attribute and add RadioStatistics.
@@ -356,7 +356,8 @@ class DataManifest:
             str: The output path within the repository based on `self.stage`.
         """
         stage = stage if stage is not None else self.stage
-        if stage in ["canonical", "rebuilt", "passim", "evenized-rebuilt"]:
+        # if stage in ["canonical", "rebuilt", "passim", "evenized-rebuilt"]: --> TODO remove evenized
+        if stage in ["canonical", "rebuilt", "passim"]:
             sub_folder = "data-preparation"
         elif "solr" in stage or "mysql":
             sub_folder = "data-ingestion"

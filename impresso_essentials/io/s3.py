@@ -268,7 +268,9 @@ def get_bucket(bucket_name: str):
     return s3.Bucket(bucket_name)
 
 
-def s3fs_glob(path: str, suffix: str | None = None, boto3_bucket=None) -> list[str]:
+def fixed_s3fs_glob(
+    path: str, suffix: str | None = None, boto3_bucket=None
+) -> list[str]:
     """Custom glob function able to list more than 1000 elements on s3 (fix of s3fs).
 
     Note:
