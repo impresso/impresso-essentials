@@ -1,14 +1,16 @@
 #!/usr/bin/env python
 # coding: utf-8
 
+from collections import namedtuple
 import sys
 import json
 import os
 import logging
 import pathlib
 import time
+import re
 from typing import Any, Generator, Optional
-from datetime import timedelta
+from datetime import timedelta, date
 from contextlib import ExitStack
 import jsonschema
 import importlib_resources
@@ -21,8 +23,6 @@ logger = logging.getLogger(__name__)
 
 # changed to dict to include the partner/data origin
 KNOWN_JOURNALS = {
-    # "FedGazIt",  # Not in data
-    # "LNQ",  # Not in data
     "SNL-RERO": [
         "BDC",
         "CDV",
@@ -173,6 +173,12 @@ KNOWN_JOURNALS = {
     ],
 }
 
+PARTNERS_WITHOUT_OLR = ["NZZ", "SWA", "BCUL"]
+
+# a simple data structure to represent input directories
+# a `Document.zip` file is expected to be found in `IssueDir.path`
+IssueDir = namedtuple("IssueDir", ["journal", "date", "edition", "path"])
+
 
 def user_confirmation(question: str, default: str | None = None) -> bool:
     """Ask a yes/no question via raw_input() and return their answer.
@@ -286,7 +292,7 @@ def chunk(l_to_chunk: list, chunksize: int) -> Generator:
 
 
 def get_pkg_resource(
-    file_manager: ExitStack, path: str, package: str = "impresso_commons"
+    file_manager: ExitStack, path: str, package: str = "impresso_essentials"
 ) -> pathlib.PosixPath:
     """Return the resource at `path` in `package`, using a context manager.
 
@@ -298,7 +304,7 @@ def get_pkg_resource(
     Args:
         file_manager (contextlib.ExitStack): Context manager.
         path (str): Path to the desired resource in given package.
-        package (str, optional): Package name. Defaults to "impresso_commons".
+        package (str, optional): Package name. Defaults to "impresso_essentials".
 
     Returns:
         pathlib.PosixPath: Path to desired managed resource.
@@ -420,3 +426,20 @@ def partitioner(bag: Bag, path: str, nb_partitions: int) -> None:
     path = os.path.join(path, "*.jsonl.bz2")
     with ProgressBar():
         items.to_textfiles(path)
+
+
+def id_to_issuedird(canonical_id: str, issue_path: str) -> IssueDir:
+    """Instantiate an IssueDir object from a canonical ID and the path to the issue.
+
+    Args:
+        canonical_id (str): Canonical ID of the issue.
+        issue_path (str): Local path to the issue files.
+
+    Returns:
+        IssueDir: IssueDir instance for the object
+    """
+    newspaper, year, month, day, edition = canonical_id.split("-")
+    year = int(year)
+    month = int(month)
+    day = int(day)
+    return IssueDir(newspaper, date(year, month, day), edition, issue_path)

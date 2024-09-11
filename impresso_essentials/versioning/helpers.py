@@ -15,12 +15,12 @@ from tqdm import tqdm
 
 import git
 
-from impresso_commons.utils.utils import bytes_to
-from impresso_commons.utils.s3 import (
+from impresso_essentials.utils import bytes_to
+from impresso_essentials.io.s3 import (
     fixed_s3fs_glob,
     alternative_read_text,
     get_storage_options,
-    get_boto3_bucket,
+    get_bucket,
     get_s3_object_size,
 )
 
@@ -268,7 +268,7 @@ def find_s3_data_manifest_path(
         DataStage.SOLR_TEXT.value,  # "solr-ingestion-text"
     ]:
         # manifest in top-level partition of bucket
-        bucket = get_boto3_bucket(bucket_name)
+        bucket = get_bucket(bucket_name)
         matches = fixed_s3fs_glob(path_filter, boto3_bucket=bucket)
     else:
         assert partition is not None, "partition should be provided for processed data"

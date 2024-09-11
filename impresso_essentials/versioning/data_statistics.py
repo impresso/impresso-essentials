@@ -9,8 +9,7 @@ import logging
 from abc import ABC, abstractmethod
 from typing import Any, Union, Self, Optional
 
-# from impresso_commons.versioning.data_manifest import DataStage
-from impresso_commons.versioning.helpers import (
+from impresso_essentials.versioning.helpers import (
     DataStage,
     validate_stage,
     validate_granularity,
@@ -200,7 +199,7 @@ class NewspaperStatistics(DataStatistics):
         "content_items_out",
         "ft_tokens",
         "images",
-        "content_items_in",
+        "content_items_in",  # TODO remove
         "ne_mentions",
         "ne_entities",
         "embeddings_el",

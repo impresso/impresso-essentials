@@ -3,23 +3,13 @@
 import os
 import json
 import logging
-from datetime import date, datetime
-from collections import namedtuple
 import re
 import glob
 from typing import Any
 
-from impresso_essentials.utils import KNOWN_JOURNALS, bytes_to
+from impresso_essentials.utils import bytes_to, IssueDir
 
 logger = logging.getLogger(__name__)
-
-# a simple data structure to represent input directories
-# a `Document.zip` file is expected to be found in `IssueDir.path`
-IssueDir = namedtuple("IssueDir", ["journal", "date", "edition", "path"])
-
-ContentItem = namedtuple(
-    "Item", ["journal", "date", "edition", "number", "path", "type"]
-)
 
 
 def parse_json(filename: str) -> dict[str, Any]:
@@ -72,369 +62,132 @@ def list_local_directories(path: str) -> list[str]:
     return [d for d in os.listdir(path) if os.path.isdir(os.path.join(path, d))]
 
 
-def pair_issue(issue_list1, issue_list2):
-    """Associates pairs of issues originating from original and canonical repositories.
+def canonical_path(
+    issuedir: IssueDir, suffix: str = None, extension: str = None, as_dir: bool = False
+) -> str:
+    """Create a canonical dir, filename or ID from an `IssueDir` object.
 
-    :param issue_list1: list of IssueDir
-    :type issue_list1: array
-    :param issue_list2: list of IssueDir
-    :type issue_list2: array
-    :return: list containing tuples of issue pairs [(issue1, issue2), (...)]
-    :rtype: list
+    Args:
+        issuedir (IssueDir): IssueDir object to create the path for
+        suffix (str, optional): Suffix to use which will follow the issue ID.
+            eg. Can be 'pages', 'i0001' or `"p" + str(num).zfill(4)`. Defaults to None.
+        extension (str, optional): File extension to use if creating a filename.
+            Defaults to None.
+        as_dir (bool, optional): Whether the result is a directory ('/' separator) or a
+            filename or ID ('-' separator). Defaults to False.
+
+    Returns:
+        str: Constructed canonical ID, filename or canonical path for given IssueDir.
     """
-    dict1 = {}
-    pairs = []
-    for i in issue_list1:
-        s_i = "-".join([i[0], str(i[1]), i[2]])
-        dict1[s_i] = i
-
-    for j in issue_list2:
-        s_j = "-".join([j[0], str(j[1]), j[2]])
-        if s_j in dict1:
-            pairs.append((dict1[s_j], j))
-    return pairs
-
-
-def canonical_path(dir, name=None, extension=None, path_type="file"):
-    """Create a canonical dir/file path from an `IssueDir` object.
-
-    :param dir: an object representing a newspaper issue
-    :type dir: `IssueDir`
-    :param name: the file name (used only if path_type=='file')
-    :type name: string
-    :param extension: the file extension (used only if path_type=='file')
-    :type extension: string
-    :param path_type: type of path to build ('dir' | 'file')
-    :type path_type: string
-    :rtype: string
-    """
-    sep = "-" if path_type == "file" else "/"
-    extension = extension if extension is not None else ""
-    if path_type == "file":
-        return "{}{}".format(
-            sep.join(
-                [
-                    dir.journal,
-                    str(dir.date.year),
-                    str(dir.date.month).zfill(2),
-                    str(dir.date.day).zfill(2),
-                    dir.edition,
-                    name,
-                ]
-            ),
-            extension,
-        )
-    else:
-        return sep.join(
-            [
-                dir.journal,
-                str(dir.date.year),
-                str(dir.date.month).zfill(2),
-                str(dir.date.day).zfill(2),
-                dir.edition,
-            ]
-        )
-
-
-def _apply_datefilter(filter_dict, issues, year_only):
-    filtered_issues = []
-
-    for newspaper, dates in filter_dict.items():
-        # date filter is a range
-        if isinstance(dates, str):
-            start, end = dates.split("-")
-            start = datetime.strptime(start, "%Y/%m/%d").date()
-            end = datetime.strptime(end, "%Y/%m/%d").date()
-
-            if year_only:
-                filtered_issues += [
-                    i
-                    for i in issues
-                    if i.journal == newspaper and start.year <= i.date.year <= end.year
-                ]
-            else:
-                filtered_issues += [
-                    i
-                    for i in issues
-                    if i.journal == newspaper and start <= i.date <= end
-                ]
-
-        # date filter is not a range
-        elif isinstance(dates, list):
-            if not dates:
-                filtered_issues += [i for i in issues if i.journal == newspaper]
-            else:
-                filter_date = [
-                    (
-                        datetime.strptime(d, "%Y/%m/%d").date().year
-                        if year_only
-                        else datetime.strptime(d, "%Y/%m/%d").date()
-                    )
-                    for d in dates
-                ]
-
-                if year_only:
-                    filtered_issues += [
-                        i
-                        for i in issues
-                        if i.journal == newspaper and i.date.year in filter_date
-                    ]
-                else:
-                    filtered_issues += [
-                        i
-                        for i in issues
-                        if i.journal == newspaper and i.date in filter_date
-                    ]
-
-    return filtered_issues
-
-
-def select_issues(config_dict, inp_dir):
-    """Reads a configuration file and select newspapers/issues to consider
-    See config.example.md for explanations.
-
-    Usage example:
-        if config_file and os.path.isfile(config_file):
-            with open(config_file, 'r') as f:
-                config = json.load(f)
-                issues = select_issues(config, inp_dir)
-            else:
-                issues = detect_issues(inp_dir)
-
-    :param config_dict: dict of newspaper filter parameters
-    :type config_dict: dict
-    :param inp_dir: base dit where to get the issues from
-    :type inp_dir: str
-
-    """
-    # read filters from json configuration (see config.example.json)
-    try:
-        filter_dict = config_dict.get("newspapers")
-        exclude_list = config_dict["exclude_newspapers"]
-        year_flag = config_dict["year_only"]
-    except KeyError:
-        logger.critical(
-            f"The key [newspapers|exclude_newspapers|year_only] is missing in the config file."
-        )
-        return
-    exclude_flag = False if not exclude_list else True
-    logger.debug(
-        f"got filter_dict: {filter_dict}, "
-        f"\nexclude_list: {exclude_list}, "
-        f"\nyear_flag: {year_flag}"
-        f"\nexclude_flag: {exclude_flag}"
+    sep = "/" if as_dir else "-"
+    base = sep.join(
+        [
+            issuedir.journal,
+            str(issuedir.date.year),
+            str(issuedir.date.month).zfill(2),
+            str(issuedir.date.day).zfill(2),
+            issuedir.edition,
+        ]
     )
 
-    # detect issues to be imported
-    if (
-        not filter_dict and not exclude_list
-    ):  # todo: remove this case? should be detect issue
-        logger.debug(
-            "No positive nor negative filter definition, all issues in {inp_dir} will be considered."
-        )
-        issues = detect_issues(inp_dir)
-        return issues
-    else:
-        filter_newspapers = (
-            set(filter_dict.keys()) if not exclude_list else set(exclude_list)
-        )
-        logger.debug(
-            f"got filter_newspapers: {filter_newspapers}, with exclude flag: {exclude_flag}"
-        )
-        issues = detect_issues(
-            inp_dir, journal_filter=filter_newspapers, exclude=exclude_flag
-        )
+    # if the suffix and extension are not defined, return directly
+    if as_dir or not (extension or suffix):
+        return base
 
-        # apply date filter if not exclusion mode
-        filtered_issues = (
-            _apply_datefilter(filter_dict, issues, year_only=year_flag)
-            if not exclude_flag
-            else issues
-        )
-        return filtered_issues
+    if suffix:
+        base = sep.join([base, suffix])
+    if extension:
+        base = f"{base}.{extension}" if "." not in extension else f"{base}{extension}"
+
+    return base
 
 
-def detect_issues(base_dir, journal_filter=None, exclude=False):
-    """Parse a directory structure and detect newspaper issues to be imported.
+def check_filenaming(
+    file_basename: str, object_type: str = "issue"
+) -> re.Match[str] | None:
+    """Check whether a file's basename complies with the naming convention.
 
-    NB: invalid directories are skipped, and a warning message is logged.
+    Args:
+        file_basename (str): Basename of file to check (excluding extension).
+        object_type (str, optional): Type of objects in the given file.
+            One of "issue", "page", "rebuilt". Defaults to 'issues'.
 
-    :param base_dir: the root of the directory structure
-    :type base_dir: basestring
-    :param journal_filter: list of newspaper to filter (positive or negative)
-    :type journal_filter: set
-    :param exclude: whether journal_filter is positive or negative
-    :type exclude: boolean
-    :rtype: list of `IssueDir` instances
+    Returns:
+        Match[str] | None: The resulting match if correct, None otherwise.
     """
-    detected_issues = []
-    dir_path, dirs, files = next(os.walk(base_dir))
-    # workaround to deal with journal-level folders like: 01_GDL, 02_GDL
-    if journal_filter is None:
-        journal_dirs = [d for d in dirs if d.split("_")[-1] in KNOWN_JOURNALS]
-    else:
-        if not exclude:
-            filtrd_journals = list(set(KNOWN_JOURNALS).intersection(journal_filter))
-        else:
-            filtrd_journals = list(set(KNOWN_JOURNALS).difference(journal_filter))
-        journal_dirs = [d for d in dirs if d.split("_")[-1] in filtrd_journals]
+    # if the file extension is still included, remove it.
+    if "." in file_basename:
+        file_basename = file_basename.split(".")[0]
+    match object_type:
+        case "issue":
+            pattern = re.compile(r"^[A-Z]+-\d{4}-issues$")
+        case "page":
+            pattern = re.compile(r"^[A-Z]+-\d{4}-\d{2}-\d{2}-[a-z]-pages$")
+        case "rebuilt":
+            pattern = re.compile(r"^[A-Z]+-\d{4}$")
 
-    for journal in journal_dirs:
-        journal_path = os.path.join(base_dir, journal)
-        journal = journal.split("_")[-1] if "_" in journal else journal
-        dir_path, year_dirs, files = next(os.walk(journal_path))
-        # year_dirs = [d for d in dirs if len(d) == 4]
-
-        for year in year_dirs:
-            year_path = os.path.join(journal_path, year)
-            dir_path, month_dirs, files = next(os.walk(year_path))
-
-            for month in month_dirs:
-                month_path = os.path.join(year_path, month)
-                dir_path, day_dirs, files = next(os.walk(month_path))
-
-                for day in day_dirs:
-                    day_path = os.path.join(month_path, day)
-                    # concerning `edition="a"`: for now, no cases of newspapers
-                    # published more than once a day in Olive format (but it
-                    # may come later on)
-                    try:
-                        detected_issue = IssueDir(
-                            journal,
-                            date(int(year), int(month), int(day)),
-                            "a",
-                            day_path,
-                        )
-                        logger.debug("Found an issue: {}".format(str(detected_issue)))
-                        detected_issues.append(detected_issue)
-                    except ValueError:
-                        logger.warning(
-                            "Path {} is not a valid issue directory".format(day_path)
-                        )
-    return detected_issues
+    return pattern.match(file_basename)
 
 
-def detect_canonical_issues(base_dir, newspapers):
-    """Parse a directory structure and detect newspaper issues to be imported.
+def check_id(canonical_id: str, object_type: str = "issue") -> re.Match[str] | None:
+    """Check whether a canonical ID complies with the naming convention.
 
-    NB: invalid directories are skipped, and a warning message is logged.
+    Args:
+        canonical_id (str): Canonical ID to check.
+        object_type (str, optional): Object it corresponds to.
+            One of "issue", "page", "content-item". Defaults to 'issues'.
 
-    :param base_dir: the root of the directory structure
-    :type base_dir: IssueDir
-    :param newspapers: the list of newspapers to consider (acronym blank separated)
-    :type newspapers: str
-    :return: list of `IssueDir` instances
-    :rtype: list
+    Returns:
+        Match[str] | None: The resulting match if correct, None otherwise
     """
-    detected_issues = []
-    dir_path, dirs, files = next(os.walk(base_dir))
-
-    # workaround to deal with journal-level folders like: 01_GDL, 02_GDL
-    # journal_dirs = [d for d in dirs if d.split("_")[-1] == newspapers]
-    journal_dirs = [d for d in dirs if d in [d.split("_")[-1] for d in newspapers]]
-
-    for journal in journal_dirs:
-        journal_path = os.path.join(base_dir, journal)
-        journal = journal.split("_")[-1] if "_" in journal else journal
-        dir_path, year_dirs, files = next(os.walk(journal_path))
-        # year_dirs = [d for d in dirs if len(d) == 4]
-
-        for year in year_dirs:
-            year_path = os.path.join(journal_path, year)
-            dir_path, month_dirs, files = next(os.walk(year_path))
-
-            for month in month_dirs:
-                month_path = os.path.join(year_path, month)
-                dir_path, day_dirs, files = next(os.walk(month_path))
-
-                for day in day_dirs:
-                    day_path = os.path.join(month_path, day)
-                    dir_path, edition_dirs, files = next(os.walk(day_path))
-
-                    for edition in edition_dirs:
-                        edition_path = os.path.join(day_path, edition)
-                        try:
-                            detected_issue = IssueDir(
-                                journal,
-                                date(int(year), int(month), int(day)),
-                                edition,
-                                edition_path,
-                            )
-                            logger.debug(
-                                "Found an issue: {}".format(str(detected_issue))
-                            )
-                            detected_issues.append(detected_issue)
-                        except ValueError:
-                            logger.warning(
-                                "Path {} is not a valid issue directory".format(
-                                    edition_path
-                                )
-                            )
-    return detected_issues
+    match object_type:
+        case "issue":
+            pattern = re.compile(r"^[A-Z]+-\d{4}-\d{2}-\d{2}-[a-z]$")
+        case "page":
+            pattern = re.compile(r"^[A-Z]+-\d{4}-\d{2}-\d{2}-[a-z]-p\d{4}$")
+        case "content-item":
+            pattern = re.compile(r"^[A-Z]+-\d{4}-\d{2}-\d{2}-[a-z]-i\d{4}$")
+    return pattern.match(canonical_id)
 
 
-def detect_journal_issues(base_dir, newspapers):
-    """Parse a directory structure and detect newspaper issues to be imported.
+def get_issueshortpath(issuedir: IssueDir) -> str:
+    """Return short version of an IssueDir's path, starting from the journal.
 
-    :param base_dir: the root of the directory structure
-    :type base_dir: IssueDir
-    :param newspapers: the list of newspapers to consider (acronym blank separated)
-    :type newspapers: str
-    :return: list of `IssueDir` instances
-    :rtype: list
+    Args:
+        issuedir (IssueDir): IssueDir instance from which to get the short path.
+
+    Returns:
+        str: Canonical path to the issue starting at the journal name.
     """
-    # newspapers = [journal.split("_")[-1] if "_" in journal else journal for journal in newspapers]
-
-    detected_issues = []
-    dir_path, dirs, files = next(os.walk(base_dir))
-    journal_dirs = [d for d in dirs if d == newspapers]
-
-    for journal in journal_dirs:
-        journal_path = os.path.join(base_dir, journal)
-        journal = journal.split("_")[-1] if "_" in journal else journal
-        dir_path, year_dirs, files = next(os.walk(journal_path))
-
-        for year in year_dirs:
-            if "_" not in year:
-                year_path = os.path.join(journal_path, year)
-                dir_path, month_dirs, files = next(os.walk(year_path))
-
-                for month in month_dirs:
-                    if "_" not in month:
-                        month_path = os.path.join(year_path, month)
-                        dir_path, day_dirs, files = next(os.walk(month_path))
-
-                        for day in day_dirs:
-                            if "_" not in day:
-                                day_path = os.path.join(month_path, day)
-                                # concerning `edition="a"`: for now, no cases of newspapers
-                                # published more than once a day in Olive format (but it
-                                # may come later on)
-                                detected_issue = IssueDir(
-                                    journal,
-                                    date(int(year), int(month), int(day)),
-                                    "a",
-                                    day_path,
-                                )
-                                logger.debug(
-                                    "Found an issue: {}".format(str(detected_issue))
-                                )
-                                detected_issues.append(detected_issue)
-    return detected_issues
-
-
-def check_filenaming(file_basename):
-    """Checks whether a filename complies with our naming convention (GDL-1900-01-10-a-p0001)
-
-    :param file_basename: page file (txt or image)
-    :type file_basename: str
-    """
-    page_pattern = re.compile(r"^[A-Z]+-\d{4}-\d{2}-\d{2}-[a-z]-p\d{4}$")
-    return page_pattern.match(file_basename)
-
-
-def get_issueshortpath(issuedir):
-    """Returns short version of issue dir path"""
-
     path = issuedir.path
     return path[path.index(issuedir.journal) :]
+
+
+def parse_canonical_filename(filename: str) -> tuple[str, tuple, str, str, int, str]:
+    """Parse a canonical page or CI ID or filename into its components.
+
+    >>> filename = "GDL-1950-01-02-a-i0002"
+    >>> parse_canonical_filename(filename)
+    >>> ('GDL', ('1950', '01', '02'), 'a', 'i', 2, '')
+
+    Args:
+        filename (str): ID or filename to parse.
+
+    Returns:
+        tuple[str, tuple, str, str, int, str]: Parsed ID or filename.
+    """
+    regex = re.compile(
+        (
+            r"^(?P<np>[A-Za-z0-9]+)-(?P<year>\d{4})"
+            r"-(?P<month>\d{2})-(?P<day>\d{2})"
+            r"-(?P<ed>[a-z])-(?P<type>[p|i])(?P<pgnb>\d{4})(?P<ext>.*)?$"
+        )
+    )
+    result = re.match(regex, filename)
+    newspaper_id = result.group("np")
+    date = (result.group("year"), result.group("month"), result.group("day"))
+    page_number = int(result.group("pgnb"))
+    edition = result.group("ed")
+    filetype = result.group("type")
+    extension = result.group("ext")
+    return (newspaper_id, date, edition, filetype, page_number, extension)

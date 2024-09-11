@@ -16,8 +16,9 @@ import botocore
 from botocore.client import BaseClient
 from dotenv import load_dotenv
 from smart_open import open as s_open
+import dask.bag as db
 
-from impresso_essentials.utils import bytes_to
+from impresso_essentials.utils import bytes_to, id_to_issuedird
 
 logger = logging.getLogger(__name__)
 
@@ -439,3 +440,209 @@ def get_s3_object_size(bucket_name: str, key: str) -> int:
     except botocore.exceptions.ClientError as err:
         logger.error("Error: %s for %s in %s", err, key, bucket_name)
         return None
+
+
+def read_s3_issues(
+    newspaper: str, year: str, input_bucket: str
+) -> list[tuple[IssueDir, dict]]:
+    """Read the contents of canonical issues from a given S3 bucket.
+
+    Args:
+        newspaper (str): Name of the newspaper to read the issues from.
+        year (str): Target year to tread issues from.
+        input_bucket (str): Bucket from where to fetch the issues.
+
+    Returns:
+        list[tuple[IssueDir, dict]]: List of IssueDirs and the issues' contents.
+    """
+
+    def add_version(issue):
+        issue["s3_version"] = None
+        return issue
+
+    issue_path_on_s3 = (
+        f"{input_bucket}/{newspaper}/issues/{newspaper}-{year}-issues.jsonl.bz2"
+    )
+    issues = (
+        db.read_text(issue_path_on_s3, storage_options=IMPRESSO_STORAGEOPT)
+        .map(json.loads)
+        .map(add_version)
+        .map(lambda x: (id_to_issuedird(x["id"], issue_path_on_s3), x))
+        .compute()
+    )
+    return issues
+
+
+def list_newspapers(
+    bucket_name: str,
+    s3_client=get_s3_client(),
+    page_size: int = 10000,
+) -> list[str]:
+    """List newspapers contained in an s3 bucket with impresso data.
+
+    Note:
+        25,000 seems to be the maximum `PageSize` value supported by
+        SwitchEngines' S3 implementation (ceph).
+    Note:
+        Copied from https://github.com/impresso/impresso-data-sanitycheck/tree/master/sanity_check/contents/s3_data.py
+
+    Args:
+        bucket_name (str): Name of the S3 bucket to consider
+        s3_client (optional): S3 client to use. Defaults to get_s3_client().
+        page_size (int, optional): Pagination configuration. Defaults to 10000.
+
+    Returns:
+        list[str]: List of newspaper (aliases) present in the given S3 bucket.
+    """
+    print(f"Fetching list of newspapers from {bucket_name}")
+
+    if "s3://" in bucket_name:
+        bucket_name = bucket_name.replace("s3://", "").split("/")[0]
+
+    paginator = s3_client.get_paginator("list_objects")
+
+    newspapers = set()
+    for n, resp in enumerate(
+        paginator.paginate(Bucket=bucket_name, PaginationConfig={"PageSize": page_size})
+    ):
+        # means the bucket is empty
+        if "Contents" not in resp:
+            continue
+
+        for f in resp["Contents"]:
+            newspapers.add(f["Key"].split("/")[0])
+        msg = (
+            f"Paginated listing of keys in {bucket_name}: page {n + 1}, listed "
+            f"{len(resp['Contents'])}"
+        )
+        logger.info(msg)
+
+    print(f"{bucket_name} contains {len(newspapers)} newspapers")
+
+    return newspapers
+
+
+def list_files(
+    bucket_name: str,
+    file_type: str = "issues",
+    newspapers_filter: list[str] | None = None,
+) -> tuple[list[str] | None, list[str] | None]:
+    """List the canonical files located in a given S3 bucket.
+
+    Args:
+        bucket_name (str): S3 bucket name.
+        file_type (str, optional): Type of files to list, possible values are "issues",
+            "pages" and "both". Defaults to "issues".
+        newspapers_filter (list[str] | None, optional): List of newspapers to consider.
+            If None, all will be considered. Defaults to None.
+
+    Raises:
+        NotImplementedError: The given `file_type` is not one of ['issues', 'pages', 'both'].
+
+    Returns:
+        tuple[list[str] | None, list[str] | None]: [0] List of issue files or None and
+            [1] List of page files or None based on `file_type`
+    """
+    if file_type not in ["issues", "pages", "both"]:
+        logger.error("The provided type is not one of ['issues', 'pages', 'both']!")
+        raise NotImplementedError
+
+    # initialize the output lists
+    issue_files, page_files = None, None
+    # list the newspapers in the bucket
+    newspapers = list_newspapers(bucket_name)
+
+    if newspapers_filter is not None:
+        suffix = f"for the provided newspapers {newspapers_filter}"
+    else:
+        suffix = ""
+
+    if file_type in ["issues", "both"]:
+        issue_files = [
+            file
+            for np in newspapers
+            if newspapers_filter is not None and np in newspapers_filter
+            for file in fixed_s3fs_glob(os.path.join(bucket_name, f"{np}/issues/*"))
+        ]
+        print(f"{bucket_name} contains {len(issue_files)} .bz2 issue files {suffix}")
+    if file_type in ["pages", "both"]:
+        page_files = [
+            file
+            for np in newspapers
+            if newspapers_filter is not None and np in newspapers_filter
+            for file in fixed_s3fs_glob(f"{os.path.join(bucket_name, f'{np}/pages/*')}")
+        ]
+        print(f"{bucket_name} contains {len(page_files)} .bz2 page files {suffix}")
+
+    return issue_files, page_files
+
+
+def fetch_files(
+    bucket_name: str,
+    compute: bool = True,
+    file_type: str = "issues",
+    newspapers_filter: list[str] | None = None,
+) -> (
+    tuple[db.core.Bag | None, db.core.Bag | None]
+    | tuple[list[str] | None, list[str] | None]
+):
+    """Fetch issue and/or page canonical JSON files from an s3 bucket.
+
+    If compute=True, the output will be a list of the contents of all files in the
+    bucket for the specified newspapers and type of files.
+    If compute=False, the output will remain in a distributed dask.bag.
+
+    Based on file_type, the issue files, page files or both will be returned.
+    In the returned tuple, issues are always in the first element and pages in the
+    second, hence if file_type is not 'both', the tuple entry corresponding to the
+    undesired type of files will be None.
+
+    Args:
+        bucket_name (str): Name of the s3 bucket to fetch the files form
+        compute (bool, optional): Whether to compute result and output as list.
+            Defaults to True.
+        file_type: (str, optional): Type of files to list, possible values are "issues",
+            "pages" and "both". Defaults to "issues".
+        newspapers_filter: (list[str]|None,optional): List of newspapers to consider.
+            If None, all will be considered. Defaults to None.
+
+    Raises:
+        NotImplementedError: The given `file_type` is not one of ['issues', 'pages', 'both'].
+
+    Returns:
+        tuple[db.core.Bag|None, db.core.Bag|None] | tuple[list[str]|None, list[str]|None]:
+            [0] Issue files' contents or None and
+            [1] Page files' contents or None based on `file_type`
+    """
+    if file_type not in ["issues", "pages", "both"]:
+        logger.error("The provided type is not one of ['issues', 'pages', 'both']!")
+        raise NotImplementedError
+
+    issue_files, page_files = list_files(bucket_name, file_type, newspapers_filter)
+    # initialize the outputs
+    issue_bag, page_bag = None, None
+
+    msg = "Fetching "
+    if issue_files is not None:
+        msg = f"{msg} issue ids from {len(issue_files)} .bz2 files, "
+        issue_bag = db.read_text(issue_files, storage_options=IMPRESSO_STORAGEOPT).map(
+            json.loads
+        )
+    if page_files is not None:
+        # make sure all files are .bz2 files and exactly have the naming format they should
+        prev_len = len(page_files)
+        page_files = [
+            p for p in page_files if ".jsonl.bz2" in p and len(p.split("-")) > 5
+        ]
+        msg = f"{msg} page ids from {len(page_files)} .bz2 files ({prev_len} files before filtering), "
+        page_bag = db.read_text(page_files, storage_options=IMPRESSO_STORAGEOPT).map(
+            json.loads
+        )
+
+    logger.info(msg)
+
+    if compute:
+        page_bag = page_bag.compute() if page_files is not None else page_bag
+        issue_bag = issue_bag.compute() if issue_files is not None else issue_bag
+
+    return issue_bag, page_bag
