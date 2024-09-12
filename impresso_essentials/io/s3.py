@@ -5,7 +5,7 @@ import bz2
 import json
 import logging
 import os
-from typing import Generator
+from typing import Callable, Generator
 from collections import namedtuple
 
 import boto3
@@ -438,6 +438,49 @@ def get_s3_object_size(bucket_name: str, key: str) -> int:
     except botocore.exceptions.ClientError as err:
         logger.error("Error: %s for %s in %s", err, key, bucket_name)
         return None
+
+
+def s3_iter_bucket(
+    bucket_name: str,
+    prefix: str = "",
+    suffix: str = "",
+    accept_key: Callable[[str], bool] = lambda k: True,
+) -> list:
+    """Iterate over a bucket, returning all keys with some filtering options.
+
+    >>> k = s3_iter_bucket("myBucket", prefix='GDL', suffix=".bz2")
+    >>> k = s3_iter_bucket("myBucket", prefix='GDL', accept_key=lambda x: "page" in x)
+
+    Note:
+        If `suffix` is not "", the used accepting condition will become:
+        `lambda key: accept_key(key) and key.endswith(suffix)`
+
+    Args:
+        bucket_name (str): Name of the S3 bucket to list the contents of
+        prefix (str, optional): Partition prefix to filter bucket's keys. Defaults to "".
+        suffix (str, optional): Suffix to filter the bucket's keys. Defaults to "".
+        accept_key (Callable[[str], bool], optional): Filtering condition for the keys
+            as a lambda function. Defaults to lambda k: True.
+
+    Returns:
+        list: List of keys corresponding ot the provided prefix, suffix and accept key.
+    """
+    if suffix != "":
+        filter_condition = lambda k: accept_key(k) and k.endswith(suffix)
+    else:
+        filter_condition = accept_key
+
+    client = get_s3_client()
+    paginator = client.get_paginator("list_objects")
+    page_iterator = paginator.paginate(Bucket=bucket_name, Prefix=prefix)
+    keys = []
+    for page in page_iterator:
+        if "Contents" in page:
+            for key in page["Contents"]:
+                key_string = key["Key"]
+                if filter_condition(key_string):
+                    keys.append(key_string)
+    return keys if keys else []
 
 
 def read_s3_issues(

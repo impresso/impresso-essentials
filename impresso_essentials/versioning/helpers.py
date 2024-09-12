@@ -46,7 +46,11 @@ class DataStage(StrEnum):
     REBUILT = "rebuilt"
     # EVENIZED = "evenized-rebuilt"  # TODO remove?
     PASSIM = "passim"
-    EMBEDDINGS = "embeddings"
+    EMBED_WORDS = "embeddings-words"
+    EMBED_SENTS = "embeddings-sents"
+    EMBED_DOCS = "embeddings-docs"
+    EMBED_ENTITIES = "embeddings-entities"
+    EMBED_PARAGRAPHS = "embeddings-paragraphs"
     ENTITIES = "entities"
     LANGIDENT = "langident"
     LINGUISTIC_PROCESSING = "lingproc"
