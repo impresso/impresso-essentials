@@ -1,6 +1,4 @@
 """Reusable functions to read/write data from/to our S3 drive.
-Warning: 2 boto libraries are used, and need to be kept until third party lib dependencies are solved.
-
 """
 
 import bz2
