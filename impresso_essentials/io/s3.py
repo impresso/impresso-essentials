@@ -172,11 +172,22 @@ def read_jsonlines(key_name: str, bucket_name: str) -> Generator:
         key_name (str): S3 key, without S3 prefix, but with partitions within.
         bucket_name (str): Name of S3 bucket to use.
 
+    Raises:
+        ValueError: The provided key_name does not exist in the provided bucket.
+
     Yields:
-        Generator: generator yielding lines within the archive one by one.
+         Generator: generator yielding lines within the archive one by one.
     """
     s3r = get_s3_resource()
-    body = s3r.Object(bucket_name, key_name).get()["Body"]
+    try:
+        body = s3r.Object(bucket_name, key_name).get()["Body"]
+
+    except s3r.meta.client.exceptions.NoSuchKey as e:
+        msg = (
+            f"The provided key_name {bucket_name}/{key_name} isn't in this bucket: {e}"
+        )
+        raise ValueError(msg) from e
+
     data = body.read()
     text = bz2.decompress(data).decode("utf-8")
 
@@ -204,6 +215,9 @@ def readtext_jsonlines(
         key_name (str): S3 key, without S3 prefix, but with partitions within.
         bucket_name (str): Name of S3 bucket to use.
 
+    Raises:
+        ValueError: The provided key_name does not exist in the provided bucket.
+
     Yields:
         Generator: generator yielding reformated lines within the archive one by one.
     """
@@ -212,18 +226,25 @@ def readtext_jsonlines(
         fields_to_keep = ["id", "pp", "ts", "lg", "tp", "t", "ft"]
 
     s3r = get_s3_resource()
-    body = s3r.Object(bucket_name, key_name).get()["Body"]
+    try:
+        body = s3r.Object(bucket_name, key_name).get()["Body"]
+    except s3r.meta.client.exceptions.NoSuchKey as e:
+        msg = (
+            f"The provided key_name {bucket_name}/{key_name} isn't in this bucket: {e}"
+        )
+        raise ValueError(msg) from e
     data = body.read()
     text = bz2.decompress(data).decode("utf-8")
     for line in text.split("\n"):
         if line != "":
             article_json = json.loads(line)
-            text = article_json["ft"]
-            if len(text) != 0:
-                article_reduced = {
-                    k: article_json[k] for k in article_json if k in fields_to_keep
-                }
-                yield json.dumps(article_reduced)
+            if article_json["tp"] == "ar":
+                text = article_json["ft"]
+                if len(text) != 0:
+                    article_reduced = {
+                        k: article_json[k] for k in article_json if k in fields_to_keep
+                    }
+                    yield json.dumps(article_reduced)
 
 
 def upload_to_s3(local_path: str, path_within_bucket: str, bucket_name: str) -> bool:
@@ -496,21 +517,20 @@ def read_s3_issues(
     Returns:
         list[tuple[IssueDir, dict]]: List of IssueDirs and the issues' contents.
     """
-
-    def add_version(issue):
-        issue["s3_version"] = None
-        return issue
-
     issue_path_on_s3 = (
-        f"{input_bucket}/{newspaper}/issues/{newspaper}-{year}-issues.jsonl.bz2"
+        f"s3://{input_bucket}/{newspaper}/issues/{newspaper}-{year}-issues.jsonl.bz2"
     )
-    issues = (
-        db.read_text(issue_path_on_s3, storage_options=IMPRESSO_STORAGEOPT)
-        .map(json.loads)
-        .map(add_version)
-        .map(lambda x: (id_to_issuedird(x["id"], issue_path_on_s3), x))
-        .compute()
-    )
+    try:
+        issues = (
+            db.read_text(issue_path_on_s3, storage_options=IMPRESSO_STORAGEOPT)
+            .map(json.loads)
+            .map(lambda x: (id_to_issuedird(x["id"], issue_path_on_s3), x))
+            .compute()
+        )
+    except FileNotFoundError as e:
+        logger.error(e)
+        return []
+
     return issues
 
 
