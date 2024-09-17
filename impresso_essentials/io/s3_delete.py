@@ -1,5 +1,5 @@
 """
-Simple CLI script to delete versioned keys from S3.
+Simple CLI script to delete keys from S3.
 
 Usage:
     impresso_commons/utils/s3_delete.py --bucket=<b> --prefix=<p>

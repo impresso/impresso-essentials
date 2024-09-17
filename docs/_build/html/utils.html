@@ -1,0 +1,547 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="./">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Utilities &mdash; Impresso Essentials  documentation</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=80d5e7a1" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=19f00094" />
+
+  
+  <!--[if lt IE 9]>
+    <script src="_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="_static/jquery.js?v=5d32c60e"></script>
+        <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+        <script src="_static/documentation_options.js?v=5929fcd5"></script>
+        <script src="_static/doctools.js?v=9a2dae69"></script>
+        <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="prev" title="Data Versioning" href="versioning.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="index.html" class="icon icon-home">
+            Impresso Essentials
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="io.html">Input/Output</a></li>
+<li class="toctree-l1"><a class="reference internal" href="versioning.html">Data Versioning</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Utilities</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#module-impresso_essentials.utils">Basic and General Utils Functions</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#impresso_essentials.utils.IssueDir"><code class="docutils literal notranslate"><span class="pre">IssueDir</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#impresso_essentials.utils.IssueDir.date"><code class="docutils literal notranslate"><span class="pre">IssueDir.date</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#impresso_essentials.utils.IssueDir.edition"><code class="docutils literal notranslate"><span class="pre">IssueDir.edition</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#impresso_essentials.utils.IssueDir.journal"><code class="docutils literal notranslate"><span class="pre">IssueDir.journal</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#impresso_essentials.utils.IssueDir.path"><code class="docutils literal notranslate"><span class="pre">IssueDir.path</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#impresso_essentials.utils.Timer"><code class="docutils literal notranslate"><span class="pre">Timer</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#impresso_essentials.utils.Timer.stop"><code class="docutils literal notranslate"><span class="pre">Timer.stop()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#impresso_essentials.utils.Timer.tick"><code class="docutils literal notranslate"><span class="pre">Timer.tick()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#impresso_essentials.utils.bytes_to"><code class="docutils literal notranslate"><span class="pre">bytes_to()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#impresso_essentials.utils.chunk"><code class="docutils literal notranslate"><span class="pre">chunk()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#impresso_essentials.utils.get_list_intersection"><code class="docutils literal notranslate"><span class="pre">get_list_intersection()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#impresso_essentials.utils.get_pkg_resource"><code class="docutils literal notranslate"><span class="pre">get_pkg_resource()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#impresso_essentials.utils.id_to_issuedird"><code class="docutils literal notranslate"><span class="pre">id_to_issuedird()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#impresso_essentials.utils.init_logger"><code class="docutils literal notranslate"><span class="pre">init_logger()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#impresso_essentials.utils.partitioner"><code class="docutils literal notranslate"><span class="pre">partitioner()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#impresso_essentials.utils.timestamp"><code class="docutils literal notranslate"><span class="pre">timestamp()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#impresso_essentials.utils.user_confirmation"><code class="docutils literal notranslate"><span class="pre">user_confirmation()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#impresso_essentials.utils.user_question"><code class="docutils literal notranslate"><span class="pre">user_question()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#impresso_essentials.utils.validate_against_schema"><code class="docutils literal notranslate"><span class="pre">validate_against_schema()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#module-impresso_essentials.text_utils">Text Processing Utils Functions</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#impresso_essentials.text_utils.is_stopword_or_all_stopwords"><code class="docutils literal notranslate"><span class="pre">is_stopword_or_all_stopwords()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#impresso_essentials.text_utils.normalize_text"><code class="docutils literal notranslate"><span class="pre">normalize_text()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#impresso_essentials.text_utils.search_text"><code class="docutils literal notranslate"><span class="pre">search_text()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#impresso_essentials.text_utils.segment_and_trim_sentences"><code class="docutils literal notranslate"><span class="pre">segment_and_trim_sentences()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#impresso_essentials.text_utils.tokenise"><code class="docutils literal notranslate"><span class="pre">tokenise()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">Impresso Essentials</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Utilities</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/utils.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="utilities">
+<h1>Utilities<a class="headerlink" href="#utilities" title="Link to this heading"></a></h1>
+<section id="module-impresso_essentials.utils">
+<span id="basic-and-general-utils-functions"></span><h2>Basic and General Utils Functions<a class="headerlink" href="#module-impresso_essentials.utils" title="Link to this heading"></a></h2>
+<dl class="py class">
+<dt class="sig sig-object py" id="impresso_essentials.utils.IssueDir">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">impresso_essentials.utils.</span></span><span class="sig-name descname"><span class="pre">IssueDir</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">journal</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">date</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">edition</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">path</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#impresso_essentials.utils.IssueDir" title="Link to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">tuple</span></code></p>
+<p>Create new instance of IssueDir(journal, date, edition, path)</p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="impresso_essentials.utils.IssueDir.date">
+<span class="sig-name descname"><span class="pre">date</span></span><a class="headerlink" href="#impresso_essentials.utils.IssueDir.date" title="Link to this definition"></a></dt>
+<dd><p>Alias for field number 1</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="impresso_essentials.utils.IssueDir.edition">
+<span class="sig-name descname"><span class="pre">edition</span></span><a class="headerlink" href="#impresso_essentials.utils.IssueDir.edition" title="Link to this definition"></a></dt>
+<dd><p>Alias for field number 2</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="impresso_essentials.utils.IssueDir.journal">
+<span class="sig-name descname"><span class="pre">journal</span></span><a class="headerlink" href="#impresso_essentials.utils.IssueDir.journal" title="Link to this definition"></a></dt>
+<dd><p>Alias for field number 0</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="impresso_essentials.utils.IssueDir.path">
+<span class="sig-name descname"><span class="pre">path</span></span><a class="headerlink" href="#impresso_essentials.utils.IssueDir.path" title="Link to this definition"></a></dt>
+<dd><p>Alias for field number 3</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="impresso_essentials.utils.Timer">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">impresso_essentials.utils.</span></span><span class="sig-name descname"><span class="pre">Timer</span></span><a class="headerlink" href="#impresso_essentials.utils.Timer" title="Link to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>Basic timer</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="impresso_essentials.utils.Timer.stop">
+<span class="sig-name descname"><span class="pre">stop</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">str</span></span></span><a class="headerlink" href="#impresso_essentials.utils.Timer.stop" title="Link to this definition"></a></dt>
+<dd><p>Stop the timer.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Elapsed time since the start tick in seconds.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>str</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="impresso_essentials.utils.Timer.tick">
+<span class="sig-name descname"><span class="pre">tick</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">str</span></span></span><a class="headerlink" href="#impresso_essentials.utils.Timer.tick" title="Link to this definition"></a></dt>
+<dd><p>Perform a tick with the timer.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Elapsed time since last tick in seconds.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>str</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="impresso_essentials.utils.bytes_to">
+<span class="sig-prename descclassname"><span class="pre">impresso_essentials.utils.</span></span><span class="sig-name descname"><span class="pre">bytes_to</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">bytes_nb</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">to_unit</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">bsize</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">1024</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">float</span></span></span><a class="headerlink" href="#impresso_essentials.utils.bytes_to" title="Link to this definition"></a></dt>
+<dd><p>Convert bytes to the specified unit.</p>
+<p>Supported target units:
+- ‘k’ (kilobytes), ‘m’ (megabytes),
+- ‘g’ (gigabytes), ‘t’ (terabytes),
+- ‘p’ (petabytes), ‘e’ (exabytes).</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>bytes_nb</strong> (<em>int</em>) – The number of bytes to be converted.</p></li>
+<li><p><strong>to_unit</strong> (<em>str</em>) – The target unit for conversion.</p></li>
+<li><p><strong>bsize</strong> (<em>int</em><em>, </em><em>optional</em>) – The base size used for conversion (default is 1024).</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The converted value in the specified unit.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>float</p>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>KeyError</strong> – If the specified target unit is not supported.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="impresso_essentials.utils.chunk">
+<span class="sig-prename descclassname"><span class="pre">impresso_essentials.utils.</span></span><span class="sig-name descname"><span class="pre">chunk</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">l_to_chunk</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">list</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">chunksize</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Generator</span></span></span><a class="headerlink" href="#impresso_essentials.utils.chunk" title="Link to this definition"></a></dt>
+<dd><p>Yield successive n-sized chunks from list.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>l_to_chunk</strong> (<em>list</em>) – List to chunk down.</p></li>
+<li><p><strong>chunksize</strong> (<em>int</em>) – Size of each chunk.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Yields<span class="colon">:</span></dt>
+<dd class="field-even"><p><em>Generator</em> – Each chunk of the list.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="impresso_essentials.utils.get_list_intersection">
+<span class="sig-prename descclassname"><span class="pre">impresso_essentials.utils.</span></span><span class="sig-name descname"><span class="pre">get_list_intersection</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">list1</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">list</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">list2</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">list</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">list</span></span></span><a class="headerlink" href="#impresso_essentials.utils.get_list_intersection" title="Link to this definition"></a></dt>
+<dd><p>Compute the intersection between two lists.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>list1</strong> (<em>list</em>) – First list to intersect.</p></li>
+<li><p><strong>list2</strong> (<em>list</em>) – First list to intersect.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>List of intersection of both arguments.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>list</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="impresso_essentials.utils.get_pkg_resource">
+<span class="sig-prename descclassname"><span class="pre">impresso_essentials.utils.</span></span><span class="sig-name descname"><span class="pre">get_pkg_resource</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">file_manager</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ExitStack</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">package</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'impresso_essentials'</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">PosixPath</span></span></span><a class="headerlink" href="#impresso_essentials.utils.get_pkg_resource" title="Link to this definition"></a></dt>
+<dd><p>Return the resource at <cite>path</cite> in <cite>package</cite>, using a context manager.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>The context manager <cite>file_manager</cite> needs to be instantiated prior to
+calling this function and should be closed once the package resource
+is no longer of use.</p>
+</div>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>file_manager</strong> (<em>contextlib.ExitStack</em>) – Context manager.</p></li>
+<li><p><strong>path</strong> (<em>str</em>) – Path to the desired resource in given package.</p></li>
+<li><p><strong>package</strong> (<em>str</em><em>, </em><em>optional</em>) – Package name. Defaults to “impresso_essentials”.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Path to desired managed resource.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>pathlib.PosixPath</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="impresso_essentials.utils.id_to_issuedird">
+<span class="sig-prename descclassname"><span class="pre">impresso_essentials.utils.</span></span><span class="sig-name descname"><span class="pre">id_to_issuedird</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">canonical_id</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">issue_path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#impresso_essentials.utils.IssueDir" title="impresso_essentials.utils.IssueDir"><span class="pre">IssueDir</span></a></span></span><a class="headerlink" href="#impresso_essentials.utils.id_to_issuedird" title="Link to this definition"></a></dt>
+<dd><p>Instantiate an IssueDir object from a canonical ID and the path to the issue.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>canonical_id</strong> (<em>str</em>) – Canonical ID of the issue.</p></li>
+<li><p><strong>issue_path</strong> (<em>str</em>) – Local path to the issue files.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>IssueDir instance for the object</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference internal" href="#impresso_essentials.utils.IssueDir" title="impresso_essentials.utils.IssueDir">IssueDir</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="impresso_essentials.utils.init_logger">
+<span class="sig-prename descclassname"><span class="pre">impresso_essentials.utils.</span></span><span class="sig-name descname"><span class="pre">init_logger</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">level</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">20</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">file</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">RootLogger</span></span></span><a class="headerlink" href="#impresso_essentials.utils.init_logger" title="Link to this definition"></a></dt>
+<dd><p>Initialises the root logger.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>level</strong> (<em>int</em><em>, </em><em>optional</em>) – desired level of logging. Defaults to logging.INFO.</p></li>
+<li><p><strong>file</strong> (<em>str</em><em> | </em><em>None</em><em>, </em><em>optional</em>) – _description_. Defaults to None.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>the initialised logger</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>logging.RootLogger</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="impresso_essentials.utils.partitioner">
+<span class="sig-prename descclassname"><span class="pre">impresso_essentials.utils.</span></span><span class="sig-name descname"><span class="pre">partitioner</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">bag</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Bag</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">nb_partitions</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#impresso_essentials.utils.partitioner" title="Link to this definition"></a></dt>
+<dd><p>Partition a Dask bag into n partitions and write each to a separate file.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>bag</strong> (<em>dask.bag.core.Bag</em>) – The Dask bag to be partitioned.</p></li>
+<li><p><strong>path</strong> (<em>str</em>) – Directory path where partitioned files will be saved.</p></li>
+<li><p><strong>nb_partitions</strong> (<em>int</em>) – Number of partitions to create.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The function writes partitioned files to the specified path.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>None</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="impresso_essentials.utils.timestamp">
+<span class="sig-prename descclassname"><span class="pre">impresso_essentials.utils.</span></span><span class="sig-name descname"><span class="pre">timestamp</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">ts_format</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'%Y-%m-%dT%H:%M:%SZ'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">with_space</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">str</span></span></span><a class="headerlink" href="#impresso_essentials.utils.timestamp" title="Link to this definition"></a></dt>
+<dd><p>Return an iso-formatted timestamp.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>ts_format</strong> (<em>str</em><em>, </em><em>optional</em>) – Timestamp format to use for the returned timestamp.
+Defaults to “%Y-%m-%dT%H:%M:%SZ”.</p></li>
+<li><p><strong>with_space</strong> (<em>bool</em><em>, </em><em>optional</em>) – Format the timestamp with spaces. If True, the
+format used will be “%Y-%m-%d %H:%M:%S”. Defaults to False.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Timestamp formatted according to a provided format.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>str</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="impresso_essentials.utils.user_confirmation">
+<span class="sig-prename descclassname"><span class="pre">impresso_essentials.utils.</span></span><span class="sig-name descname"><span class="pre">user_confirmation</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">question</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">default</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">bool</span></span></span><a class="headerlink" href="#impresso_essentials.utils.user_confirmation" title="Link to this definition"></a></dt>
+<dd><p>Ask a yes/no question via raw_input() and return their answer.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>question</strong> (<em>str</em>) – String question presented to the user.</p></li>
+<li><p><strong>default</strong> (<em>str</em><em> | </em><em>None</em><em>, </em><em>optional</em>) – Presumed answer if the user just hits &lt;Enter&gt;.
+Should be one of “yes”, “no” and None. Defaults to None.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>ValueError</strong> – The default value provided is not valid.</p>
+</dd>
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>User’s answer to the asked question.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>bool</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="impresso_essentials.utils.user_question">
+<span class="sig-prename descclassname"><span class="pre">impresso_essentials.utils.</span></span><span class="sig-name descname"><span class="pre">user_question</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">variable_to_confirm</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#impresso_essentials.utils.user_question" title="Link to this definition"></a></dt>
+<dd><p>Ask the user if the identified variable is correct.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>variable_to_confirm</strong> (<em>str</em>) – Variable to be checked by the user.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="impresso_essentials.utils.validate_against_schema">
+<span class="sig-prename descclassname"><span class="pre">impresso_essentials.utils.</span></span><span class="sig-name descname"><span class="pre">validate_against_schema</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">json_to_validate</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Any</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">path_to_schema</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'schemas/json/versioning/manifest.schema.json'</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#impresso_essentials.utils.validate_against_schema" title="Link to this definition"></a></dt>
+<dd><p>Validate a dict corresponding to a JSON against a provided JSON schema.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>json</strong> (<em>dict</em><em>[</em><em>str</em><em>, </em><em>Any</em><em>]</em>) – JSON data to validate against a schema.</p></li>
+<li><p><strong>path_to_schema</strong> (<em>str</em><em>, </em><em>optional</em>) – Path to the JSON schema to validate against.
+Defaults to “impresso-schemas/json/versioning/manifest.schema.json”.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>e</strong> – The provided JSON could not be validated against the provided schema.</p>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+<section id="module-impresso_essentials.text_utils">
+<span id="text-processing-utils-functions"></span><h2>Text Processing Utils Functions<a class="headerlink" href="#module-impresso_essentials.text_utils" title="Link to this heading"></a></h2>
+<p>Reusable util functions to perform some text processing.</p>
+<dl class="py function">
+<dt class="sig sig-object py" id="impresso_essentials.text_utils.is_stopword_or_all_stopwords">
+<span class="sig-prename descclassname"><span class="pre">impresso_essentials.text_utils.</span></span><span class="sig-name descname"><span class="pre">is_stopword_or_all_stopwords</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">text</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">languages</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">list</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">bool</span></span></span><a class="headerlink" href="#impresso_essentials.text_utils.is_stopword_or_all_stopwords" title="Link to this definition"></a></dt>
+<dd><p>Check if all tokens in the text are stopwords in the given languages.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>text</strong> (<em>str</em>) – The text to check.</p></li>
+<li><p><strong>languages</strong> (<em>list</em><em> | </em><em>None</em><em>, </em><em>optional</em>) – List of languages to consider for stopwords.
+If not defined, will be set to [“french”, “german”]. Defaults to None.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>True if the text is a stopword or all tokens are stopwords, False otherwise.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>bool</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="impresso_essentials.text_utils.normalize_text">
+<span class="sig-prename descclassname"><span class="pre">impresso_essentials.text_utils.</span></span><span class="sig-name descname"><span class="pre">normalize_text</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">text</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">str</span></span></span><a class="headerlink" href="#impresso_essentials.text_utils.normalize_text" title="Link to this definition"></a></dt>
+<dd><p>Remove spaces and tabs for the search but keep newline characters.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>text</strong> (<em>str</em>) – Text to normalize.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Normalized text.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>str</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="impresso_essentials.text_utils.search_text">
+<span class="sig-prename descclassname"><span class="pre">impresso_essentials.text_utils.</span></span><span class="sig-name descname"><span class="pre">search_text</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">article_text</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">search_text</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">int</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#impresso_essentials.text_utils.search_text" title="Link to this definition"></a></dt>
+<dd><p>Look for all occurrences or the <cite>search_text</cite> within the given article text.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>article_text</strong> (<em>str</em>) – Article in which to find occurrences or <cite>search_text</cite>.</p></li>
+<li><p><strong>search_text</strong> (<em>str</em>) – Text to search within the <cite>article_text</cite>.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Start and end indices of occurrences within the article.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>list[tuple[int, int]]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="impresso_essentials.text_utils.segment_and_trim_sentences">
+<span class="sig-prename descclassname"><span class="pre">impresso_essentials.text_utils.</span></span><span class="sig-name descname"><span class="pre">segment_and_trim_sentences</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">article</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">language</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_length</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#impresso_essentials.text_utils.segment_and_trim_sentences" title="Link to this definition"></a></dt>
+<dd><p>Segment the given article into trimmed sentences based on a max_length.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>article</strong> (<em>str</em>) – Full-text article to segment into sentences.</p></li>
+<li><p><strong>language</strong> (<em>str</em>) – Two-letter language code of article.</p></li>
+<li><p><strong>max_length</strong> (<em>int</em>) – Maximum length for each segmented sentence.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>List of resulting trimmed sentences.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>list[str]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="impresso_essentials.text_utils.tokenise">
+<span class="sig-prename descclassname"><span class="pre">impresso_essentials.text_utils.</span></span><span class="sig-name descname"><span class="pre">tokenise</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">text</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">language</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#impresso_essentials.text_utils.tokenise" title="Link to this definition"></a></dt>
+<dd><p>Apply whitespace rules to the given text and language, separating it into tokens.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>text</strong> (<em>str</em>) – The input text to separate into a list of tokens.</p></li>
+<li><p><strong>language</strong> (<em>str</em>) – Language of the text.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>List of tokens with punctuation as separate tokens.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>list[str]</p>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="versioning.html" class="btn btn-neutral float-left" title="Data Versioning" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2024, Impresso - Media Monitoring of the Past - EPFL-DHLAB, UZH-ICL, UNILU-C2DH, UNIL-History..</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>
