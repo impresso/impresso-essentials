@@ -12,19 +12,70 @@ logger = logging.getLogger(__name__)
 
 WHITESPACE_RULES = {
     "fr": {
-        "punctuation_nows_before": [".", ",", ")", "]", "}", "°", "..."],
-        "punctuation_nows_after": ["(", "[", "{"],
-        "punctuation_nows_beforeafter": ["'", "-"],
-        "punctuation_ciffre": [".", ","],
-    }
+        "pct_no_ws_before": [".", ",", ")", "]", "}", "°", "...", ".-", "%"],
+        "pct_no_ws_after": ["(", "[", "{"],
+        "pct_no_ws_before_after": ["'", "-"],
+        "pct_number": [".", ","],
+    },
+    "de": {
+        "pct_no_ws_before": [
+            ".",
+            ",",
+            ")",
+            "]",
+            "}",
+            "°",
+            "...",
+            "?",
+            "!",
+            ":",
+            ";",
+            ".-",
+            "%",
+        ],
+        "pct_no_ws_after": ["(", "[", "{"],
+        "pct_no_ws_before_after": ["'", "-"],
+        "pct_number": [".", ","],
+    },
+    "other": {
+        "pct_no_ws_before": [
+            ".",
+            ",",
+            ")",
+            "]",
+            "}",
+            "°",
+            "...",
+            "?",
+            "!",
+            ":",
+            ";",
+            ".-",
+            "%",
+        ],
+        "pct_no_ws_after": ["(", "[", "{"],
+        "pct_no_ws_before_after": ["'", "-"],
+        "pct_number": [".", ","],
+    },
 }
 
 
-def segment_and_trim_sentences(article, language, max_length):
+def segment_and_trim_sentences(
+    article: str, language: str, max_length: int
+) -> list[str]:
+    """Segment the given article into trimmed sentences based on a max_length.
 
+    Args:
+        article (str): Full-text article to segment into sentences.
+        language (str): Two-letter language code of article.
+        max_length (int): Maximum length for each segmented sentence.
+
+    Returns:
+        list[str]: List of resulting trimmed sentences.
+    """
     try:
         segmenter = pysbd.Segmenter(language=language, clean=False)
-    except Exception:
+    except ValueError:
         segmenter = pysbd.Segmenter(language="en", clean=False)
 
     sentences = segmenter.segment(article)
@@ -51,16 +102,20 @@ def segment_and_trim_sentences(article, language, max_length):
     return trimmed_sentences
 
 
-def is_stopword_or_all_stopwords(text: str, languages=["french", "german"]) -> bool:
-    """Check if the text is a stopword in the specified languages or if all tokens in the text are stopwords.
+def is_stopword_or_all_stopwords(text: str, languages: list | None = None) -> bool:
+    """Check if all tokens in the text are stopwords in the given languages.
 
     Args:
         text (str): The text to check.
-        languages (list): List of languages to consider for stopwords.
+        languages (list | None, optional): List of languages to consider for stopwords.
+            If not defined, will be set to ["french", "german"]. Defaults to None.
 
     Returns:
         bool: True if the text is a stopword or all tokens are stopwords, False otherwise.
     """
+    if not languages:
+        languages = ["french", "german"]
+
     # Load stopwords for the specified languages
     stopwords_list = set()
     for lang in languages:
@@ -78,10 +133,10 @@ def is_stopword_or_all_stopwords(text: str, languages=["french", "german"]) -> b
 
 
 def tokenise(text: str, language: str) -> list[str]:
-    """Apply whitespace rules to the provided text for a specific language and return a list of tokens including punctuation as separate tokens.
+    """Apply whitespace rules to the given text and language, separating it into tokens.
 
     Args:
-        text (str): The input text.
+        text (str): The input text to separate into a list of tokens.
         language (str): Language of the text.
 
     Returns:
@@ -92,13 +147,14 @@ def tokenise(text: str, language: str) -> list[str]:
         return []
 
     if language not in WHITESPACE_RULES:
-        # Default behavior for languages without specific rules: tokenize using standard whitespace splitting
+        # Default behavior for languages without specific rules:
+        # tokenize using standard whitespace splitting
         return text.split()
 
     wsrules = WHITESPACE_RULES[language]
     tokenized_text = []
     current_token = ""
-    # print('tokens before=', text.split())
+
     for char in text:
         if char in wsrules["punctuation_nows_beforeafter"]:
             if current_token:
@@ -123,16 +179,31 @@ def tokenise(text: str, language: str) -> list[str]:
     if current_token:
         tokenized_text.append(current_token)
 
-    # print('tokens after=', tokenized_text)
     return tokenized_text
 
 
-def normalize_text(text):
-    # Remove spaces and tabs for the search but keep newline characters
+def normalize_text(text: str) -> str:
+    """Remove spaces and tabs for the search but keep newline characters.
+
+    Args:
+        text (str): Text to normalize.
+
+    Returns:
+        str: Normalized text.
+    """
     return re.sub(r"[ \t]+", "", text)
 
 
-def search_text(article_text, search_text):
+def search_text(article_text: str, search_text: str) -> list[tuple[int, int]]:
+    """Look for all occurrences or the `search_text` within the given article text.
+
+    Args:
+        article_text (str): Article in which to find occurrences or `search_text`.
+        search_text (str): Text to search within the `article_text`.
+
+    Returns:
+        list[tuple[int, int]]: Start and end indices of occurrences within the article.
+    """
     # Normalize texts by removing spaces and tabs
     normalized_article = normalize_text(article_text)
     normalized_search = normalize_text(search_text)
