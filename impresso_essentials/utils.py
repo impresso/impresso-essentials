@@ -8,7 +8,6 @@ import os
 import logging
 import pathlib
 import time
-import re
 from typing import Any, Generator, Optional
 from datetime import timedelta, date
 from contextlib import ExitStack

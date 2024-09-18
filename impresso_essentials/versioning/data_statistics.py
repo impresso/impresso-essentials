@@ -233,11 +233,11 @@ class NewspaperStatistics(DataStatistics):
                 # add 'ft_tokens'
                 count_keys.append(self.possible_count_keys[4])
                 # keys: 'content_items_out', 'titles', 'issues', 'ft_tokens'
-            case DataStage.EMBEDDINGS:
-                # add 'embeddings'
-                count_keys.append(self.stage.value)
-                # TODO update
-                # keys: 'content_items_out', 'titles', 'issues', 'embeddings'
+            # case DataStage.EMBEDDINGS:
+            # add 'embeddings'
+            # count_keys.append(self.stage.value)
+            # TODO update
+            # keys: 'content_items_out', 'titles', 'issues', 'embeddings'
             case DataStage.ENTITIES:
                 # add 'ne_entities', 'ne_mentions'
                 count_keys.extend(self.possible_count_keys[7:9])
