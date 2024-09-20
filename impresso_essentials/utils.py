@@ -21,7 +21,7 @@ from dask.diagnostics import ProgressBar
 logger = logging.getLogger(__name__)
 
 # changed to dict to include the partner/data origin
-KNOWN_JOURNALS = {
+KNOWN_JOURNALS_DICT = {
     "SNL-RERO": [
         "BDC",
         "CDV",
@@ -125,8 +125,8 @@ KNOWN_JOURNALS = {
         "Croquis",
         "FAMDE",
         "FAN",
-        "feuilleP",  # (no OCR)
-        "feuillePMA",  # (no OCR)
+        # "feuilleP",  # (no OCR)
+        # "feuillePMA",  # (no OCR)
         "GAVi",
         "AV",
         "JY2",
@@ -145,9 +145,9 @@ KNOWN_JOURNALS = {
         "CharivariCH",
         "Grelot",
         "Moniteur",
-        "Moustique",  # (no OCR)
+        # "Moustique",  # (no OCR)
         "ouistiti",
-        "PDN",  # (no OCR)
+        # "PDN",  # (no OCR)
         "PDL",
         "PJ",
         "TouSuIl",
@@ -158,7 +158,7 @@ KNOWN_JOURNALS = {
         "ME",
         "MB",
         "NS",
-        "RN",  # (no OCR)
+        # "RN",  # (no OCR)
         "FAM",
         "FAV1",
         "EM",
@@ -167,11 +167,12 @@ KNOWN_JOURNALS = {
         "VVS",
         "NV1",
         "NV2",
-        "RN1",  # (no OCR)
-        "RN2",  # (no OCR)
+        # "RN1",  # (no OCR)
+        # "RN2",  # (no OCR)
     ],
 }
-
+# flatten the known journals into a sorted list
+KNOWN_JOURNALS = sorted([j for part_j in KNOWN_JOURNALS_DICT.values() for j in part_j])
 PARTNERS_WITHOUT_OLR = ["NZZ", "SWA", "BCUL"]
 
 # a simple data structure to represent input directories
@@ -313,11 +314,12 @@ def get_pkg_resource(
 
 
 def init_logger(
-    level: int = logging.INFO, file: Optional[str] = None
+    _logger: logging.RootLogger, level: int = logging.INFO, file: Optional[str] = None
 ) -> logging.RootLogger:
     """Initialises the root logger.
 
     Args:
+        _logger (logging.RootLogger): Logger instance to initialise.
         level (int, optional): desired level of logging. Defaults to logging.INFO.
         file (str | None, optional): _description_. Defaults to None.
 
@@ -325,8 +327,7 @@ def init_logger(
         logging.RootLogger: the initialised logger
     """
     # Initialise the logger
-    root_logger = logging.getLogger("")
-    root_logger.setLevel(level)
+    _logger.setLevel(level)
 
     if file is not None:
         handler = logging.FileHandler(filename=file, mode="w")
@@ -335,10 +336,10 @@ def init_logger(
 
     formatter = logging.Formatter("%(asctime)s %(name)-12s %(levelname)-8s %(message)s")
     handler.setFormatter(formatter)
-    root_logger.addHandler(handler)
-    root_logger.info("Logger successfully initialised")
+    _logger.addHandler(handler)
+    _logger.info("Logger successfully initialised")
 
-    return root_logger
+    return _logger
 
 
 def validate_against_schema(
