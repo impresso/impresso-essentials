@@ -208,7 +208,7 @@ def create_manifest(
     """
     # if the logger was not previously inialized, do it
     if not logger.hasHandlers():
-        init_logger()
+        init_logger(logger)
 
     # ensure basic validity of the provided configuration
     config_dict = validate_config(config_dict)
@@ -317,7 +317,7 @@ def main():
     nworkers = int(arguments["--nworkers"]) if arguments["--nworkers"] else 8
     scheduler = arguments["--scheduler"]
 
-    init_logger(log_level, log_file)
+    init_logger(logger, log_level, log_file)
 
     # suppressing botocore's verbose logging
     logging.getLogger("botocore").setLevel(logging.WARNING)
