@@ -9,7 +9,7 @@ Please refer to the [documentation](https://impresso-essentials.readthedocs.io/)
 
 The library supports configuration of s3 credentials via project-specific local .env files.
 
-## Installation [COMING SOON]
+## Installation
 
 With `pip`: 
 
