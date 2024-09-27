@@ -878,7 +878,7 @@ class DataManifest:
                     )
 
                     old_media_list[title].update(media_update_info)
-                    print("Updated media information for %s", title)
+                    print(f"Updated media information for {title}")
                     logger.info("Updated media information for %s", title)
                     # keep track that media info was updated for version increase
                     self.modified_info = True

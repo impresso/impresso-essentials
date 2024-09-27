@@ -151,7 +151,8 @@ def agg(s):
     Part of the ggregating function(s) implementing np.nunique()
     """
     s = s._selected_obj
-    return s.groupby(level=list(range(s.index.nlevels))).sum()
+    # added apply(list) because in newer versions of pandas, it was ndarrays.
+    return s.apply(list).groupby(level=list(range(s.index.nlevels))).sum()
 
 
 def finalize(s):
