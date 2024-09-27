@@ -16,7 +16,7 @@ from dotenv import load_dotenv
 from smart_open import open as s_open
 import dask.bag as db
 
-from impresso_essentials.utils import bytes_to, id_to_issuedird
+from impresso_essentials.utils import bytes_to, id_to_issuedir
 
 logger = logging.getLogger(__name__)
 
@@ -524,7 +524,7 @@ def read_s3_issues(
         issues = (
             db.read_text(issue_path_on_s3, storage_options=IMPRESSO_STORAGEOPT)
             .map(json.loads)
-            .map(lambda x: (id_to_issuedird(x["id"], issue_path_on_s3), x))
+            .map(lambda x: (id_to_issuedir(x["id"], issue_path_on_s3), x))
             .compute()
         )
     except FileNotFoundError as e:

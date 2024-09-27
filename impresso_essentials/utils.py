@@ -428,7 +428,7 @@ def partitioner(bag: Bag, path: str, nb_partitions: int) -> None:
         items.to_textfiles(path)
 
 
-def id_to_issuedird(canonical_id: str, issue_path: str) -> IssueDir:
+def id_to_issuedir(canonical_id: str, issue_path: str) -> IssueDir:
     """Instantiate an IssueDir object from a canonical ID and the path to the issue.
 
     Args:
