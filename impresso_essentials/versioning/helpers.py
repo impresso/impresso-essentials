@@ -1,18 +1,15 @@
 """Helper functions to read, generate and write data versioning manifests.
 """
 
+import sys
 import copy
 import json
 import logging
 import os
 import re
 from time import strptime
-from typing import Any, Union, Self, Optional
-
-# python 3.10+
-from enum import StrEnum
+from typing import Any, Union, Optional
 from tqdm import tqdm
-
 import git
 
 from impresso_essentials.utils import bytes_to
@@ -23,6 +20,14 @@ from impresso_essentials.io.s3 import (
     get_bucket,
     get_s3_object_size,
 )
+
+if sys.version < "3.11":
+    # python 3.10
+    from typing_extensions import Self
+    from strenum import StrEnum
+else:
+    from typing import Self
+    from enum import StrEnum
 
 logger = logging.getLogger(__name__)
 

@@ -76,8 +76,8 @@ def extract_np_key(s3_key: str, bucket: str) -> str:
     # Not all buckets separate the data per title, but the title will always come first.
     if "/" in key_no_bucket:
         return key_no_bucket.split("/")[0]
-    else:
-        return key_no_bucket.split("-")[0]
+
+    return key_no_bucket.split("-")[0]
 
 
 def get_files_to_consider(config: dict[str, Any]) -> Optional[dict[str, list[str]]]:

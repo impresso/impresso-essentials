@@ -1,5 +1,6 @@
 """Code for parsing impresso's canonical directory structures."""
 
+import sys
 import os
 import json
 import logging
@@ -40,7 +41,11 @@ def glob_with_size(directory: str, file_suffix: str) -> list[str]:
         list[str]: A list of tuples, each containing the file path and its
                    size in megabytes, rounded to six decimal places.
     """
-    file_paths = glob.glob(os.path.join(directory, "*"), include_hidden=False)
+    if sys.version < "3.11":
+        file_paths = glob.glob(os.path.join(directory, "*"))
+    else:
+        file_paths = glob.glob(os.path.join(directory, "*"), include_hidden=False)
+
     files = [
         (path, round(bytes_to(os.path.getsize(path), "m"), 6))
         for path in file_paths

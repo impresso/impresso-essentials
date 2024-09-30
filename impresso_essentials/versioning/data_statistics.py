@@ -5,15 +5,21 @@ the data preprocessing and augmentation of the Impresso project, and used to
 progressively count the number of elements modified or added by the processing.
 """
 
+import sys
 import logging
 from abc import ABC, abstractmethod
-from typing import Any, Union, Self, Optional
+from typing import Any, Union, Optional
 
 from impresso_essentials.versioning.helpers import (
     DataStage,
     validate_stage,
     validate_granularity,
 )
+
+if sys.version < "3.11":
+    from typing_extensions import Self
+else:
+    from typing import Self
 
 logger = logging.getLogger(__name__)
 
