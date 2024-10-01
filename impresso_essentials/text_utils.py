@@ -149,7 +149,7 @@ def tokenise(text: str, language: str) -> list[str]:
     if language not in WHITESPACE_RULES:
         # Default behavior for languages without specific rules:
         # tokenize using standard whitespace splitting
-        return text.split()
+        language = "other"
 
     wsrules = WHITESPACE_RULES[language]
     tokenized_text = []
