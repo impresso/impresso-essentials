@@ -316,6 +316,8 @@ def read_manifest_from_s3(
         tuple[str, dict[str, Any]] | tuple[None, None]: S3 path of the manifest
             and corresponding contents, if a manifest was found, None otherwise.
     """
+    # reset the partition to None if it's empty
+    partition = None if partition == '' else partition
     manifest_s3_path = find_s3_data_manifest_path(bucket_name, data_stage, partition)
     if manifest_s3_path is None:
         logger.info("No %s manifest found in bucket %s", data_stage, bucket_name)

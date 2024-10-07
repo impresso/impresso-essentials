@@ -30,6 +30,7 @@ from impresso_essentials.versioning.aggregators import (
     compute_stats_in_rebuilt_bag,
     compute_stats_in_entities_bag,
     compute_stats_in_langident_bag,
+    compute_stats_in_text_reuse_passage_bag
 )
 from impresso_essentials.versioning.data_manifest import DataManifest
 
@@ -156,7 +157,7 @@ def compute_stats_for_stage(
         case DataStage.LANGIDENT:
             return compute_stats_in_langident_bag(files_bag, client=client)
         case DataStage.TEXT_REUSE:
-            return None  # TODO add aggregator for TR
+            return compute_stats_in_text_reuse_passage_bag(files_bag, client=client)
             # return compute_stats_in_langident_bag(files_bag, client=client)
     raise NotImplementedError(
         "The function computing statistics for this DataStage is not yet implemented."

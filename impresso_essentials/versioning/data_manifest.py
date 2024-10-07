@@ -327,8 +327,10 @@ class DataManifest:
             logger.debug("Reading the input data's manifest from S3.")
 
             # only the rebuilt uses the canonical as input
+            # text-reuse's input stage, passim rebuilt has various partitions
+            split_path = self.input_bucket_name.replace("s3://", "").split('/')
             (self.input_manifest_s3_path, input_v_mft) = read_manifest_from_s3(
-                self.input_bucket_name.replace("s3://", ""), self._input_stage
+                split_path[0], self._input_stage, '/'.join(split_path[1:])
             )
 
             if input_v_mft is not None:

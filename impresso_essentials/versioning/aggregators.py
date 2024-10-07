@@ -334,7 +334,7 @@ def compute_stats_in_langident_bag(
         client (Client | None, optional): Dask client. Defaults to None.
 
     Returns:
-        list[dict[str, Any]]:  List of counts that match langident DataStatistics keys.
+        list[dict[str, Any]]: List of counts that match langident DataStatistics keys.
     """
 
     def freq(x, col="lang_fd"):
@@ -399,7 +399,7 @@ def compute_stats_in_solr_text_bag(
         client (Client | None, optional): Dask client. Defaults to None.
 
     Returns:
-        list[dict[str, Any]]:  List of counts that match solr text DataStatistics keys.
+        list[dict[str, Any]]: List of counts that match solr text DataStatistics keys.
     """
     count_df = (
         s3_solr_text.map(
@@ -428,6 +428,65 @@ def compute_stats_in_solr_text_bag(
             {
                 "issues": tunique,
                 "content_items_out": sum,
+            }
+        )
+        .reset_index()
+    ).persist()
+
+    print("Finished grouping and aggregating stats by title and year.")
+    logger.info("Finished grouping and aggregating stats by title and year.")
+
+    if client is not None:
+        # only add the progress bar if the client is defined
+        progress(aggregated_df)
+
+    # return as a list of dicts
+    return aggregated_df.to_bag(format="dict").compute()
+
+
+def compute_stats_in_text_reuse_passage_bag(
+    s3_tr_passages: Bag, client: Client | None = None
+) -> list[dict[str, Any]]:
+    """Compute stats on a dask bag of text-reuse passages.
+
+    Args:
+        s3_tr_passages (Bag): Text-reuse passages contained in one output file.
+        client (Client | None, optional): Dask client. Defaults to None.
+
+    Returns:
+        list[dict[str, Any]]: List of counts that match text-reuse DataStatistics keys.
+    """
+    count_df = (
+        s3_tr_passages.map(
+            lambda passage: {
+                "np_id": passage["ci_id"].split("-")[0],
+                "year": passage["ci_id"].split("-")[1],
+                "issues": "-".join(passage["id"].split("-")[:-1]),
+                "content_items_out": passage["ci_id"],
+                "text_reuse_passages": 1,
+                "text_reuse_clusters": passage["cluster_id"]
+            }
+        ).to_dataframe(
+            meta={
+                "np_id": str,
+                "year": str,
+                "issues": str,
+                "content_items_out": str,
+                "text_reuse_passages": int,
+                "text_reuse_clusters": str,
+            }
+        )
+        .persist()
+    )
+
+    aggregated_df = (
+        count_df.groupby(by=["np_id", "year"])
+        .agg(
+            {
+                "issues": tunique,
+                "content_items_out": tunique,
+                "text_reuse_passages": sum,
+                "text_reuse_clusters": tunique,
             }
         )
         .reset_index()
