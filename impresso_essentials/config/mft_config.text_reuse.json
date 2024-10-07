@@ -9,7 +9,7 @@
     "is_staging": true,
     "is_patch": false,
     "patched_fields": [],
-    "push_to_git": false,
+    "push_to_git": true,
     "only_counting": false,
     "notes": "Computing the manifest for text-reuse passages.",
     "file_extensions": "jsonl.bz2",
