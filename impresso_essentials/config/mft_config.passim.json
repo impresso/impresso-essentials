@@ -12,5 +12,6 @@
     "push_to_git": false,
     "only_counting": true,
     "notes": "Final passim-rebuilt manifest for April 2024 release.",
-    "file_extensions": "jsonl.bz2"
+    "file_extensions": "jsonl.bz2",
+    "compute_altogether": false
 }

@@ -27,6 +27,7 @@ Below is an example for the case of NE-processing, as well as a description of e
     "only_counting": false,
     "notes": "",
     "file_extensions": ".jsonl.bz2",
+    "compute_altogether": false
 }
 ```
 
@@ -64,3 +65,4 @@ Below is an example for the case of NE-processing, as well as a description of e
   - Can be left empty (`""` or `null`), in which case a generic note with the processed titles will be used.
 - __*file_extensions*__: (required) The extension of the files to consider within `output_bucket`, *including* the first `.` (`.jsonl.bz2` instead of `jsonl.bz2`).
   - Is necessary for the `fixed_s3fs_glob` function used internally, and allows to ensure only desired files are considered (eg. if `.txt` or `.json` files are present in the bucket).
+- __*compute_altogether*__: (optional) Whether the statistics should be computed on the entire dataset at once (eg. for text-reuse). If the output data to version is organized by title, should be `false`. Set to `false` by default.

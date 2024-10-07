@@ -12,5 +12,6 @@
     "push_to_git": false,
     "only_counting": false,
     "notes": "small test.",
-    "file_extensions": "jsonl.bz2"
+    "file_extensions": "jsonl.bz2",
+    "compute_altogether": false
 }

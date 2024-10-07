@@ -580,6 +580,10 @@ class DataManifest:
         Returns:
             bool: True if the processing stats' update was successful, False otherwise.
         """
+        if any(isinstance(v, str) for v in counts.values()):
+            # if any of the count values are not ints of dicts, convert to int
+            logger.debug("Some string values have been found in counts, converting to int.")
+            counts = {k: int(v) for k,v in counts.items() if isinstance(v, str)}
         return self._modify_processing_stats(title, str(year), counts)
 
     def add_count_list_by_title_year(

@@ -461,7 +461,7 @@ def compute_stats_in_text_reuse_passage_bag(
             lambda passage: {
                 "np_id": passage["ci_id"].split("-")[0],
                 "year": passage["ci_id"].split("-")[1],
-                "issues": "-".join(passage["id"].split("-")[:-1]),
+                "issues": "-".join(passage["ci_id"].split("-")[:-1]),
                 "content_items_out": passage["ci_id"],
                 "text_reuse_passages": 1,
                 "text_reuse_clusters": passage["cluster_id"]
@@ -490,6 +490,7 @@ def compute_stats_in_text_reuse_passage_bag(
             }
         )
         .reset_index()
+        .sort_values('year')
     ).persist()
 
     print("Finished grouping and aggregating stats by title and year.")

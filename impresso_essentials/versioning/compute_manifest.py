@@ -23,7 +23,7 @@ from docopt import docopt
 import dask.bag as db
 from dask.distributed import Client
 from impresso_essentials.io.s3 import fixed_s3fs_glob, IMPRESSO_STORAGEOPT
-from impresso_essentials.utils import init_logger
+from impresso_essentials.utils import init_logger, KNOWN_JOURNALS
 from impresso_essentials.versioning.helpers import validate_stage, DataStage
 from impresso_essentials.versioning.aggregators import (
     compute_stats_in_canonical_bag,
@@ -189,6 +189,91 @@ def validate_config(config: dict[str, Any]) -> dict[str, Any]:
 
     return config
 
+def add_stats_to_mft(
+    manifest: DataManifest, title: str, computed_stats: list[dict]
+) -> DataManifest:
+    logger.info(
+        "%s - Populating the manifest with the resulting %s yearly statistics found...",
+        title,
+        len(computed_stats),
+    )
+    logger.debug("%s - computed_stats: %s", title, computed_stats)
+
+    for stats in computed_stats:
+        title = stats["np_id"]
+        year = stats["year"]
+        del stats["np_id"]
+        del stats["year"]
+        logger.debug("Adding %s to %s-%s", stats, title, year)
+        manifest.add_by_title_year(title, year, stats)
+
+    logger.info("%s - Finished adding stats, going to the next title...", title)
+    return manifest
+
+def process_by_title(
+    manifest: DataManifest, 
+    s3_files: dict[str, list[str]], 
+    stage: DataStage, 
+    client: Client|None
+) -> DataManifest:
+    logger.info("\n-> Starting computing the manifest by title <-")
+    for np_title, np_s3_files in s3_files.items():
+
+        logger.info("---------- %s ----------", np_title)
+        logger.debug(
+            "The list of files selected for %s is: %s",
+            np_title,
+            np_s3_files,
+        )
+        # load the selected files in dask bags
+        processed_files = db.read_text(
+            np_s3_files, storage_options=IMPRESSO_STORAGEOPT
+        ).map(json.loads)
+
+        logger.info(
+            "%s - Starting to compute the statistics on the fetched files...",
+            np_title,
+        )
+        computed_stats = compute_stats_for_stage(processed_files, stage, client)
+
+        manifest = add_stats_to_mft(manifest, np_title, computed_stats)
+
+    return manifest
+
+
+def process_altogether(
+    manifest : DataManifest, 
+    s3_files : dict[str, list[str]], 
+    stage : DataStage, 
+    client : Client|None
+) -> DataManifest:
+    logger.info("\n-> Starting to compute the manifest altogether, filterting iteratively by title <-")
+
+    s3_fpaths = [j for part_j in s3_files.values() for j in part_j]
+    logger.debug("The list of files selected is: %s", s3_fpaths)
+    # load the selected files in dask bags
+    processed_files = db.read_text(
+        s3_fpaths, storage_options=IMPRESSO_STORAGEOPT
+    ).map(json.loads).persist()#.map(lambda x: (x['ci_id'].split('-')[0], x)).persist()
+
+    total_num = len(KNOWN_JOURNALS)
+    for idx, np_title in enumerate(KNOWN_JOURNALS):
+
+        logger.info("---------- %s - %s/%s ----------", np_title, idx+1, total_num)
+
+        # filter to only keep the tr_passages for this title
+        filtered = processed_files.filter(lambda x: f"{np_title}-" in x['ci_id']).persist()
+
+        logger.info(
+            "%s - Starting to compute the statistics on the filtered files...",
+            np_title,
+        )
+        computed_stats = compute_stats_for_stage(filtered, stage, client)
+
+        manifest = add_stats_to_mft(manifest, np_title, computed_stats)
+
+    return manifest
+
 
 def create_manifest(
     config_dict: dict[str, Any], client: Optional[Client] = None
@@ -253,42 +338,18 @@ def create_manifest(
         only_counting=only_counting,
     )
 
-    # processing newspapers one at a time
-    for np_title, np_s3_files in s3_files.items():
+    if 'compute_altogether' in config_dict:
+        compute_altogether = config_dict["input_bucket"]
+    else:
+        compute_altogether = False
 
-        logger.info("---------- %s ----------", np_title)
-        logger.debug(
-            "The list of files selected for %s is: %s",
-            np_title,
-            np_s3_files,
-        )
-        # load the selected files in dask bags
-        processed_files = db.read_text(
-            np_s3_files, storage_options=IMPRESSO_STORAGEOPT
-        ).map(json.loads)
-
-        logger.info(
-            "%s - Starting to compute the statistics on the fetched files...",
-            np_title,
-        )
-        computed_stats = compute_stats_for_stage(processed_files, stage, client)
-
-        logger.info(
-            "%s - Populating the manifest with the resulting %s yearly statistics found...",
-            np_title,
-            len(computed_stats),
-        )
-        logger.debug("%s - computed_stats: %s", np_title, computed_stats)
-
-        for stats in computed_stats:
-            title = stats["np_id"]
-            year = stats["year"]
-            del stats["np_id"]
-            del stats["year"]
-            logger.debug("Adding %s to %s-%s", stats, title, year)
-            manifest.add_by_title_year(title, year, stats)
-
-        logger.info("%s - Finished adding stats, going to the next title...", np_title)
+    if stage == DataStage.TEXT_REUSE or compute_altogether:
+        # when the output data is not organized by title, 
+        # the manifest needs to be computed on all the data at once
+        manifest = process_altogether(manifest, s3_files, stage, client)
+    else:
+        # processing newspapers one at a time
+        manifest = process_by_title(manifest, s3_files, stage, client)
 
     logger.info("Finalizing the manifest, and computing the result...")
     # Add the note to the manifest

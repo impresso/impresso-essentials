@@ -12,5 +12,6 @@
     "push_to_git": true,
     "only_counting": false,
     "notes": "",
-    "file_extensions": "fill_me"
+    "file_extensions": "fill_me",
+    "compute_altogether": false
 }
