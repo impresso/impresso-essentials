@@ -65,6 +65,7 @@ class DataManifest:
         only_counting: Optional[bool] = False,
         notes: Optional[str] = None,
         push_to_git: Optional[bool] = None,
+        relative_git_path: Optional[str] = None,
     ) -> None:
 
         # TODO when integrating radio data: init a media_type attribute and add RadioStatistics.
@@ -83,6 +84,13 @@ class DataManifest:
         else:
             # for data preparation, the manifest is at the top level of the bucket
             self.output_bucket_name, self.output_s3_partition = s3_output_bucket, None
+        
+        # define the relative path within the git repository
+        if relative_git_path:
+            self.output_git_partition = relative_git_path
+        else:
+            self.output_git_partition = self.output_s3_partition
+        self._print_git_path_warning()
 
         self.temp_dir = temp_dir
         os.makedirs(temp_dir, exist_ok=True)
@@ -187,6 +195,16 @@ class DataManifest:
             ), "Mismatch between s3 path of previous & current version of manifest."
 
         return full_s3_path
+    
+    def _print_git_path_warning(self) -> None:
+        if self.push_to_git and self.output_git_partition is not None:
+            out_git_path = self._get_out_path_within_repo()
+            info_msg = (
+                "Note that once generated, this manifest will be pushed to "
+                f"the following path {out_git_path} within the git repository."
+            )
+            logger.info(info_msg)
+            print(info_msg)
 
     def _get_output_branch(self, for_staging: Optional[bool]) -> str:
         """Get the git repository branch on which to add the manifest once generated-
@@ -364,7 +382,7 @@ class DataManifest:
         elif "solr" in stage or "mysql" in stage:
             sub_folder = "data-ingestion"
         else:
-            sub_folder = "data-processing"
+            sub_folder = os.path.join("data-processing", self.output_git_partition)
 
         return os.path.join(folder_prefix, sub_folder)
 

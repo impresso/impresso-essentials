@@ -502,3 +502,76 @@ def compute_stats_in_text_reuse_passage_bag(
 
     # return as a list of dicts
     return aggregated_df.to_bag(format="dict").compute()
+
+
+def compute_stats_in_topics_bag(
+    s3_topics: Bag, client: Client | None = None
+) -> list[dict[str, Any]]:
+    """Compute stats on a dask bag of entities output content-items.
+
+    Args:
+        s3_topics (db.core.Bag): Bag with the contents of topics files.
+        client (Client | None, optional): Dask client. Defaults to None.
+
+    Returns:
+        list[dict[str, Any]]: List of counts that match NE DataStatistics keys.
+    """
+    count_df = (
+        s3_topics.map(
+            lambda ci: {
+                "np_id": ci["id"].split("-")[0],
+                "year": ci["id"].split("-")[1],
+                "issues": ci["id"].split("-i")[0],
+                "content_items_out": 1,
+                "topics": sorted(
+                    list(
+                        set(
+                            [
+                                t["t"]
+                                for t in ci["topics"]
+                                if "t" in t and t["t"] not in ["NIL", None]
+                            ]
+                        )
+                    )
+                ),  # sorted list to ensure all are the same
+            }
+        ).to_dataframe(
+            meta={
+            "np_id": str,
+            "year": str,
+            "issues": str,
+            "content_items_out": int,
+            "topics": object,
+        }
+        )
+        # .explode("ne_entities")
+        # .persist()
+    )
+
+    count_df["topics"] = count_df["topics"].apply(
+        lambda x: x if isinstance(x, list) else [x]
+    )
+    count_df = count_df.explode("topics").persist()
+
+    # cum the counts for all values collected
+    aggregated_df = (
+        count_df.groupby(by=["np_id", "year"])
+        .agg(
+            {
+                "issues": tunique,
+                "content_items_out": sum, #'count', ???
+                "topics": tunique,
+            }
+        )
+        .reset_index()
+    ).persist()
+
+    print("Finished grouping and aggregating stats by title and year.")
+    logger.info("Finished grouping and aggregating stats by title and year.")
+
+    if client is not None:
+        # only add the progress bar if the client is defined
+        progress(aggregated_df)
+
+    # return as a list of dicts
+    return aggregated_df.to_bag(format="dict").compute()

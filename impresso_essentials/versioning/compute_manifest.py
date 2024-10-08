@@ -30,7 +30,8 @@ from impresso_essentials.versioning.aggregators import (
     compute_stats_in_rebuilt_bag,
     compute_stats_in_entities_bag,
     compute_stats_in_langident_bag,
-    compute_stats_in_text_reuse_passage_bag
+    compute_stats_in_text_reuse_passage_bag,
+    compute_stats_in_topics_bag
 )
 from impresso_essentials.versioning.data_manifest import DataManifest
 
@@ -46,6 +47,8 @@ OPT_CONFIG_KEYS = [
     "only_counting",
     "push_to_git",
     "notes",
+    "relative_git_path",
+    "compute_altogether"
 ]
 # list of requirec configurations
 REQ_CONFIG_KEYS = [
@@ -73,7 +76,10 @@ def extract_np_key(s3_key: str, bucket: str) -> str:
         str: Name of the corresponding newspaper, extracted form the s3 path.
     """
     # in format: 's3://31-passim-rebuilt-staging/passim/indeplux/indeplux-1889.jsonl.bz2'
-    key_no_bucket = s3_key.replace(f"s3://{bucket}/", "")
+    if 's3://' in bucket:
+        key_no_bucket = s3_key.replace(f"{bucket}/", "")
+    else:
+        key_no_bucket = s3_key.replace(f"s3://{bucket}/", "")
     # Not all buckets separate the data per title, but the title will always come first.
     if "/" in key_no_bucket:
         return key_no_bucket.split("/")[0]
@@ -150,6 +156,8 @@ def compute_stats_for_stage(
             )
         case DataStage.ENTITIES:
             return compute_stats_in_entities_bag(files_bag, client=client)
+        case DataStage.NEWS_AGENCIES:
+            return compute_stats_in_entities_bag(files_bag, client=client)
         case DataStage.PASSIM:
             return compute_stats_in_rebuilt_bag(
                 files_bag, include_np=True, passim=True, client=client
@@ -158,6 +166,8 @@ def compute_stats_for_stage(
             return compute_stats_in_langident_bag(files_bag, client=client)
         case DataStage.TEXT_REUSE:
             return compute_stats_in_text_reuse_passage_bag(files_bag, client=client)
+        case DataStage.TOPICS:
+            return compute_stats_in_topics_bag(files_bag, client=client)
             # return compute_stats_in_langident_bag(files_bag, client=client)
     raise NotImplementedError(
         "The function computing statistics for this DataStage is not yet implemented."
@@ -320,9 +330,8 @@ def create_manifest(
     if p_fields is not None and len(p_fields) == 0:
         p_fields = None
     prev_mft = config_dict["previous_mft_s3_path"]
-    only_counting = None
-    if "only_counting" in config_dict:
-        only_counting = config_dict["only_counting"]
+    only_counting = config_dict["only_counting"]
+    relative_git_path = config_dict["relative_git_path"]
 
     # init the manifest given the configuration
     manifest = DataManifest(
@@ -336,14 +345,11 @@ def create_manifest(
         patched_fields=p_fields,
         previous_mft_path=prev_mft if prev_mft != "" else None,
         only_counting=only_counting,
+        relative_git_path=relative_git_path if relative_git_path != "" else None,
     )
 
-    if 'compute_altogether' in config_dict:
-        compute_altogether = config_dict["input_bucket"]
-    else:
-        compute_altogether = False
-
-    if stage == DataStage.TEXT_REUSE or compute_altogether:
+    # `compute_altogether` can be None (counts as False)
+    if stage == DataStage.TEXT_REUSE or config_dict["compute_altogether"]:
         # when the output data is not organized by title, 
         # the manifest needs to be computed on all the data at once
         manifest = process_altogether(manifest, s3_files, stage, client)

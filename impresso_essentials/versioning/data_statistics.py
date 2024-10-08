@@ -248,6 +248,10 @@ class NewspaperStatistics(DataStatistics):
                 # add 'ne_entities', 'ne_mentions'
                 count_keys.extend(self.possible_count_keys[7:9])
                 # keys: 'content_items_out', 'titles', 'issues', 'ne_entities', 'ne_mentions'
+            case DataStage.NEWS_AGENCIES:
+                # add 'ne_entities', 'ne_mentions'
+                count_keys.extend(self.possible_count_keys[7:9])
+                # keys: 'content_items_out', 'titles', 'issues', 'ne_entities', 'ne_mentions'
             case DataStage.PASSIM:
                 # add 'ft_tokens'
                 count_keys.append(self.possible_count_keys[4])
