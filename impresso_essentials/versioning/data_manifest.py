@@ -411,24 +411,36 @@ class DataManifest:
         manifest_dump = json.dumps(self.manifest_data, indent=4)
 
         mft_filename = self._manifest_filename
-
+        
         # if out_repo is None, in debug mode
         if push_to_git:
-            # write file and push to git
-            local_path_in_repo = self._get_out_path_within_repo()
-            pushed, out_file_path = write_and_push_to_git(
-                manifest_dump,
-                out_repo,
-                local_path_in_repo,
-                mft_filename,
-                commit_msg=commit_msg,
-            )
-            if not pushed:
-                logger.critical(
-                    "Push manifest to git manually using the file added on S3: \ns3://%s/%s.",
+            try:
+                # write file and push to git
+                local_path_in_repo = self._get_out_path_within_repo()
+                pushed, out_file_path = write_and_push_to_git(
+                    manifest_dump,
+                    out_repo,
+                    local_path_in_repo,
+                    mft_filename,
+                    commit_msg=commit_msg,
+                )
+                
+                if not pushed:
+                    logger.critical(
+                        "Push manifest to git manually using the file added on S3: \ns3://%s/%s.",
+                        self.output_bucket_name,
+                        out_file_path,
+                    )
+            except Exception as e:
+                logger.error(
+                    "Push manifest to git manually using the file added on S3: \ns3://%s/%s. Exception: %s",
                     self.output_bucket_name,
                     out_file_path,
+                    e
                 )
+                # if there was a problem cloning the repository of pushing to git, 
+                # write the manifest somewhere in the fs
+                out_file_path = write_dump_to_fs(manifest_dump, self.temp_dir, mft_filename)
         else:
             # for debug purposes, write in temp dir and not in git repo
             out_file_path = write_dump_to_fs(manifest_dump, self.temp_dir, mft_filename)

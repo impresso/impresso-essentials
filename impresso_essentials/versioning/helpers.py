@@ -272,7 +272,6 @@ def find_s3_data_manifest_path(
     if partition is None and stage_value in [
         DataStage.CANONICAL.value,  # "canonical"
         DataStage.REBUILT.value,  # "rebuilt"
-        # DataStage.EVENIZED.value,  # "evenized-rebuilt"
         DataStage.PASSIM.value,  # "passim"
         DataStage.SOLR_TEXT.value,  # "solr-ingestion-text"
     ]:
@@ -284,7 +283,7 @@ def find_s3_data_manifest_path(
         # processed data are all in the same bucket,
         # manifest should be directly fetched from path
         full_s3_path = os.path.join(bucket_name, partition, path_filter)
-        print(full_s3_path)
+        #print(full_s3_path)
         matches = fixed_s3fs_glob(full_s3_path)
 
     # matches will always be a list
