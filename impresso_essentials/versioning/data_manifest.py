@@ -361,7 +361,7 @@ class DataManifest:
         # if stage in ["canonical", "rebuilt", "passim", "evenized-rebuilt"]: --> TODO remove evenized
         if stage in ["canonical", "rebuilt", "passim"]:
             sub_folder = "data-preparation"
-        elif "solr" in stage or "mysql":
+        elif "solr" in stage or "mysql" in stage:
             sub_folder = "data-ingestion"
         else:
             sub_folder = "data-processing"
