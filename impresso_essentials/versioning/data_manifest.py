@@ -65,6 +65,7 @@ class DataManifest:
         only_counting: Optional[bool] = False,
         notes: Optional[str] = None,
         push_to_git: Optional[bool] = None,
+        relative_git_path: Optional[str] = None,
     ) -> None:
 
         # TODO when integrating radio data: init a media_type attribute and add RadioStatistics.
@@ -83,6 +84,13 @@ class DataManifest:
         else:
             # for data preparation, the manifest is at the top level of the bucket
             self.output_bucket_name, self.output_s3_partition = s3_output_bucket, None
+        
+        # define the relative path within the git repository
+        if relative_git_path:
+            self.output_git_partition = relative_git_path
+        else:
+            self.output_git_partition = self.output_s3_partition
+        self._print_git_path_warning()
 
         self.temp_dir = temp_dir
         os.makedirs(temp_dir, exist_ok=True)
@@ -187,6 +195,16 @@ class DataManifest:
             ), "Mismatch between s3 path of previous & current version of manifest."
 
         return full_s3_path
+    
+    def _print_git_path_warning(self) -> None:
+        if self.push_to_git and self.output_git_partition is not None:
+            out_git_path = self._get_out_path_within_repo()
+            info_msg = (
+                "Note that once generated, this manifest will be pushed to "
+                f"the following path {out_git_path} within the git repository."
+            )
+            logger.info(info_msg)
+            print(info_msg)
 
     def _get_output_branch(self, for_staging: Optional[bool]) -> str:
         """Get the git repository branch on which to add the manifest once generated-
@@ -327,8 +345,10 @@ class DataManifest:
             logger.debug("Reading the input data's manifest from S3.")
 
             # only the rebuilt uses the canonical as input
+            # text-reuse's input stage, passim rebuilt has various partitions
+            split_path = self.input_bucket_name.replace("s3://", "").split('/')
             (self.input_manifest_s3_path, input_v_mft) = read_manifest_from_s3(
-                self.input_bucket_name.replace("s3://", ""), self._input_stage
+                split_path[0], self._input_stage, '/'.join(split_path[1:])
             )
 
             if input_v_mft is not None:
@@ -359,10 +379,10 @@ class DataManifest:
         # if stage in ["canonical", "rebuilt", "passim", "evenized-rebuilt"]: --> TODO remove evenized
         if stage in ["canonical", "rebuilt", "passim"]:
             sub_folder = "data-preparation"
-        elif "solr" in stage or "mysql":
+        elif "solr" in stage or "mysql" in stage:
             sub_folder = "data-ingestion"
         else:
-            sub_folder = "data-processing"
+            sub_folder = os.path.join("data-processing", self.output_git_partition)
 
         return os.path.join(folder_prefix, sub_folder)
 
@@ -409,24 +429,36 @@ class DataManifest:
         manifest_dump = json.dumps(self.manifest_data, indent=4)
 
         mft_filename = self._manifest_filename
-
+        
         # if out_repo is None, in debug mode
         if push_to_git:
-            # write file and push to git
-            local_path_in_repo = self._get_out_path_within_repo()
-            pushed, out_file_path = write_and_push_to_git(
-                manifest_dump,
-                out_repo,
-                local_path_in_repo,
-                mft_filename,
-                commit_msg=commit_msg,
-            )
-            if not pushed:
-                logger.critical(
-                    "Push manifest to git manually using the file added on S3: \ns3://%s/%s.",
+            try:
+                # write file and push to git
+                local_path_in_repo = self._get_out_path_within_repo()
+                pushed, out_file_path = write_and_push_to_git(
+                    manifest_dump,
+                    out_repo,
+                    local_path_in_repo,
+                    mft_filename,
+                    commit_msg=commit_msg,
+                )
+                
+                if not pushed:
+                    logger.critical(
+                        "Push manifest to git manually using the file added on S3: \ns3://%s/%s.",
+                        self.output_bucket_name,
+                        out_file_path,
+                    )
+            except Exception as e:
+                logger.error(
+                    "Push manifest to git manually using the file added on S3: \ns3://%s/%s. Exception: %s",
                     self.output_bucket_name,
                     out_file_path,
+                    e
                 )
+                # if there was a problem cloning the repository of pushing to git, 
+                # write the manifest somewhere in the fs
+                out_file_path = write_dump_to_fs(manifest_dump, self.temp_dir, mft_filename)
         else:
             # for debug purposes, write in temp dir and not in git repo
             out_file_path = write_dump_to_fs(manifest_dump, self.temp_dir, mft_filename)
@@ -578,6 +610,11 @@ class DataManifest:
         Returns:
             bool: True if the processing stats' update was successful, False otherwise.
         """
+        if any(isinstance(v, str) for v in counts.values()):
+            # if any of the count values are not ints of dicts, convert to int
+            counts = {k: int(v) if isinstance(v, str) else v for k,v in counts.items()}
+            logger.debug("Some string values have been found in counts, converting to int: %s.", counts)
+
         return self._modify_processing_stats(title, str(year), counts)
 
     def add_count_list_by_title_year(

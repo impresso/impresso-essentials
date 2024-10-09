@@ -10,7 +10,9 @@
     "is_patch": false,
     "patched_fields": [],
     "push_to_git": false,
+    "relative_git_path": "",
     "only_counting": false,
     "notes": "small test.",
-    "file_extensions": "jsonl.bz2"
+    "file_extensions": "jsonl.bz2",
+    "compute_altogether": false
 }

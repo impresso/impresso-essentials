@@ -56,7 +56,9 @@ class DataStage(StrEnum):
     EMBED_DOCS = "embeddings-docs"
     EMBED_ENTITIES = "embeddings-entities"
     EMBED_PARAGRAPHS = "embeddings-paragraphs"
+    EMBED_ARTICLES = "embeddings-article"
     ENTITIES = "entities"
+    NEWS_AGENCIES = "newsagencies"
     LANGIDENT = "langident"
     LINGUISTIC_PROCESSING = "lingproc"
     OCRQA = "ocrqa"
@@ -272,7 +274,6 @@ def find_s3_data_manifest_path(
     if partition is None and stage_value in [
         DataStage.CANONICAL.value,  # "canonical"
         DataStage.REBUILT.value,  # "rebuilt"
-        # DataStage.EVENIZED.value,  # "evenized-rebuilt"
         DataStage.PASSIM.value,  # "passim"
         DataStage.SOLR_TEXT.value,  # "solr-ingestion-text"
     ]:
@@ -284,7 +285,7 @@ def find_s3_data_manifest_path(
         # processed data are all in the same bucket,
         # manifest should be directly fetched from path
         full_s3_path = os.path.join(bucket_name, partition, path_filter)
-        print(full_s3_path)
+        #print(full_s3_path)
         matches = fixed_s3fs_glob(full_s3_path)
 
     # matches will always be a list
@@ -316,6 +317,8 @@ def read_manifest_from_s3(
         tuple[str, dict[str, Any]] | tuple[None, None]: S3 path of the manifest
             and corresponding contents, if a manifest was found, None otherwise.
     """
+    # reset the partition to None if it's empty
+    partition = None if partition == '' else partition
     manifest_s3_path = find_s3_data_manifest_path(bucket_name, data_stage, partition)
     if manifest_s3_path is None:
         logger.info("No %s manifest found in bucket %s", data_stage, bucket_name)

@@ -24,9 +24,11 @@ Below is an example for the case of NE-processing, as well as a description of e
     "is_patch": false,
     "patched_fields": [],
     "push_to_git": true,
+    "relative_git_path": "ner_el/v02_feb_2024",
     "only_counting": false,
     "notes": "",
     "file_extensions": ".jsonl.bz2",
+    "compute_altogether": false
 }
 ```
 
@@ -53,8 +55,10 @@ Below is an example for the case of NE-processing, as well as a description of e
   - Can be left to `false` or `null` by default.
 - __*patched_fields*__: (optional) In the case `is_patch=true`, should be the list of individual properties modified or added to the data present in `output_bucket`.
   - Can be left empty if `is_patch=false`.
-- __*push_to_git*__: (optional) Whether to push the generated manifest to the `impresso/impresso-data-release` gitrepository as it's uploaded to S3.
+- __*push_to_git*__: (optional) Whether to push the generated manifest to the `impresso/impresso-data-release` git repository as it's uploaded to S3.
   - Can be set to `false` or `null` during experimentation or debugging to only upload to S3 and not push to git.
+- __*relative_git_path*__: (optional) Only in the case the `data_stage` is a data processing stage; relative path where to push the generated manifest in the `impresso/impresso-data-release` git repository. It's only relevant if `push_to_git=true`, and defaults to the s3 partition where the data to version is on S3. 
+  - Eg. the manifest computed on data located in `s3://42-processed-data-final/topics/tm-de-all-v2024.08.29/` would be pushed by default to the git at the following path: `data-processing/topics/tm-de-all-v2024.08.29/topics_v*-*-*.json`.
 - __*only_counting*__: (optional) Whether the manifest is computed only to count & version the contents of an S3 bucket (`true`, after a copy from one bucket to the next for instance) or if it directly follows a processing (`false`). 
   - When `only_counting=true`, the update information for media titles for which the statistics did not change since the last manifest will not be updated (`last_modification_date`, `update_type`, `update_level`, `updated years`, `updated_fields`, `code_git_commit`).
   - Conversely, when `only_counting=false`, they will all be updated as if the data had been modified or recomputed since the last manifest computation.
@@ -64,3 +68,4 @@ Below is an example for the case of NE-processing, as well as a description of e
   - Can be left empty (`""` or `null`), in which case a generic note with the processed titles will be used.
 - __*file_extensions*__: (required) The extension of the files to consider within `output_bucket`, *including* the first `.` (`.jsonl.bz2` instead of `jsonl.bz2`).
   - Is necessary for the `fixed_s3fs_glob` function used internally, and allows to ensure only desired files are considered (eg. if `.txt` or `.json` files are present in the bucket).
+- __*compute_altogether*__: (optional) Whether the statistics should be computed on the entire dataset at once (eg. for text-reuse). If the output data to version is organized by title, should be `false`. Set to `false` by default.
