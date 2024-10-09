@@ -11,13 +11,13 @@ The library supports configuration of s3 credentials via project-specific local 
 
 ## Installation
 
-With `pip`: 
+With `pip`:
 
 ```bash
 pip install impresso-essentials
 ```
 
-or 
+or
 
 ```bash
 pip install --upgrade impresso-essentials
@@ -125,8 +125,10 @@ To do so, some simple modifications should be made to the process' code:
         only_counting=False,
         notes="Patching some information in the passim-rebuilt",
         push_to_git=True,
+        relative_git_path="relative/path/to/use/in/git/repo", # if None will be set to the s3 partition by default (here "/passim")
     )
     ```
+
     Note however that as opposed to the previous approach, simply instantiating the manifest **will not do anything**, as it is not filled in with S3 data automatically. Instead, the user should provide it with statistics that they computed on their data and wish to track, as it is described in the next steps.
 
 2. **Addition of data and counts:** Once the manifest is instantiated the main interaction with the instantiated manifest object will be through the `add_by_title_year` or `add_by_ci_id` methods (two other with "replace" instead also exist, as well as `add_count_list_by_title_year`, all described in the [documentation](https://impresso-essentials.readthedocs.io/)), which take as input:
