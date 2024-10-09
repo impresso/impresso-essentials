@@ -285,7 +285,7 @@ def find_s3_data_manifest_path(
         # processed data are all in the same bucket,
         # manifest should be directly fetched from path
         full_s3_path = os.path.join(bucket_name, partition, path_filter)
-        #print(full_s3_path)
+        # print(full_s3_path)
         matches = fixed_s3fs_glob(full_s3_path)
 
     # matches will always be a list
@@ -318,7 +318,7 @@ def read_manifest_from_s3(
             and corresponding contents, if a manifest was found, None otherwise.
     """
     # reset the partition to None if it's empty
-    partition = None if partition == '' else partition
+    partition = None if partition == "" else partition
     manifest_s3_path = find_s3_data_manifest_path(bucket_name, data_stage, partition)
     if manifest_s3_path is None:
         logger.info("No %s manifest found in bucket %s", data_stage, bucket_name)
@@ -368,6 +368,9 @@ def write_dump_to_fs(file_contents: str, abs_path: str, filename: str) -> Option
         Optional[str]: Full path of writen file, or None if an IOError occurred.
     """
     full_file_path = os.path.join(abs_path, filename)
+    
+    # ensure the path where to write the local manifest exists
+    os.makedirs(abs_path, exist_ok=True)
 
     # write file to absolute path provided
     try:
@@ -425,16 +428,12 @@ def clone_git_repo(
 
     # if the repository was already cloned, pull and return it.
     if os.path.exists(repo_path) and is_git_repo(repo_path):
-        logger.info(
-            "Git repository %s had already been cloned, pulling from branch %s.",
-            repo_name,
-            branch,
+        msg = (
+            f"Git repository {repo_name} had already been cloned, "
+            f"pulling from branch {branch}."
         )
-        print(
-            "Git repository %s had already been cloned, pulling from branch %s.",
-            repo_name,
-            branch,
-        )
+        logger.info(msg)
+        print(msg)
         repo = git.Repo(repo_path)
         # check if the current branch is the correct one & pull latest version
         if branch not in repo.active_branch.name:
