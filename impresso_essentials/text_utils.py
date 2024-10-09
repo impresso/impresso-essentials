@@ -149,22 +149,19 @@ def tokenise(text: str, language: str) -> list[str]:
     if language not in WHITESPACE_RULES:
         # Default behavior for languages without specific rules:
         # tokenize using standard whitespace splitting
-        return text.split()
+        language = "other"
 
     wsrules = WHITESPACE_RULES[language]
     tokenized_text = []
     current_token = ""
 
     for char in text:
-        if char in wsrules["punctuation_nows_beforeafter"]:
+        if char in wsrules["pct_no_ws_before_after"]:
             if current_token:
                 tokenized_text.append(current_token)
             tokenized_text.append(char)
             current_token = ""
-        elif (
-            char in wsrules["punctuation_nows_before"]
-            or char in wsrules["punctuation_nows_after"]
-        ):
+        elif char in wsrules["pct_no_ws_before"] or char in wsrules["pct_no_ws_after"]:
             if current_token:
                 tokenized_text.append(current_token)
             tokenized_text.append(char)
