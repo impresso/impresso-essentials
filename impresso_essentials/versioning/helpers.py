@@ -368,7 +368,7 @@ def write_dump_to_fs(file_contents: str, abs_path: str, filename: str) -> Option
         Optional[str]: Full path of writen file, or None if an IOError occurred.
     """
     full_file_path = os.path.join(abs_path, filename)
-
+    
     # ensure the path where to write the local manifest exists
     os.makedirs(abs_path, exist_ok=True)
 

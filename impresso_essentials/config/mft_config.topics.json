@@ -1,0 +1,18 @@
+{
+    "data_stage": "topics",
+    "output_bucket": "42-processed-data-final/topics/topics_v1-0-0/",
+    "input_bucket": "22-rebuilt-final/",
+    "git_repository": "add the path to the repo here",
+    "newspapers": [],
+    "temp_directory": "add path to temp dir here",
+    "previous_mft_s3_path": "",
+    "is_staging": false,
+    "is_patch": false,
+    "patched_fields": [],
+    "push_to_git": true,
+    "relative_git_path": "",
+    "only_counting": false,
+    "notes": "[add information about the models used to generate the topics].",
+    "file_extensions": "jsonl.bz2",
+    "compute_altogether": false
+}
