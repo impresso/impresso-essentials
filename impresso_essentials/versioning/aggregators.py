@@ -464,9 +464,10 @@ def compute_stats_in_text_reuse_passage_bag(
                 "issues": "-".join(passage["ci_id"].split("-")[:-1]),
                 "content_items_out": passage["ci_id"],
                 "text_reuse_passages": 1,
-                "text_reuse_clusters": passage["cluster_id"]
+                "text_reuse_clusters": passage["cluster_id"],
             }
-        ).to_dataframe(
+        )
+        .to_dataframe(
             meta={
                 "np_id": str,
                 "year": str,
@@ -490,7 +491,7 @@ def compute_stats_in_text_reuse_passage_bag(
             }
         )
         .reset_index()
-        .sort_values('year')
+        .sort_values("year")
     ).persist()
 
     print("Finished grouping and aggregating stats by title and year.")
@@ -507,45 +508,41 @@ def compute_stats_in_text_reuse_passage_bag(
 def compute_stats_in_topics_bag(
     s3_topics: Bag, client: Client | None = None
 ) -> list[dict[str, Any]]:
-    """Compute stats on a dask bag of entities output content-items.
+    """Compute stats on a dask bag of topic modeling output content-items.
 
     Args:
         s3_topics (db.core.Bag): Bag with the contents of topics files.
         client (Client | None, optional): Dask client. Defaults to None.
 
     Returns:
-        list[dict[str, Any]]: List of counts that match NE DataStatistics keys.
+        list[dict[str, Any]]: List of counts that match topics DataStatistics keys.
     """
-    count_df = (
-        s3_topics.map(
-            lambda ci: {
-                "np_id": ci["id"].split("-")[0],
-                "year": ci["id"].split("-")[1],
-                "issues": ci["id"].split("-i")[0],
-                "content_items_out": 1,
-                "topics": sorted(
-                    list(
-                        set(
-                            [
-                                t["t"]
-                                for t in ci["topics"]
-                                if "t" in t and t["t"] not in ["NIL", None]
-                            ]
-                        )
+    count_df = s3_topics.map(
+        lambda ci: {
+            "np_id": ci["id"].split("-")[0],
+            "year": ci["id"].split("-")[1],
+            "issues": ci["id"].split("-i")[0],
+            "content_items_out": 1,
+            "topics": sorted(
+                list(
+                    set(
+                        [
+                            t["t"]
+                            for t in ci["topics"]
+                            if "t" in t and t["t"] not in ["NIL", None]
+                        ]
                     )
-                ),  # sorted list to ensure all are the same
-            }
-        ).to_dataframe(
-            meta={
+                )
+            ),  # sorted list to ensure all are the same
+        }
+    ).to_dataframe(
+        meta={
             "np_id": str,
             "year": str,
             "issues": str,
             "content_items_out": int,
             "topics": object,
         }
-        )
-        # .explode("ne_entities")
-        # .persist()
     )
 
     count_df["topics"] = count_df["topics"].apply(
@@ -559,7 +556,7 @@ def compute_stats_in_topics_bag(
         .agg(
             {
                 "issues": tunique,
-                "content_items_out": sum, #'count', ???
+                "content_items_out": sum,  #'count', # ???
                 "topics": tunique,
             }
         )
