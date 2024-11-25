@@ -263,9 +263,17 @@ def compute_stats_in_entities_bag(
     count_df = (
         s3_entities.map(
             lambda ci: {
-                "np_id": ci["id"].split("-")[0],
-                "year": ci["id"].split("-")[1],
-                "issues": "-".join(ci["id"].split("-")[:-1]),
+                "np_id": (
+                    ci["id"].split("-")[0] if "id" in ci else ci["ci_id"].split("-")[0]
+                ),
+                "year": (
+                    ci["id"].split("-")[1] if "id" in ci else ci["ci_id"].split("-")[1]
+                ),
+                "issues": (
+                    "-".join(ci["id"].split("-")[:-1])
+                    if "id" in ci
+                    else "-".join(ci["ci_id"].split("-")[:-1])
+                ),
                 "content_items_out": 1,
                 "ne_mentions": len(ci["nes"]),
                 "ne_entities": sorted(

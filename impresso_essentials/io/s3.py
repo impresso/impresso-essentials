@@ -34,15 +34,15 @@ def get_storage_options() -> dict[str, dict | str]:
     try:
         access_key = os.environ["SE_ACCESS_KEY"]
         secret_key = os.environ["SE_SECRET_KEY"]
-    except Exception as e:
+    except Exception:
         msg = (
             "Variables SE_ACCESS_KEY and SE_ACCESS_KEY were not found in the environment! "
             "Setting default values '' instead. Note the connection to S3 won't be possible currently."
         )
-        logger.warining(msg)
+        logger.warning(msg)
         print(msg)
-        access_key = ''
-        secret_key = ''
+        access_key = ""
+        secret_key = ""
 
     return {
         "client_kwargs": {"endpoint_url": "https://os.zhdk.cloud.switch.ch"},
