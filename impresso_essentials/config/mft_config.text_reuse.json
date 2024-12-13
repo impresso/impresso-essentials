@@ -13,7 +13,7 @@
     "relative_git_path": "",
     "only_counting": false,
     "model_id": "",
-    "process_id": "",
+    "run_id": "",
     "notes": "Computing the manifest for text-reuse passages.",
     "file_extensions": "jsonl.bz2",
     "compute_altogether": true

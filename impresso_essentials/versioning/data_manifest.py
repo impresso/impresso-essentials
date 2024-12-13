@@ -67,7 +67,7 @@ class DataManifest:
         push_to_git: Optional[bool] = None,
         relative_git_path: Optional[str] = None,
         model_id: Optional[str] = "",
-        process_id: Optional[str] = "",
+        run_id: Optional[str] = "",
     ) -> None:
 
         # TODO when integrating radio data: init a media_type attribute and add RadioStatistics.
@@ -78,7 +78,7 @@ class DataManifest:
         self.modified_info = False
         self.push_to_git = push_to_git
         self.model_id = model_id
-        self.process_id = process_id
+        self.run_id = run_id
 
         # s3_output_bucket is the path to actual data partition
         s3_output_bucket = s3_output_bucket.replace("s3://", "")
@@ -1120,7 +1120,7 @@ class DataManifest:
                 "input_mft_git_path": input_mft_git_path,
                 "code_git_commit": self.commit_url,
                 "model_id": self.model_id,
-                "process_id": self.process_id,
+                "run_id": self.run_id,
                 "media_list": list(updated_media.values()),
                 "overall_statistics": overall_stats,
                 "notes": self.notes,

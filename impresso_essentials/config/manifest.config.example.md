@@ -27,7 +27,7 @@ Below is an example for the case of NE-processing, as well as a description of e
     "relative_git_path": "ner_el/v02_feb_2024",
     "only_counting": false,
     "model_id": "",
-    "process_id": "",
+    "run_id": "",
     "notes": "",
     "file_extensions": ".jsonl.bz2",
     "compute_altogether": false
@@ -67,7 +67,7 @@ Below is an example for the case of NE-processing, as well as a description of e
   - This parameter allows to maintain update information through manifest iterations, even if the entire contents of a bucket are taken into consideration.
   - Can be set to `false` or `null` by default.
 - __*model_id*__ : (optional) Model ID, according to the Impresso internal naming conventions, if applicable.
-- __*process_id*__ : (optional) Process ID, according to the Impresso internal naming conventions, if applicable.
+- __*run_id*__ : (optional) Run ID, according to the Impresso internal naming conventions, if applicable.
 - __*notes*__ : (optional) Note for the manifest, about the processing.
   - Can be left empty (`""` or `null`), in which case a generic note with the processed titles will be used.
 - __*file_extensions*__: (required) The extension of the files to consider within `output_bucket`, *including* the first `.` (`.jsonl.bz2` instead of `jsonl.bz2`).

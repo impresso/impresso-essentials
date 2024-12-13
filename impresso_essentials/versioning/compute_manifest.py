@@ -50,7 +50,7 @@ OPT_CONFIG_KEYS = [
     "relative_git_path",
     "compute_altogether",
     "model_id",
-    "process_id"
+    "run_id"
 ]
 # list of requirec configurations
 REQ_CONFIG_KEYS = [
@@ -292,7 +292,6 @@ def create_manifest(
 ) -> None:
     """Given its configuration, generate the manifest for a given s3 bucket partition.
 
-    TODO: add option to agg for all titles together if desired
     TODO: add options to exclude NP for all agg types
     TODO: separate further into functions
 
@@ -349,7 +348,7 @@ def create_manifest(
         only_counting=only_counting,
         relative_git_path=relative_git_path if relative_git_path != "" else None,
         model_id = config_dict["model_id"], 
-        process_id = config_dict["process_id"],
+        run_id = config_dict["run_id"],
     )
 
     # `compute_altogether` can be None (counts as False)
