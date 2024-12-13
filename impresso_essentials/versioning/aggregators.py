@@ -525,6 +525,25 @@ def compute_stats_in_topics_bag(
     Returns:
         list[dict[str, Any]]: List of counts that match topics DataStatistics keys.
     """
+
+    def flatten_lists(list_elem):
+        final_list = []
+        for str_list in list_elem:
+            assert isinstance(str_list, str)
+            if str_list == '[]':
+                final_list.append('no-topic')
+            else:
+                for elem in literal_eval(str_list):
+                    final_list.append(elem)
+        
+        return final_list
+        
+
+    def freq(x, col=('topics_fd')):
+        x[col] = dict(Counter(literal_eval(x[col])))
+        return x
+
+    
     count_df = s3_topics.map(
         lambda ci: {
             "np_id": ci["id"].split("-")[0],
@@ -532,15 +551,11 @@ def compute_stats_in_topics_bag(
             "issues": ci["id"].split("-i")[0],
             "content_items_out": 1,
             "topics": sorted(
-                list(
-                    set(
-                        [
-                            t["t"]
-                            for t in ci["topics"]
-                            if "t" in t and t["t"] not in ["NIL", None]
-                        ]
-                    )
-                )
+                [
+                    t["t"]
+                    for t in ci["topics"]
+                    if "t" in t
+                ]
             ),  # sorted list to ensure all are the same
         }
     ).to_dataframe(
@@ -554,22 +569,35 @@ def compute_stats_in_topics_bag(
     )
 
     count_df["topics"] = count_df["topics"].apply(
-        lambda x: x if isinstance(x, list) else [x]
+        lambda x: x if isinstance(x, list) else [x], meta=('topics', 'object')
     )
-    count_df = count_df.explode("topics").persist()
 
     # cum the counts for all values collected
     aggregated_df = (
-        count_df.groupby(by=["np_id", "year"])
+        count_df
+        .explode("topics")
+        .groupby(by=["np_id", "year"])
         .agg(
             {
                 "issues": tunique,
-                "content_items_out": sum,  #'count', # ???
-                "topics": tunique,
+                "content_items_out": sum,  
+                "topics": [tunique, list]
             }
         )
         .reset_index()
-    ).persist()
+    )
+
+    aggregated_df.columns = aggregated_df.columns.to_flat_index()
+    aggregated_df = aggregated_df.rename(columns = {
+        ("np_id", ""): "np_id", 
+        ("year", ""): "year", 
+        ("issues", "tunique"): "issues", 
+        ("content_items_out", "sum"): "content_items_out", 
+        ("topics", "tunique"): "topics",
+        ("topics", "list"): "topics_fd",
+    })
+
+    aggregated_df['topics_fd'] = aggregated_df['topics_fd'].apply(flatten_lists, meta=('topics_fd', 'object'))
 
     print("Finished grouping and aggregating stats by title and year.")
     logger.info("Finished grouping and aggregating stats by title and year.")
@@ -579,4 +607,4 @@ def compute_stats_in_topics_bag(
         progress(aggregated_df)
 
     # return as a list of dicts
-    return aggregated_df.to_bag(format="dict").compute()
+    return aggregated_df.to_bag(format="dict").map(freq).compute()
