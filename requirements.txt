@@ -1,6 +1,7 @@
 boto3>=1.35.23
 botocore>=1.35.23
 dask>=2024.9.1
+dask[dataframe]
 docopt>=0.6.2
 GitPython>=3.1.43
 importlib_resources>=6.4.5
