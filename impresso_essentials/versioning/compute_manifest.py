@@ -48,7 +48,9 @@ OPT_CONFIG_KEYS = [
     "push_to_git",
     "notes",
     "relative_git_path",
-    "compute_altogether"
+    "compute_altogether",
+    "model_id",
+    "process_id"
 ]
 # list of requirec configurations
 REQ_CONFIG_KEYS = [
@@ -346,6 +348,8 @@ def create_manifest(
         previous_mft_path=prev_mft if prev_mft != "" else None,
         only_counting=only_counting,
         relative_git_path=relative_git_path if relative_git_path != "" else None,
+        model_id = config_dict["model_id"], 
+        process_id = config_dict["process_id"],
     )
 
     # `compute_altogether` can be None (counts as False)
