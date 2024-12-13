@@ -51,12 +51,13 @@ class DataStage(StrEnum):
     REBUILT = "rebuilt"
     # EVENIZED = "evenized-rebuilt"  # TODO remove?
     PASSIM = "passim"
-    EMBED_WORDS = "embeddings-words"
-    EMBED_SENTS = "embeddings-sents"
-    EMBED_DOCS = "embeddings-docs"
-    EMBED_ENTITIES = "embeddings-entities"
-    EMBED_PARAGRAPHS = "embeddings-paragraphs"
-    EMBED_ARTICLES = "embeddings-article"
+    EMB_WORDS = "embeddings-words"
+    EMB_SENTS = "embeddings-sents"
+    EMB_DOCS = "embeddings-docs"
+    EMB_ENTITIES = "embeddings-entities"
+    EMB_PARAGRAPHS = "embeddings-paragraphs"
+    EMB_IMAGES = "embeddings-images"
+    # EMBED_ARTICLES = "embeddings-article"
     ENTITIES = "entities"
     NEWS_AGENCIES = "newsagencies"
     LANGIDENT = "langident"
@@ -368,7 +369,7 @@ def write_dump_to_fs(file_contents: str, abs_path: str, filename: str) -> Option
         Optional[str]: Full path of writen file, or None if an IOError occurred.
     """
     full_file_path = os.path.join(abs_path, filename)
-    
+
     # ensure the path where to write the local manifest exists
     os.makedirs(abs_path, exist_ok=True)
 

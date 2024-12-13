@@ -31,7 +31,8 @@ from impresso_essentials.versioning.aggregators import (
     compute_stats_in_entities_bag,
     compute_stats_in_langident_bag,
     compute_stats_in_text_reuse_passage_bag,
-    compute_stats_in_topics_bag
+    compute_stats_in_topics_bag,
+    compute_stats_in_img_emb_bag,
 )
 from impresso_essentials.versioning.data_manifest import DataManifest
 
@@ -50,7 +51,7 @@ OPT_CONFIG_KEYS = [
     "relative_git_path",
     "compute_altogether",
     "model_id",
-    "run_id"
+    "run_id",
 ]
 # list of requirec configurations
 REQ_CONFIG_KEYS = [
@@ -78,7 +79,7 @@ def extract_np_key(s3_key: str, bucket: str) -> str:
         str: Name of the corresponding newspaper, extracted form the s3 path.
     """
     # in format: 's3://31-passim-rebuilt-staging/passim/indeplux/indeplux-1889.jsonl.bz2'
-    if 's3://' in bucket:
+    if "s3://" in bucket:
         key_no_bucket = s3_key.replace(f"{bucket}/", "")
     else:
         key_no_bucket = s3_key.replace(f"s3://{bucket}/", "")
@@ -171,6 +172,8 @@ def compute_stats_for_stage(
         case DataStage.TOPICS:
             return compute_stats_in_topics_bag(files_bag, client=client)
             # return compute_stats_in_langident_bag(files_bag, client=client)
+        case DataStage.EMB_IMAGES:
+            return compute_stats_in_img_emb_bag(files_bag, client=client)
     raise NotImplementedError(
         "The function computing statistics for this DataStage is not yet implemented."
     )
@@ -201,6 +204,7 @@ def validate_config(config: dict[str, Any]) -> dict[str, Any]:
 
     return config
 
+
 def add_stats_to_mft(
     manifest: DataManifest, title: str, computed_stats: list[dict]
 ) -> DataManifest:
@@ -222,11 +226,12 @@ def add_stats_to_mft(
     logger.info("%s - Finished adding stats, going to the next title...", title)
     return manifest
 
+
 def process_by_title(
-    manifest: DataManifest, 
-    s3_files: dict[str, list[str]], 
-    stage: DataStage, 
-    client: Client|None
+    manifest: DataManifest,
+    s3_files: dict[str, list[str]],
+    stage: DataStage,
+    client: Client | None,
 ) -> DataManifest:
     logger.info("\n-> Starting computing the manifest by title <-")
     for np_title, np_s3_files in s3_files.items():
@@ -254,27 +259,33 @@ def process_by_title(
 
 
 def process_altogether(
-    manifest : DataManifest, 
-    s3_files : dict[str, list[str]], 
-    stage : DataStage, 
-    client : Client|None
+    manifest: DataManifest,
+    s3_files: dict[str, list[str]],
+    stage: DataStage,
+    client: Client | None,
 ) -> DataManifest:
-    logger.info("\n-> Starting to compute the manifest altogether, filterting iteratively by title <-")
+    logger.info(
+        "\n-> Starting to compute the manifest altogether, filterting iteratively by title <-"
+    )
 
     s3_fpaths = [j for part_j in s3_files.values() for j in part_j]
     logger.debug("The list of files selected is: %s", s3_fpaths)
     # load the selected files in dask bags
-    processed_files = db.read_text(
-        s3_fpaths, storage_options=IMPRESSO_STORAGEOPT
-    ).map(json.loads).persist()#.map(lambda x: (x['ci_id'].split('-')[0], x)).persist()
+    processed_files = (
+        db.read_text(s3_fpaths, storage_options=IMPRESSO_STORAGEOPT)
+        .map(json.loads)
+        .persist()
+    )  # .map(lambda x: (x['ci_id'].split('-')[0], x)).persist()
 
     total_num = len(KNOWN_JOURNALS)
     for idx, np_title in enumerate(KNOWN_JOURNALS):
 
-        logger.info("---------- %s - %s/%s ----------", np_title, idx+1, total_num)
+        logger.info("---------- %s - %s/%s ----------", np_title, idx + 1, total_num)
 
         # filter to only keep the tr_passages for this title
-        filtered = processed_files.filter(lambda x: f"{np_title}-" in x['ci_id']).persist()
+        filtered = processed_files.filter(
+            lambda x: f"{np_title}-" in x["ci_id"]
+        ).persist()
 
         logger.info(
             "%s - Starting to compute the statistics on the filtered files...",
@@ -347,13 +358,13 @@ def create_manifest(
         previous_mft_path=prev_mft if prev_mft != "" else None,
         only_counting=only_counting,
         relative_git_path=relative_git_path if relative_git_path != "" else None,
-        model_id = config_dict["model_id"], 
-        run_id = config_dict["run_id"],
+        model_id=config_dict["model_id"],
+        run_id=config_dict["run_id"],
     )
 
     # `compute_altogether` can be None (counts as False)
-    if stage == DataStage.TEXT_REUSE or config_dict["compute_altogether"]:
-        # when the output data is not organized by title, 
+    if config_dict["compute_altogether"]:
+        # when the output data is not organized by title,
         # the manifest needs to be computed on all the data at once
         manifest = process_altogether(manifest, s3_files, stage, client)
     else:

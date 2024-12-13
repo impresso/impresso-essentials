@@ -210,22 +210,23 @@ class NewspaperStatistics(DataStatistics):
         "ne_entities",
         "embeddings_el",
         "topics",
-        "topics_fd", # '_fd' suffix signifies a frenquency dict
+        "topics_fd",  # '_fd' suffix signifies a frenquency dict
         "lang_fd",  # '_fd' suffix signifies a frenquency dict
         "text_reuse_clusters",
         "text_reuse_passages",
     ]
 
     stage_extra_keys = {
-        DataStage.CANONICAL: ['pages', 'images'],
-        DataStage.REBUILT: ['ft_tokens'],
-        DataStage.ENTITIES: ['ne_entities', 'ne_mentions'],
-        DataStage.NEWS_AGENCIES: ['ne_entities', 'ne_mentions'],
-        DataStage.PASSIM: ['ft_tokens'],
-        DataStage.LANGIDENT: ['images', 'lang_fd'],
-        DataStage.TEXT_REUSE: ['text_reuse_clusters', 'text_reuse_passages'],
-        DataStage.TOPICS: ['topics', 'topic_fd'],
-        DataStage.MYSQL_CIS: ['pages']
+        DataStage.CANONICAL: ["pages", "images"],
+        DataStage.REBUILT: ["ft_tokens"],
+        DataStage.ENTITIES: ["ne_entities", "ne_mentions"],
+        DataStage.NEWS_AGENCIES: ["ne_entities", "ne_mentions"],
+        DataStage.PASSIM: ["ft_tokens"],
+        DataStage.LANGIDENT: ["images", "lang_fd"],
+        DataStage.TEXT_REUSE: ["text_reuse_clusters", "text_reuse_passages"],
+        DataStage.TOPICS: ["topics", "topic_fd"],
+        DataStage.MYSQL_CIS: ["pages"],
+        DataStage.EMB_IMAGES: ["images"],
         # TODO Add for solr
         # todo add for embeddings
     }
