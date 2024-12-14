@@ -538,15 +538,16 @@ def compute_stats_in_topics_bag(
 
         return final_list
 
-    def freq(x, col=("topics_fd")):
-        x[col] = dict(Counter(literal_eval(x[col])))
+    def freq(x, col="topics_fd"):
+        if col in x:
+            x[col] = dict(Counter(literal_eval(x[col])))
         return x
 
     count_df = s3_topics.map(
         lambda ci: {
-            "np_id": ci["id"].split("-")[0],
-            "year": ci["id"].split("-")[1],
-            "issues": ci["id"].split("-i")[0],
+            "np_id": ci["ci_id"].split("-")[0],
+            "year": ci["ci_id"].split("-")[1],
+            "issues": ci["ci_id"].split("-i")[0],
             "content_items_out": 1,
             "topics": sorted(
                 [t["t"] for t in ci["topics"] if "t" in t]
@@ -625,9 +626,9 @@ def compute_stats_in_img_emb_bag(
     count_df = (
         s3_emb_images.map(
             lambda ci: {
-                "np_id": ci["id"].split("-")[0],
-                "year": ci["id"].split("-")[1],
-                "issues": "-".join(ci["id"].split("-")[:-1]),
+                "np_id": ci["ci_id"].split("-")[0],
+                "year": ci["ci_id"].split("-")[1],
+                "issues": "-".join(ci["ci_id"].split("-")[:-1]),
                 "content_items_out": 1,
                 "images": 1,
             }

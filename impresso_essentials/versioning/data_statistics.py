@@ -224,7 +224,7 @@ class NewspaperStatistics(DataStatistics):
         DataStage.PASSIM: ["ft_tokens"],
         DataStage.LANGIDENT: ["images", "lang_fd"],
         DataStage.TEXT_REUSE: ["text_reuse_clusters", "text_reuse_passages"],
-        DataStage.TOPICS: ["topics", "topic_fd"],
+        DataStage.TOPICS: ["topics", "topics_fd"],
         DataStage.MYSQL_CIS: ["pages"],
         DataStage.EMB_IMAGES: ["images"],
         # TODO Add for solr
