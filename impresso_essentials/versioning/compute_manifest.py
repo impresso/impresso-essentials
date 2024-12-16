@@ -206,24 +206,30 @@ def validate_config(config: dict[str, Any]) -> dict[str, Any]:
 
 
 def add_stats_to_mft(
-    manifest: DataManifest, title: str, computed_stats: list[dict]
+    manifest: DataManifest, np_title: str, computed_stats: list[dict]
 ) -> DataManifest:
     logger.info(
         "%s - Populating the manifest with the resulting %s yearly statistics found...",
-        title,
+        np_title,
         len(computed_stats),
     )
-    logger.debug("%s - computed_stats: %s", title, computed_stats)
+    logger.debug("%s - computed_stats: %s", np_title, computed_stats)
 
     for stats in computed_stats:
         title = stats["np_id"]
-        year = stats["year"]
-        del stats["np_id"]
-        del stats["year"]
-        logger.debug("Adding %s to %s-%s", stats, title, year)
-        manifest.add_by_title_year(title, year, stats)
+        if title != np_title and np_title in KNOWN_JOURNALS:
+            # unless the value for np_title is the name of a file, ensure the correct stats are being added.
+            msg = f"Warning, some stats were computed on the wrong title! np_title={np_title}, title={title}, year={stats["year"]}. Not adding them."
+            print(msg)
+            logger.info(msg)
+        else:
+            year = stats["year"]
+            del stats["np_id"]
+            del stats["year"]
+            logger.debug("Adding %s to %s-%s", stats, title, year)
+            manifest.add_by_title_year(title, year, stats)
 
-    logger.info("%s - Finished adding stats, going to the next title...", title)
+    logger.info("%s - Finished adding stats, going to the next title...", np_title)
     return manifest
 
 
@@ -237,7 +243,7 @@ def process_by_title(
     for np_title, np_s3_files in s3_files.items():
 
         logger.info("---------- %s ----------", np_title)
-        logger.debug(
+        logger.info(
             "The list of files selected for %s is: %s",
             np_title,
             np_s3_files,
@@ -284,7 +290,7 @@ def process_altogether(
 
         # filter to only keep the tr_passages for this title
         filtered = processed_files.filter(
-            lambda x: f"{np_title}-" in x["ci_id"]
+            lambda x: x["ci_id"].startswith(f"{np_title}-") # in x["ci_id"]
         ).persist()
 
         logger.info(
