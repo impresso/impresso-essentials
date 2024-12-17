@@ -529,7 +529,7 @@ def compute_stats_in_topics_bag(
     def flatten_lists(list_elem):
         final_list = []
         for str_list in list_elem:
-            assert isinstance(str_list, str)
+            assert isinstance(str_list, str), "Inside topic aggregator flatten_list, and provided list is not str!"
             if str_list == "[]":
                 final_list.append("no-topic")
             else:
@@ -542,6 +542,14 @@ def compute_stats_in_topics_bag(
         if col in x:
             x[col] = dict(Counter(literal_eval(x[col])))
         return x
+    
+    try:
+        test = s3_topics.take(1, npartitions = -1)
+    except Exception as e:
+        msg = f"Warning! the contents of the topics files were empty!! {e}"
+        print(msg)
+        logger.warning(msg)
+        return {}
 
     count_df = s3_topics.map(
         lambda ci: {
@@ -572,20 +580,23 @@ def compute_stats_in_topics_bag(
         count_df.explode("topics")
         .groupby(by=["np_id", "year"])
         .agg({"issues": tunique, "content_items_out": sum, "topics": [tunique, list]})
-        .reset_index()
-        .sort_values("year")
     )
 
     aggregated_df.columns = aggregated_df.columns.to_flat_index()
-    aggregated_df = aggregated_df.rename(
-        columns={
-            ("np_id", ""): "np_id",
-            ("year", ""): "year",
-            ("issues", "tunique"): "issues",
-            ("content_items_out", "sum"): "content_items_out",
-            ("topics", "tunique"): "topics",
-            ("topics", "list"): "topics_fd",
-        }
+    aggregated_df = (
+        aggregated_df
+        .reset_index()
+        .rename(
+            columns={
+                ("np_id", ""): "np_id",
+                ("year", ""): "year",
+                ("issues", "tunique"): "issues",
+                ("content_items_out", "sum"): "content_items_out",
+                ("topics", "tunique"): "topics",
+                ("topics", "list"): "topics_fd",
+            }
+        ) 
+        .sort_values("year")
     )
 
     aggregated_df["topics_fd"] = aggregated_df["topics_fd"].apply(
@@ -595,10 +606,18 @@ def compute_stats_in_topics_bag(
     print("Finished grouping and aggregating stats by title and year.")
     logger.info("Finished grouping and aggregating stats by title and year.")
 
-    if client is not None:
+    #if client is not None:
         # only add the progress bar if the client is defined
-        progress(aggregated_df)
+        #progress(aggregated_df)
 
+    try:
+        test = aggregated_df.head()
+    except Exception as e:
+        msg = f"Warning! the aggregated_df was empty!! {e}"
+        print(msg)
+        logger.warning(msg)
+        return {}
+    
     # return as a list of dicts
     return aggregated_df.to_bag(format="dict").map(freq).compute()
 

@@ -79,10 +79,13 @@ def extract_np_key(s3_key: str, bucket: str) -> str:
         str: Name of the corresponding newspaper, extracted form the s3 path.
     """
     # in format: 's3://31-passim-rebuilt-staging/passim/indeplux/indeplux-1889.jsonl.bz2'
+    if not bucket.endswith('/'):
+        bucket = f"{bucket}/"
+        
     if "s3://" in bucket:
-        key_no_bucket = s3_key.replace(f"{bucket}/", "")
+        key_no_bucket = s3_key.replace(f"{bucket}", "")
     else:
-        key_no_bucket = s3_key.replace(f"s3://{bucket}/", "")
+        key_no_bucket = s3_key.replace(f"s3://{bucket}", "")
     # Not all buckets separate the data per title, but the title will always come first.
     if "/" in key_no_bucket:
         return key_no_bucket.split("/")[0]
@@ -242,24 +245,27 @@ def process_by_title(
     logger.info("\n-> Starting computing the manifest by title <-")
     for np_title, np_s3_files in s3_files.items():
 
-        logger.info("---------- %s ----------", np_title)
-        logger.info(
-            "The list of files selected for %s is: %s",
-            np_title,
-            np_s3_files,
-        )
-        # load the selected files in dask bags
-        processed_files = db.read_text(
-            np_s3_files, storage_options=IMPRESSO_STORAGEOPT
-        ).map(json.loads)
+        if np_title in KNOWN_JOURNALS:
+            logger.info("---------- %s ----------", np_title)
+            logger.info(
+                "The list of files selected for %s is: %s",
+                np_title,
+                np_s3_files,
+            )
+            # load the selected files in dask bags
+            processed_files = db.read_text(
+                np_s3_files, storage_options=IMPRESSO_STORAGEOPT
+            ).map(json.loads)
 
-        logger.info(
-            "%s - Starting to compute the statistics on the fetched files...",
-            np_title,
-        )
-        computed_stats = compute_stats_for_stage(processed_files, stage, client)
+            logger.info(
+                "%s - Starting to compute the statistics on the fetched files...",
+                np_title,
+            )
+            computed_stats = compute_stats_for_stage(processed_files, stage, client)
 
-        manifest = add_stats_to_mft(manifest, np_title, computed_stats)
+            manifest = add_stats_to_mft(manifest, np_title, computed_stats)
+        else:
+            logger.info("Found S3 files for %s which is not an known media title, it will be ignored.", np_title)
 
     return manifest
 
