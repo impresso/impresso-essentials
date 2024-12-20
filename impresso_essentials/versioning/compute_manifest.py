@@ -222,7 +222,7 @@ def add_stats_to_mft(
         title = stats["np_id"]
         if title != np_title and np_title in KNOWN_JOURNALS:
             # unless the value for np_title is the name of a file, ensure the correct stats are being added.
-            msg = f"Warning, some stats were computed on the wrong title! np_title={np_title}, title={title}, year={stats["year"]}. Not adding them."
+            msg = f"Warning, some stats were computed on the wrong title! np_title={np_title}, title={title}, year={stats['year']}. Not adding them."
             print(msg)
             logger.info(msg)
         else:
