@@ -140,6 +140,7 @@ class DataManifest:
             DataStage.CANONICAL,
             DataStage.PASSIM,
             DataStage.MYSQL_CIS,
+            DataStage.EMB_IMAGES,
         ]:
             # datastages that directly follow or use canonical data
             return DataStage.CANONICAL
