@@ -25,15 +25,7 @@ from dask.distributed import Client
 from impresso_essentials.io.s3 import fixed_s3fs_glob, IMPRESSO_STORAGEOPT
 from impresso_essentials.utils import init_logger, KNOWN_JOURNALS
 from impresso_essentials.versioning.helpers import validate_stage, DataStage
-from impresso_essentials.versioning.aggregators import (
-    compute_stats_in_canonical_bag,
-    compute_stats_in_rebuilt_bag,
-    compute_stats_in_entities_bag,
-    compute_stats_in_langident_bag,
-    compute_stats_in_text_reuse_passage_bag,
-    compute_stats_in_topics_bag,
-    compute_stats_in_img_emb_bag,
-)
+from impresso_essentials.versioning import aggregators
 from impresso_essentials.versioning.data_manifest import DataManifest
 
 logger = logging.getLogger(__name__)
@@ -155,28 +147,29 @@ def compute_stats_for_stage(
     """
     match stage:
         case DataStage.CANONICAL:
-            return compute_stats_in_canonical_bag(files_bag, client=client)
+            return aggregators.compute_stats_in_canonical_bag(files_bag, client=client)
         case DataStage.REBUILT:
-            return compute_stats_in_rebuilt_bag(
+            return aggregators.compute_stats_in_rebuilt_bag(
                 files_bag, include_np=True, client=client
             )
         case DataStage.ENTITIES:
-            return compute_stats_in_entities_bag(files_bag, client=client)
+            return aggregators.compute_stats_in_entities_bag(files_bag, client=client)
         case DataStage.NEWS_AGENCIES:
-            return compute_stats_in_entities_bag(files_bag, client=client)
+            return aggregators.compute_stats_in_entities_bag(files_bag, client=client)
         case DataStage.PASSIM:
-            return compute_stats_in_rebuilt_bag(
+            return aggregators.compute_stats_in_rebuilt_bag(
                 files_bag, include_np=True, passim=True, client=client
             )
         case DataStage.LANGIDENT:
-            return compute_stats_in_langident_bag(files_bag, client=client)
+            return aggregators.compute_stats_in_langident_bag(files_bag, client=client)
         case DataStage.TEXT_REUSE:
-            return compute_stats_in_text_reuse_passage_bag(files_bag, client=client)
+            return aggregators.compute_stats_in_text_reuse_passage_bag(files_bag, client=client)
         case DataStage.TOPICS:
-            return compute_stats_in_topics_bag(files_bag, client=client)
-            # return compute_stats_in_langident_bag(files_bag, client=client)
+            return aggregators.compute_stats_in_topics_bag(files_bag, client=client)
         case DataStage.EMB_IMAGES:
-            return compute_stats_in_img_emb_bag(files_bag, client=client)
+            return aggregators.compute_stats_in_img_emb_bag(files_bag, client=client)
+        case DataStage.LINGPROC:
+            return aggregators.compute_stats_in_lingproc_bag(files_bag, client=client)
     raise NotImplementedError(
         "The function computing statistics for this DataStage is not yet implemented."
     )

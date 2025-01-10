@@ -686,3 +686,66 @@ def compute_stats_in_img_emb_bag(
 
     # return as a list of dicts
     return aggregated_df.to_bag(format="dict").compute()
+
+
+def compute_stats_in_lingproc_bag(
+    s3_lingprocs: Bag,
+    client: Client | None = None,
+) -> list[dict[str, int | str]]:
+    """Compute stats on a dask bag of linguistic preprocessing output content-items.
+
+    Args:
+        s3_lingprocs (db.core.Bag): Bag with the contents of the lingproc files.
+        client (Client | None, optional): Dask client. Defaults to None.
+
+    Returns:
+        list[dict[str, Union[int, str]]]: List of counts that match lingproc.
+            DataStatistics keys.
+    """
+    # when called in the rebuilt, all the rebuilt articles in the bag
+    # are from the same newspaper and year
+    print("Fetched all files, gathering desired information.")
+    logger.info("Fetched all files, gathering desired information.")
+
+    # define the list of columns in the dataframe
+    count_df = (
+        s3_lingprocs.map(
+            lambda ci: {
+                "np_id": ci["ci_id"].split("-")[0],
+                "year": ci["ci_id"].split("-")[1],
+                "issues": "-".join(ci["ci_id"].split("-")[:-1]),
+                "content_items_out": 1,
+            }
+        )
+        .to_dataframe(
+            meta={
+                "np_id": str,
+                "year": str,
+                "issues": str,
+                "content_items_out": int,
+            }
+        )
+        .persist()
+    )
+
+    aggregated_df = (
+        count_df.groupby(by=["np_id", "year"])
+        .agg(
+            {
+                "issues": tunique,
+                "content_items_out": sum,
+            }
+        )
+        .reset_index()
+        .sort_values("year")
+    ).persist()
+
+    print("Finished grouping and aggregating stats by title and year.")
+    logger.info("Finished grouping and aggregating stats by title and year.")
+
+    if client is not None:
+        # only add the progress bar if the client is defined
+        progress(aggregated_df)
+
+    # return as a list of dicts
+    return aggregated_df.to_bag(format="dict").compute()

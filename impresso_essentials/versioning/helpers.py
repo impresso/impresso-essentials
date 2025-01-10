@@ -61,7 +61,7 @@ class DataStage(StrEnum):
     ENTITIES = "entities"
     NEWS_AGENCIES = "newsagencies"
     LANGIDENT = "langident"
-    LINGUISTIC_PROCESSING = "lingproc"
+    LINGPROC = "lingproc"
     OCRQA = "ocrqa"
     TEXT_REUSE = "text-reuse"
     TOPICS = "topics"

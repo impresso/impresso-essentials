@@ -247,8 +247,10 @@ class NewspaperStatistics(DataStatistics):
 
         # add the stage specific additional keys when relevant
         count_keys.extend(self.stage_extra_keys[self.stage])
-        
+
         # For case DataStage.SOLR_TEXT, all keys are already added.
+        #   keys: 'content_items_out', 'titles', 'issues'
+        # For case DataStage.LINGPROC, all keys are already added.
         #   keys: 'content_items_out', 'titles', 'issues'
         return count_keys
 
