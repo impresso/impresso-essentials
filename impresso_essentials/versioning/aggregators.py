@@ -525,22 +525,40 @@ def compute_stats_in_topics_bag(
     Returns:
         list[dict[str, Any]]: List of counts that match topics DataStatistics keys.
     """
+
+    def flatten_lists(list_elem):
+        final_list = []
+        for str_list in list_elem:
+            assert isinstance(str_list, str), "Inside topic aggregator flatten_list, and provided list is not str!"
+            if str_list == "[]":
+                final_list.append("no-topic")
+            else:
+                for elem in literal_eval(str_list):
+                    final_list.append(elem)
+
+        return final_list
+
+    def freq(x, col="topics_fd"):
+        if col in x:
+            x[col] = dict(Counter(literal_eval(x[col])))
+        return x
+    
+    try:
+        test = s3_topics.take(1, npartitions = -1)
+    except Exception as e:
+        msg = f"Warning! the contents of the topics files were empty!! {e}"
+        print(msg)
+        logger.warning(msg)
+        return {}
+
     count_df = s3_topics.map(
         lambda ci: {
-            "np_id": ci["id"].split("-")[0],
-            "year": ci["id"].split("-")[1],
-            "issues": ci["id"].split("-i")[0],
+            "np_id": ci["ci_id"].split("-")[0],
+            "year": ci["ci_id"].split("-")[1],
+            "issues": ci["ci_id"].split("-i")[0],
             "content_items_out": 1,
             "topics": sorted(
-                list(
-                    set(
-                        [
-                            t["t"]
-                            for t in ci["topics"]
-                            if "t" in t and t["t"] not in ["NIL", None]
-                        ]
-                    )
-                )
+                [t["t"] for t in ci["topics"] if "t" in t]
             ),  # sorted list to ensure all are the same
         }
     ).to_dataframe(
@@ -554,21 +572,172 @@ def compute_stats_in_topics_bag(
     )
 
     count_df["topics"] = count_df["topics"].apply(
-        lambda x: x if isinstance(x, list) else [x]
+        lambda x: x if isinstance(x, list) else [x], meta=("topics", "object")
     )
-    count_df = count_df.explode("topics").persist()
 
     # cum the counts for all values collected
+    aggregated_df = (
+        count_df.explode("topics")
+        .groupby(by=["np_id", "year"])
+        .agg({"issues": tunique, "content_items_out": sum, "topics": [tunique, list]})
+    )
+
+    aggregated_df.columns = aggregated_df.columns.to_flat_index()
+    aggregated_df = (
+        aggregated_df
+        .reset_index()
+        .rename(
+            columns={
+                ("np_id", ""): "np_id",
+                ("year", ""): "year",
+                ("issues", "tunique"): "issues",
+                ("content_items_out", "sum"): "content_items_out",
+                ("topics", "tunique"): "topics",
+                ("topics", "list"): "topics_fd",
+            }
+        ) 
+        .sort_values("year")
+    )
+
+    aggregated_df["topics_fd"] = aggregated_df["topics_fd"].apply(
+        flatten_lists, meta=("topics_fd", "object")
+    )
+
+    print("Finished grouping and aggregating stats by title and year.")
+    logger.info("Finished grouping and aggregating stats by title and year.")
+
+    #if client is not None:
+        # only add the progress bar if the client is defined
+        #progress(aggregated_df)
+
+    try:
+        test = aggregated_df.head()
+    except Exception as e:
+        msg = f"Warning! the aggregated_df was empty!! {e}"
+        print(msg)
+        logger.warning(msg)
+        return {}
+    
+    # return as a list of dicts
+    return aggregated_df.to_bag(format="dict").map(freq).compute()
+
+
+def compute_stats_in_img_emb_bag(
+    s3_emb_images: Bag,
+    client: Client | None = None,
+) -> list[dict[str, int | str]]:
+    """Compute stats on a dask bag of image embedding output content-items.
+
+    Args:
+        s3_emb_images (db.core.Bag): Bag with the contents of the embedded images files.
+        client (Client | None, optional): Dask client. Defaults to None.
+
+    Returns:
+        list[dict[str, Union[int, str]]]: List of counts that match image embeddings
+            DataStatistics keys.
+    """
+    # when called in the rebuilt, all the rebuilt articles in the bag
+    # are from the same newspaper and year
+    print("Fetched all files, gathering desired information.")
+    logger.info("Fetched all files, gathering desired information.")
+
+    # define the list of columns in the dataframe
+    count_df = (
+        s3_emb_images.map(
+            lambda ci: {
+                "np_id": ci["ci_id"].split("-")[0],
+                "year": ci["ci_id"].split("-")[1],
+                "issues": "-".join(ci["ci_id"].split("-")[:-1]),
+                "content_items_out": 1,
+                "images": 1,
+            }
+        )
+        .to_dataframe(
+            meta={
+                "np_id": str,
+                "year": str,
+                "issues": str,
+                "content_items_out": int,
+                "images": int,
+            }
+        )
+        .persist()
+    )
+
     aggregated_df = (
         count_df.groupby(by=["np_id", "year"])
         .agg(
             {
                 "issues": tunique,
-                "content_items_out": sum,  #'count', # ???
-                "topics": tunique,
+                "content_items_out": sum,
+                "images": sum,
             }
         )
         .reset_index()
+        .sort_values("year")
+    ).persist()
+
+    print("Finished grouping and aggregating stats by title and year.")
+    logger.info("Finished grouping and aggregating stats by title and year.")
+
+    if client is not None:
+        # only add the progress bar if the client is defined
+        progress(aggregated_df)
+
+    # return as a list of dicts
+    return aggregated_df.to_bag(format="dict").compute()
+
+
+def compute_stats_in_lingproc_bag(
+    s3_lingprocs: Bag,
+    client: Client | None = None,
+) -> list[dict[str, int | str]]:
+    """Compute stats on a dask bag of linguistic preprocessing output content-items.
+
+    Args:
+        s3_lingprocs (db.core.Bag): Bag with the contents of the lingproc files.
+        client (Client | None, optional): Dask client. Defaults to None.
+
+    Returns:
+        list[dict[str, Union[int, str]]]: List of counts that match lingproc.
+            DataStatistics keys.
+    """
+    # when called in the rebuilt, all the rebuilt articles in the bag
+    # are from the same newspaper and year
+    print("Fetched all files, gathering desired information.")
+    logger.info("Fetched all files, gathering desired information.")
+
+    # define the list of columns in the dataframe
+    count_df = (
+        s3_lingprocs.map(
+            lambda ci: {
+                "np_id": ci["ci_id"].split("-")[0],
+                "year": ci["ci_id"].split("-")[1],
+                "issues": "-".join(ci["ci_id"].split("-")[:-1]),
+                "content_items_out": 1,
+            }
+        )
+        .to_dataframe(
+            meta={
+                "np_id": str,
+                "year": str,
+                "issues": str,
+                "content_items_out": int,
+            }
+        )
+        .persist()
+    )
+
+    aggregated_df = (
+        count_df.groupby(by=["np_id", "year"])
+        .agg(
+            {
+                "issues": tunique,
+                "content_items_out": sum,
+            }
+        )
+        .reset_index()
+        .sort_values("year")
     ).persist()
 
     print("Finished grouping and aggregating stats by title and year.")

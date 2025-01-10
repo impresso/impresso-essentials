@@ -210,10 +210,26 @@ class NewspaperStatistics(DataStatistics):
         "ne_entities",
         "embeddings_el",
         "topics",
+        "topics_fd",  # '_fd' suffix signifies a frenquency dict
         "lang_fd",  # '_fd' suffix signifies a frenquency dict
         "text_reuse_clusters",
         "text_reuse_passages",
     ]
+
+    stage_extra_keys = {
+        DataStage.CANONICAL: ["pages", "images"],
+        DataStage.REBUILT: ["ft_tokens"],
+        DataStage.ENTITIES: ["ne_entities", "ne_mentions"],
+        DataStage.NEWS_AGENCIES: ["ne_entities", "ne_mentions"],
+        DataStage.PASSIM: ["ft_tokens"],
+        DataStage.LANGIDENT: ["images", "lang_fd"],
+        DataStage.TEXT_REUSE: ["text_reuse_clusters", "text_reuse_passages"],
+        DataStage.TOPICS: ["topics", "topics_fd"],
+        DataStage.MYSQL_CIS: ["pages"],
+        DataStage.EMB_IMAGES: ["images"],
+        # TODO Add for solr
+        # todo add for embeddings
+    }
 
     def _define_count_keys(self) -> list[str]:
         """Define the count keys to use for these specific statistics.
@@ -229,53 +245,12 @@ class NewspaperStatistics(DataStatistics):
         # add 'issues' and 'titles' (only if corpus granularity)
         count_keys.extend(self.possible_count_keys[start_index:2])
 
-        match self.stage:
-            case DataStage.CANONICAL:
-                # add 'pages' and 'images'
-                count_keys.append(self.possible_count_keys[2])
-                count_keys.append(self.possible_count_keys[5])
-                # keys: 'content_items_out', 'titles', 'issues', 'pages', 'images'
-            case DataStage.REBUILT:
-                # add 'ft_tokens'
-                count_keys.append(self.possible_count_keys[4])
-                # keys: 'content_items_out', 'titles', 'issues', 'ft_tokens'
-            # case DataStage.EMBEDDINGS:
-            # add 'embeddings'
-            # count_keys.append(self.stage.value)
-            # TODO update
-            # keys: 'content_items_out', 'titles', 'issues', 'embeddings'
-            case DataStage.ENTITIES:
-                # add 'ne_entities', 'ne_mentions'
-                count_keys.extend(self.possible_count_keys[7:9])
-                # keys: 'content_items_out', 'titles', 'issues', 'ne_entities', 'ne_mentions'
-            case DataStage.NEWS_AGENCIES:
-                # add 'ne_entities', 'ne_mentions'
-                count_keys.extend(self.possible_count_keys[7:9])
-                # keys: 'content_items_out', 'titles', 'issues', 'ne_entities', 'ne_mentions'
-            case DataStage.PASSIM:
-                # add 'ft_tokens'
-                count_keys.append(self.possible_count_keys[4])
-                # keys: 'content_items_out', 'titles', 'issues', 'ft_tokens'
-            case DataStage.LANGIDENT:
-                # add 'images', 'lang_fd'
-                count_keys.append(self.possible_count_keys[5])
-                count_keys.append(self.possible_count_keys[11])
-                # keys: 'content_items_out', 'titles', 'issues', 'pages', 'lang_fd'
-            case DataStage.TEXT_REUSE:
-                # add 'text_reuse_clusters' and 'text_reuse_passages'
-                count_keys.append(self.possible_count_keys[12])
-                count_keys.append(self.possible_count_keys[13])
-                # keys: 'content_items_out', 'titles', 'issues', 'text_reuse_clusters', 'text_reuse_passages'
-            case DataStage.TOPICS:
-                # add 'topics'
-                # TODO update
-                count_keys.append(self.possible_count_keys[10])
-            case DataStage.MYSQL_CIS:
-                # add 'pages'
-                count_keys.append(self.possible_count_keys[2])
-                # keys: 'content_items_out', 'titles', 'issues', 'pages'
+        # add the stage specific additional keys when relevant
+        count_keys.extend(self.stage_extra_keys[self.stage])
 
         # For case DataStage.SOLR_TEXT, all keys are already added.
+        #   keys: 'content_items_out', 'titles', 'issues'
+        # For case DataStage.LINGPROC, all keys are already added.
         #   keys: 'content_items_out', 'titles', 'issues'
         return count_keys
 

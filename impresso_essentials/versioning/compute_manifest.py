@@ -25,14 +25,7 @@ from dask.distributed import Client
 from impresso_essentials.io.s3 import fixed_s3fs_glob, IMPRESSO_STORAGEOPT
 from impresso_essentials.utils import init_logger, KNOWN_JOURNALS
 from impresso_essentials.versioning.helpers import validate_stage, DataStage
-from impresso_essentials.versioning.aggregators import (
-    compute_stats_in_canonical_bag,
-    compute_stats_in_rebuilt_bag,
-    compute_stats_in_entities_bag,
-    compute_stats_in_langident_bag,
-    compute_stats_in_text_reuse_passage_bag,
-    compute_stats_in_topics_bag
-)
+from impresso_essentials.versioning import aggregators
 from impresso_essentials.versioning.data_manifest import DataManifest
 
 logger = logging.getLogger(__name__)
@@ -48,7 +41,9 @@ OPT_CONFIG_KEYS = [
     "push_to_git",
     "notes",
     "relative_git_path",
-    "compute_altogether"
+    "compute_altogether",
+    "model_id",
+    "run_id",
 ]
 # list of requirec configurations
 REQ_CONFIG_KEYS = [
@@ -76,10 +71,13 @@ def extract_np_key(s3_key: str, bucket: str) -> str:
         str: Name of the corresponding newspaper, extracted form the s3 path.
     """
     # in format: 's3://31-passim-rebuilt-staging/passim/indeplux/indeplux-1889.jsonl.bz2'
-    if 's3://' in bucket:
-        key_no_bucket = s3_key.replace(f"{bucket}/", "")
+    if not bucket.endswith('/'):
+        bucket = f"{bucket}/"
+        
+    if "s3://" in bucket:
+        key_no_bucket = s3_key.replace(f"{bucket}", "")
     else:
-        key_no_bucket = s3_key.replace(f"s3://{bucket}/", "")
+        key_no_bucket = s3_key.replace(f"s3://{bucket}", "")
     # Not all buckets separate the data per title, but the title will always come first.
     if "/" in key_no_bucket:
         return key_no_bucket.split("/")[0]
@@ -149,26 +147,29 @@ def compute_stats_for_stage(
     """
     match stage:
         case DataStage.CANONICAL:
-            return compute_stats_in_canonical_bag(files_bag, client=client)
+            return aggregators.compute_stats_in_canonical_bag(files_bag, client=client)
         case DataStage.REBUILT:
-            return compute_stats_in_rebuilt_bag(
+            return aggregators.compute_stats_in_rebuilt_bag(
                 files_bag, include_np=True, client=client
             )
         case DataStage.ENTITIES:
-            return compute_stats_in_entities_bag(files_bag, client=client)
+            return aggregators.compute_stats_in_entities_bag(files_bag, client=client)
         case DataStage.NEWS_AGENCIES:
-            return compute_stats_in_entities_bag(files_bag, client=client)
+            return aggregators.compute_stats_in_entities_bag(files_bag, client=client)
         case DataStage.PASSIM:
-            return compute_stats_in_rebuilt_bag(
+            return aggregators.compute_stats_in_rebuilt_bag(
                 files_bag, include_np=True, passim=True, client=client
             )
         case DataStage.LANGIDENT:
-            return compute_stats_in_langident_bag(files_bag, client=client)
+            return aggregators.compute_stats_in_langident_bag(files_bag, client=client)
         case DataStage.TEXT_REUSE:
-            return compute_stats_in_text_reuse_passage_bag(files_bag, client=client)
+            return aggregators.compute_stats_in_text_reuse_passage_bag(files_bag, client=client)
         case DataStage.TOPICS:
-            return compute_stats_in_topics_bag(files_bag, client=client)
-            # return compute_stats_in_langident_bag(files_bag, client=client)
+            return aggregators.compute_stats_in_topics_bag(files_bag, client=client)
+        case DataStage.EMB_IMAGES:
+            return aggregators.compute_stats_in_img_emb_bag(files_bag, client=client)
+        case DataStage.LINGPROC:
+            return aggregators.compute_stats_in_lingproc_bag(files_bag, client=client)
     raise NotImplementedError(
         "The function computing statistics for this DataStage is not yet implemented."
     )
@@ -199,80 +200,97 @@ def validate_config(config: dict[str, Any]) -> dict[str, Any]:
 
     return config
 
+
 def add_stats_to_mft(
-    manifest: DataManifest, title: str, computed_stats: list[dict]
+    manifest: DataManifest, np_title: str, computed_stats: list[dict]
 ) -> DataManifest:
     logger.info(
         "%s - Populating the manifest with the resulting %s yearly statistics found...",
-        title,
+        np_title,
         len(computed_stats),
     )
-    logger.debug("%s - computed_stats: %s", title, computed_stats)
+    logger.debug("%s - computed_stats: %s", np_title, computed_stats)
 
     for stats in computed_stats:
         title = stats["np_id"]
-        year = stats["year"]
-        del stats["np_id"]
-        del stats["year"]
-        logger.debug("Adding %s to %s-%s", stats, title, year)
-        manifest.add_by_title_year(title, year, stats)
+        if title != np_title and np_title in KNOWN_JOURNALS:
+            # unless the value for np_title is the name of a file, ensure the correct stats are being added.
+            msg = f"Warning, some stats were computed on the wrong title! np_title={np_title}, title={title}, year={stats['year']}. Not adding them."
+            print(msg)
+            logger.info(msg)
+        else:
+            year = stats["year"]
+            del stats["np_id"]
+            del stats["year"]
+            logger.debug("Adding %s to %s-%s", stats, title, year)
+            manifest.add_by_title_year(title, year, stats)
 
-    logger.info("%s - Finished adding stats, going to the next title...", title)
+    logger.info("%s - Finished adding stats, going to the next title...", np_title)
     return manifest
 
+
 def process_by_title(
-    manifest: DataManifest, 
-    s3_files: dict[str, list[str]], 
-    stage: DataStage, 
-    client: Client|None
+    manifest: DataManifest,
+    s3_files: dict[str, list[str]],
+    stage: DataStage,
+    client: Client | None,
 ) -> DataManifest:
     logger.info("\n-> Starting computing the manifest by title <-")
     for np_title, np_s3_files in s3_files.items():
 
-        logger.info("---------- %s ----------", np_title)
-        logger.debug(
-            "The list of files selected for %s is: %s",
-            np_title,
-            np_s3_files,
-        )
-        # load the selected files in dask bags
-        processed_files = db.read_text(
-            np_s3_files, storage_options=IMPRESSO_STORAGEOPT
-        ).map(json.loads)
+        if np_title in KNOWN_JOURNALS:
+            logger.info("---------- %s ----------", np_title)
+            logger.info(
+                "The list of files selected for %s is: %s",
+                np_title,
+                np_s3_files,
+            )
+            # load the selected files in dask bags
+            processed_files = db.read_text(
+                np_s3_files, storage_options=IMPRESSO_STORAGEOPT
+            ).map(json.loads)
 
-        logger.info(
-            "%s - Starting to compute the statistics on the fetched files...",
-            np_title,
-        )
-        computed_stats = compute_stats_for_stage(processed_files, stage, client)
+            logger.info(
+                "%s - Starting to compute the statistics on the fetched files...",
+                np_title,
+            )
+            computed_stats = compute_stats_for_stage(processed_files, stage, client)
 
-        manifest = add_stats_to_mft(manifest, np_title, computed_stats)
+            manifest = add_stats_to_mft(manifest, np_title, computed_stats)
+        else:
+            logger.info("Found S3 files for %s which is not an known media title, it will be ignored.", np_title)
 
     return manifest
 
 
 def process_altogether(
-    manifest : DataManifest, 
-    s3_files : dict[str, list[str]], 
-    stage : DataStage, 
-    client : Client|None
+    manifest: DataManifest,
+    s3_files: dict[str, list[str]],
+    stage: DataStage,
+    client: Client | None,
 ) -> DataManifest:
-    logger.info("\n-> Starting to compute the manifest altogether, filterting iteratively by title <-")
+    logger.info(
+        "\n-> Starting to compute the manifest altogether, filterting iteratively by title <-"
+    )
 
     s3_fpaths = [j for part_j in s3_files.values() for j in part_j]
     logger.debug("The list of files selected is: %s", s3_fpaths)
     # load the selected files in dask bags
-    processed_files = db.read_text(
-        s3_fpaths, storage_options=IMPRESSO_STORAGEOPT
-    ).map(json.loads).persist()#.map(lambda x: (x['ci_id'].split('-')[0], x)).persist()
+    processed_files = (
+        db.read_text(s3_fpaths, storage_options=IMPRESSO_STORAGEOPT)
+        .map(json.loads)
+        .persist()
+    )  # .map(lambda x: (x['ci_id'].split('-')[0], x)).persist()
 
     total_num = len(KNOWN_JOURNALS)
     for idx, np_title in enumerate(KNOWN_JOURNALS):
 
-        logger.info("---------- %s - %s/%s ----------", np_title, idx+1, total_num)
+        logger.info("---------- %s - %s/%s ----------", np_title, idx + 1, total_num)
 
         # filter to only keep the tr_passages for this title
-        filtered = processed_files.filter(lambda x: f"{np_title}-" in x['ci_id']).persist()
+        filtered = processed_files.filter(
+            lambda x: x["ci_id"].startswith(f"{np_title}-") # in x["ci_id"]
+        ).persist()
 
         logger.info(
             "%s - Starting to compute the statistics on the filtered files...",
@@ -290,7 +308,6 @@ def create_manifest(
 ) -> None:
     """Given its configuration, generate the manifest for a given s3 bucket partition.
 
-    TODO: add option to agg for all titles together if desired
     TODO: add options to exclude NP for all agg types
     TODO: separate further into functions
 
@@ -346,11 +363,13 @@ def create_manifest(
         previous_mft_path=prev_mft if prev_mft != "" else None,
         only_counting=only_counting,
         relative_git_path=relative_git_path if relative_git_path != "" else None,
+        model_id=config_dict["model_id"],
+        run_id=config_dict["run_id"],
     )
 
     # `compute_altogether` can be None (counts as False)
-    if stage == DataStage.TEXT_REUSE or config_dict["compute_altogether"]:
-        # when the output data is not organized by title, 
+    if config_dict["compute_altogether"]:
+        # when the output data is not organized by title,
         # the manifest needs to be computed on all the data at once
         manifest = process_altogether(manifest, s3_files, stage, client)
     else:

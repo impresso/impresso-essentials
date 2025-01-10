@@ -126,6 +126,8 @@ To do so, some simple modifications should be made to the process' code:
         notes="Patching some information in the passim-rebuilt",
         push_to_git=True,
         relative_git_path="relative/path/to/use/in/git/repo", # if None will be set to the s3 partition by default (here "/passim")
+        model_id = "model_id_vx.x.x", # according to Impresso naming conventions, if relevant
+        run_id = "run_id_vx-x-x", # according to Impresso naming conventions
     )
     ```
 

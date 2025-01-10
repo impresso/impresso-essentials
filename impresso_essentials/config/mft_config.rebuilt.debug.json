@@ -12,6 +12,8 @@
     "push_to_git": false,
     "relative_git_path": "",
     "only_counting": false,
+    "model_id": "",
+    "run_id": "",
     "notes": "small test.",
     "file_extensions": "jsonl.bz2",
     "compute_altogether": false
