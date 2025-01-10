@@ -111,7 +111,7 @@
 <li class="toctree-l4"><a class="reference internal" href="#impresso_essentials.versioning.helpers.DataStage.EMB_WORDS"><code class="docutils literal notranslate"><span class="pre">DataStage.EMB_WORDS</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="#impresso_essentials.versioning.helpers.DataStage.ENTITIES"><code class="docutils literal notranslate"><span class="pre">DataStage.ENTITIES</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="#impresso_essentials.versioning.helpers.DataStage.LANGIDENT"><code class="docutils literal notranslate"><span class="pre">DataStage.LANGIDENT</span></code></a></li>
-<li class="toctree-l4"><a class="reference internal" href="#impresso_essentials.versioning.helpers.DataStage.LINGUISTIC_PROCESSING"><code class="docutils literal notranslate"><span class="pre">DataStage.LINGUISTIC_PROCESSING</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#impresso_essentials.versioning.helpers.DataStage.LINGPROC"><code class="docutils literal notranslate"><span class="pre">DataStage.LINGPROC</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="#impresso_essentials.versioning.helpers.DataStage.MYSQL_CIS"><code class="docutils literal notranslate"><span class="pre">DataStage.MYSQL_CIS</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="#impresso_essentials.versioning.helpers.DataStage.NEWS_AGENCIES"><code class="docutils literal notranslate"><span class="pre">DataStage.NEWS_AGENCIES</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="#impresso_essentials.versioning.helpers.DataStage.OCRQA"><code class="docutils literal notranslate"><span class="pre">DataStage.OCRQA</span></code></a></li>
@@ -156,6 +156,7 @@
 <li class="toctree-l3"><a class="reference internal" href="#impresso_essentials.versioning.aggregators.compute_stats_in_entities_bag"><code class="docutils literal notranslate"><span class="pre">compute_stats_in_entities_bag()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#impresso_essentials.versioning.aggregators.compute_stats_in_img_emb_bag"><code class="docutils literal notranslate"><span class="pre">compute_stats_in_img_emb_bag()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#impresso_essentials.versioning.aggregators.compute_stats_in_langident_bag"><code class="docutils literal notranslate"><span class="pre">compute_stats_in_langident_bag()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#impresso_essentials.versioning.aggregators.compute_stats_in_lingproc_bag"><code class="docutils literal notranslate"><span class="pre">compute_stats_in_lingproc_bag()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#impresso_essentials.versioning.aggregators.compute_stats_in_rebuilt_bag"><code class="docutils literal notranslate"><span class="pre">compute_stats_in_rebuilt_bag()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#impresso_essentials.versioning.aggregators.compute_stats_in_solr_text_bag"><code class="docutils literal notranslate"><span class="pre">compute_stats_in_solr_text_bag()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#impresso_essentials.versioning.aggregators.compute_stats_in_text_reuse_passage_bag"><code class="docutils literal notranslate"><span class="pre">compute_stats_in_text_reuse_passage_bag()</span></code></a></li>
@@ -1040,8 +1041,8 @@ TODO: add options for data indexing in Solr</p>
 <dd></dd></dl>
 
 <dl class="py attribute">
-<dt class="sig sig-object py" id="impresso_essentials.versioning.helpers.DataStage.LINGUISTIC_PROCESSING">
-<span class="sig-name descname"><span class="pre">LINGUISTIC_PROCESSING</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'lingproc'</span></em><a class="headerlink" href="#impresso_essentials.versioning.helpers.DataStage.LINGUISTIC_PROCESSING" title="Link to this definition"></a></dt>
+<dt class="sig sig-object py" id="impresso_essentials.versioning.helpers.DataStage.LINGPROC">
+<span class="sig-name descname"><span class="pre">LINGPROC</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'lingproc'</span></em><a class="headerlink" href="#impresso_essentials.versioning.helpers.DataStage.LINGPROC" title="Link to this definition"></a></dt>
 <dd></dd></dl>
 
 <dl class="py attribute">
@@ -1749,6 +1750,30 @@ compute statistics on.</p>
 </dd>
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
 <dd class="field-odd"><p>list[dict[str, Any]]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="impresso_essentials.versioning.aggregators.compute_stats_in_lingproc_bag">
+<span class="sig-prename descclassname"><span class="pre">impresso_essentials.versioning.aggregators.</span></span><span class="sig-name descname"><span class="pre">compute_stats_in_lingproc_bag</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">s3_lingprocs</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Bag</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">client</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Client</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">int</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">str</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#impresso_essentials.versioning.aggregators.compute_stats_in_lingproc_bag" title="Link to this definition"></a></dt>
+<dd><p>Compute stats on a dask bag of linguistic preprocessing output content-items.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>s3_lingprocs</strong> (<em>db.core.Bag</em>) – Bag with the contents of the lingproc files.</p></li>
+<li><p><strong>client</strong> (<em>Client</em><em> | </em><em>None</em><em>, </em><em>optional</em>) – Dask client. Defaults to None.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><dl class="simple">
+<dt>List of counts that match lingproc.</dt><dd><p>DataStatistics keys.</p>
+</dd>
+</dl>
+</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>list[dict[str, Union[int, str]]]</p>
 </dd>
 </dl>
 </dd></dl>
