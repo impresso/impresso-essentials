@@ -303,7 +303,7 @@ def compute_stats_in_entities_bag(
     )
 
     count_df["ne_entities"] = count_df["ne_entities"].apply(
-        lambda x: x if isinstance(x, list) else [x]
+        lambda x: x if isinstance(x, list) else [x], meta=("ne_entities", "object")
     )
     count_df = count_df.explode("ne_entities").persist()
 
