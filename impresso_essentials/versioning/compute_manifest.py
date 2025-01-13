@@ -84,6 +84,110 @@ def extract_np_key(s3_key: str, bucket: str) -> str:
 
     return key_no_bucket.split("-")[0]
 
+"""def remove_empty_corrupted_files(s3_files: dict[str, list[str]]) -> dict[str, list[str]]:
+    correct_files = {}
+    empty_files = []
+    corrupted_files = []
+    for np, files_np in s3_files.items():
+        msg = f"Checking files for {np}"
+        logger.info(msg)
+        print(msg)
+        for file in files_np:
+            try:
+                # try to read the file and only take the first one
+                contents = db.read_text(
+                    file, storage_options=IMPRESSO_STORAGEOPT
+                ).map(json.loads).take(1)
+                # if the file is empty, append to empty files
+                if len(contents) == 0:
+                    empty_files.append(file)
+                # otherwise it's correct, append it to the correct files
+                if np in correct_files:
+                    correct_files[np].append(file)
+                else:
+                    correct_files[np] = [file]
+                del contents
+            except Exception as e:
+                msg = f"{file}, an exception occurred trying to read it, it is probably corrupted."
+                logger.debug(msg)
+                corrupted_files.append(file)
+
+    total_num_files = sum(len(v) for v in s3_files.values())
+    total_num_ok_files = sum(len(v) for v in correct_files.values())
+    msg = (
+        f"Found {total_num_files} files on S3, {len(empty_files)} were empty archives, {len(corrupted_files)} were corrupted."
+        f"As a result, the remaining {total_num_ok_files} will be considered for the manifest computation."
+    )
+    logger.info(msg)
+    print(msg)
+    # if there are any empty of corrupted archives, print which ones
+    if len(empty_files) != 0:
+        msg = f"Empty archives: {empty_files}."
+        logger.info(msg)
+        print(msg)
+    if len(corrupted_files) != 0:
+        msg = f"Corrupted archives: {corrupted_files}."
+        logger.info(msg)
+        print(msg)
+
+    return correct_files"""
+
+def remove_empty_corrupted_files(s3_files: dict[str, list[str]]) -> dict[str, list[str]]:
+    correct_files = {}
+    empty_files = []
+    corrupted_files = []
+    for np, files_np in s3_files.items():
+        msg = f"Checking files for {np}"
+        logger.info(msg)
+        print(msg)
+        try:
+            # try to read the file and only take the first one
+            contents = db.read_text(
+                files_np, storage_options=IMPRESSO_STORAGEOPT
+            ).map(lambda x: (x, len(json.loads(x))!=0))
+
+            empty_contents = contents.filter(lambda x: not x[1]).map(lambda x: x[0]).compute()
+            non_empty_contents = contents.filter(lambda x: x[1]).map(lambda x: x[0]).compute()
+            # if the file is empty, append to empty files
+            if len(empty_contents) != 0:
+                empty_files.extend(empty_contents)
+            # otherwise it's correct, append it to the correct files
+            correct_files[np] = [non_empty_contents]
+
+            del contents
+        except Exception as e:
+            msg = f"{files_np}, an exception occurred trying to read some files, checking one by 1."
+            logger.debug(msg)
+            for file in files_np:
+                try: 
+                    corr_contents = db.read_text(
+                        file, storage_options=IMPRESSO_STORAGEOPT
+                    ).map(json.loads).take(1)
+                    del corr_contents
+                except:
+                    msg = f"{file}, an exception occurred trying to read it, it is probably corrupted."
+                    logger.debug(msg)
+                    corrupted_files.append(file)
+
+    total_num_files = sum(len(v) for v in s3_files.values())
+    total_num_ok_files = sum(len(v) for v in correct_files.values())
+    msg = (
+        f"Found {total_num_files} files on S3, {len(empty_files)} were empty archives, {len(corrupted_files)} were corrupted."
+        f"As a result, the remaining {total_num_ok_files} will be considered for the manifest computation."
+    )
+    logger.info(msg)
+    print(msg)
+    # if there are any empty of corrupted archives, print which ones
+    if len(empty_files) != 0:
+        msg = f"Empty archives: {empty_files}."
+        logger.info(msg)
+        print(msg)
+    if len(corrupted_files) != 0:
+        msg = f"Corrupted archives: {corrupted_files}."
+        logger.info(msg)
+        print(msg)
+
+    return correct_files
 
 def get_files_to_consider(config: dict[str, Any]) -> Optional[dict[str, list[str]]]:
     """Get the list of S3 files to consider based on the provided configuration.
@@ -118,17 +222,20 @@ def get_files_to_consider(config: dict[str, Any]) -> Optional[dict[str, list[str
                 s3_files[np].append(s3_key)
             else:
                 s3_files[np] = [s3_key]
-        return s3_files
+        #return s3_files
+    else:
+        # here list newspapers instead and s3_files becomes a dict np -> liest of files
+        logger.info("Fetching the files to consider for titles %s...", config["newspapers"])
+        s3_files = {}
+        for np in config["newspapers"]:
+            s3_files[np] = fixed_s3fs_glob(
+                os.path.join(config["output_bucket"], np, extension_filter)
+            )
 
-    # here list newspapers instead and s3_files becomes a dict np -> liest of files
-    logger.info("Fetching the files to consider for titles %s...", config["newspapers"])
-    s3_files = {}
-    for np in config["newspapers"]:
-        s3_files[np] = fixed_s3fs_glob(
-            os.path.join(config["output_bucket"], np, extension_filter)
-        )
+    # filter out empty or corrupted files
+    correct_s3_files = remove_empty_corrupted_files(s3_files)
 
-    return s3_files
+    return correct_s3_files
 
 
 def compute_stats_for_stage(
