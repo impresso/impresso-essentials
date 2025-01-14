@@ -94,8 +94,8 @@ def remove_empty_corrupted_files(s3_files: dict[str, list[str]]) -> dict[str, li
     correct_files = {}
     #empty_files = []
     corrupted_files = []
-    for np, files_np in s3_files.items():
-        msg = f"Checking files for {np}"
+    for idx, (np, files_np) in enumerate(s3_files.items()):
+        msg = f"Checking for corrupted S3 archives for {np} ({idx+1}/{len(s3_files)})"
         logger.info(msg)
         print(msg)
         try:
@@ -104,9 +104,11 @@ def remove_empty_corrupted_files(s3_files: dict[str, list[str]]) -> dict[str, li
                 files_np, storage_options=IMPRESSO_STORAGEOPT
             ).map(lambda x: len(json.loads(x))).compute()
 
+            # add any non-corrupted files to the list of files to consider
+            correct_files[np] = files_np
             del contents
         except Exception as e:
-            msg = f"{np}, an exception occurred trying to read some files, checking one by 1 from {files_np}."
+            msg = f"{np}, an exception occurred trying to read some archives, checking one by 1 from {files_np}."
             logger.info(msg)
             print(msg)
             for file in files_np:
@@ -114,6 +116,12 @@ def remove_empty_corrupted_files(s3_files: dict[str, list[str]]) -> dict[str, li
                     corr_contents = db.read_text(
                         file, storage_options=IMPRESSO_STORAGEOPT
                     ).map(json.loads).take(1)
+
+                    # add any non-corrupted files to the list of files to consider
+                    if np in correct_files:
+                        correct_files[np].append(file)
+                    else:
+                        correct_files[np] = [file]
                     del corr_contents
                 except:
                     msg = f"{file}, an exception occurred trying to read it, it is probably corrupted."
@@ -130,7 +138,7 @@ def remove_empty_corrupted_files(s3_files: dict[str, list[str]]) -> dict[str, li
     total_num_files = sum(len(v) for v in s3_files.values())
     total_num_ok_files = sum(len(v) for v in correct_files.values())
     msg = (
-        f"Found {total_num_files} files on S3, {len(corrupted_files)} were corrupted."
+        f"Found {total_num_files} files on S3, {len(corrupted_files)} were corrupted. "
         f"As a result, the remaining {total_num_ok_files} will be considered for the manifest computation."
     )
     logger.info(msg)
