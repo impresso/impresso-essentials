@@ -115,7 +115,7 @@ def remove_empty_corrupted_files(s3_files: dict[str, list[str]]) -> dict[str, li
                 try: 
                     corr_contents = db.read_text(
                         file, storage_options=IMPRESSO_STORAGEOPT
-                    ).map(json.loads).take(1)
+                    ).map(lambda x: len(json.loads(x))).compute()
 
                     # add any non-corrupted files to the list of files to consider
                     if np in correct_files:
