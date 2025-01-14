@@ -120,7 +120,7 @@ def remove_corrupted_files(s3_files: dict[str, list[str]]) -> dict[str, list[str
             correct_files[np] = files_np
             del contents
         except Exception as e:
-            msg = f"{np}, an exception occurred trying to read some archives, checking one by 1 for {len(files_np)} archives."
+            msg = f"{np}, an exception occurred trying to read some archives, checking one by 1 for {len(files_np)} archives. \nException: {e}"
             logger.info(msg)
             print(msg)
             msg = f"List of archives to check one by one: {files_np}"
