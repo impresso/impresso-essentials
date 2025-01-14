@@ -86,16 +86,28 @@ def extract_np_key(s3_key: str, bucket: str) -> str:
     return key_no_bucket.split("-")[0]
 
 
-def remove_empty_corrupted_files(s3_files: dict[str, list[str]]) -> dict[str, list[str]]:
+def remove_corrupted_files(s3_files: dict[str, list[str]]) -> dict[str, list[str]]:
+    """Check if any of the files to consider found on S3 are corrupted or empty.
 
+    If the files are corrupted or empty, they can cause errors in the later steps of
+    the manifest computation. Hence this step allows to prevent this.
+    This step is optional and creates some overhead for the manifest computation.
+    This method also logs any file that has been found to create errors when being
+    read by dask.
+
+    Args:
+        s3_files (dict[str, list[str]]): S3 archive files to consider that where found.
+
+    Returns:
+        dict[str, list[str]]: All non-corrupted/empty archives to use for the manifest.
+    """
     msg = "Starting to check all considered s3 archives to ensure they are not corrupted..."
     logger.info(msg)
     print(msg)
     correct_files = {}
-    #empty_files = []
     corrupted_files = []
     for idx, (np, files_np) in enumerate(s3_files.items()):
-        msg = f"Checking for corrupted S3 archives for {np} ({idx+1}/{len(s3_files)})"
+        msg = f"Checking for corrupted S3 archives for {np} ({idx+1}/{len(s3_files)}): {len(files_np)} archives"
         logger.info(msg)
         print(msg)
         try:
@@ -108,9 +120,11 @@ def remove_empty_corrupted_files(s3_files: dict[str, list[str]]) -> dict[str, li
             correct_files[np] = files_np
             del contents
         except Exception as e:
-            msg = f"{np}, an exception occurred trying to read some archives, checking one by 1 from {files_np}."
+            msg = f"{np}, an exception occurred trying to read some archives, checking one by 1 for {len(files_np)} archives."
             logger.info(msg)
             print(msg)
+            msg = f"List of archives to check one by one: {files_np}"
+            logger.debug(msg)
             for file in files_np:
                 try: 
                     corr_contents = db.read_text(
@@ -190,7 +204,7 @@ def get_files_to_consider(config: dict[str, Any]) -> Optional[dict[str, list[str
 
     if config["check_s3_archives"]:
         # filter out empty or corrupted files
-        correct_s3_files = remove_empty_corrupted_files(s3_files)
+        correct_s3_files = remove_corrupted_files(s3_files)
         return correct_s3_files
     
     msg = (
