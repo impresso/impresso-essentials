@@ -16,5 +16,6 @@
     "run_id": "topics-tm-mallet_infer_seed42_v2.0.1-multilingual_v2-0-1",
     "notes": "Debug manifest on the topics - would need to be recomputed with the correct git repo.",
     "file_extensions": "jsonl.bz2",
-    "compute_altogether": false
+    "compute_altogether": false,
+    "check_s3_archives": false
 }

@@ -16,5 +16,6 @@
     "run_id": "",
     "notes": "small test.",
     "file_extensions": "jsonl.bz2",
-    "compute_altogether": false
+    "compute_altogether": false,
+    "check_s3_archives": false
 }
