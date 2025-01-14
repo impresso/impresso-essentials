@@ -106,7 +106,7 @@ def remove_empty_corrupted_files(s3_files: dict[str, list[str]]) -> dict[str, li
 
             # add any non-corrupted files to the list of files to consider
             correct_files[np] = files_np
-            #del contents
+            del contents
         except Exception as e:
             msg = f"{np}, an exception occurred trying to read some archives, checking one by 1 from {files_np}."
             logger.info(msg)
@@ -122,18 +122,12 @@ def remove_empty_corrupted_files(s3_files: dict[str, list[str]]) -> dict[str, li
                         correct_files[np].append(file)
                     else:
                         correct_files[np] = [file]
-                    #del corr_contents
+                    del corr_contents
                 except:
                     msg = f"{file}, an exception occurred trying to read it, it is probably corrupted."
                     logger.info(msg)
                     print(msg)
                     corrupted_files.append(file)
-
-        # ensure any remaining objects are deleted and not consuming memory
-            if corr_contents:
-                del corr_contents
-        if contents:
-            del contents
 
     total_num_files = sum(len(v) for v in s3_files.values())
     total_num_ok_files = sum(len(v) for v in correct_files.values())
