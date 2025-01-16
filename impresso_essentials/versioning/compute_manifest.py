@@ -19,6 +19,7 @@ import logging
 from typing import Any, Optional
 import git
 from docopt import docopt
+from tqdm import tqdm
 
 import dask.bag as db
 from dask.distributed import Client
@@ -125,7 +126,7 @@ def remove_corrupted_files(s3_files: dict[str, list[str]]) -> dict[str, list[str
             print(msg)
             msg = f"List of archives to check one by one: {files_np}"
             logger.debug(msg)
-            for file in files_np:
+            for file in tqdm(files_np):
                 try: 
                     corr_contents = db.read_text(
                         file, storage_options=IMPRESSO_STORAGEOPT
