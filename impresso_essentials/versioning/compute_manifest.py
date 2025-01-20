@@ -126,7 +126,7 @@ def remove_corrupted_files(s3_files: dict[str, list[str]]) -> dict[str, list[str
             print(msg)
             msg = f"List of archives to check one by one: {files_np}"
             logger.debug(msg)
-            for file in tqdm(files_np):
+            for file in tqdm(files_np, total=len(files_np)):
                 try: 
                     corr_contents = db.read_text(
                         file, storage_options=IMPRESSO_STORAGEOPT
