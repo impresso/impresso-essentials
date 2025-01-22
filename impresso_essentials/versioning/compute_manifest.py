@@ -115,7 +115,7 @@ def remove_corrupted_files(s3_files: dict[str, list[str]]) -> dict[str, list[str
             # try to read the file and only take the first one
             contents = db.read_text(
                 files_np, storage_options=IMPRESSO_STORAGEOPT
-            ).map(lambda x: len(json.loads(x))).compute()
+            ).map(lambda x: (len(json.loads(x)), json.loads(x).keys())).compute()
 
             # add any non-corrupted files to the list of files to consider
             correct_files[np] = files_np

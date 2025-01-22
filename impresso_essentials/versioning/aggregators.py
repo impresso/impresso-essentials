@@ -260,6 +260,16 @@ def compute_stats_in_entities_bag(
     Returns:
         list[dict[str, Any]]: List of counts that match NE DataStatistics keys.
     """
+
+    try:
+        test = s3_entities.take(1, npartitions = -1)
+    except Exception as e:
+        msg = f"Warning! the contents of the entities files were empty!! {e}"
+        print(msg)
+        logger.warning(msg)
+        return {}
+    
+
     count_df = (
         s3_entities.map(
             lambda ci: {
