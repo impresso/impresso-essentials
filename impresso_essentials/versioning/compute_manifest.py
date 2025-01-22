@@ -218,14 +218,16 @@ def get_files_to_consider(config: dict[str, Any]) -> Optional[dict[str, list[str
 
 
 def compute_stats_for_stage(
-    files_bag: db.core.Bag, stage: DataStage, client: Optional[Client] = None
-) -> Optional[list[dict]]:
+    files_bag: db.core.Bag, stage: DataStage, client: Client|None = None, title: str|None=None
+) -> list[dict]|None:
     """Compute statistics for a specific data stage.
 
     Args:
         files_bag (db.core.Bag): A bag containing files for statistics computation.
         stage (DataStage): The data stage for which statistics are computed.
         client (Client | None, optional): Dask client to use.
+        title (str, optional): Media title for which the stats are being computed.
+            Defaults to None.
 
     Returns:
         list[dict] | None]: List of computed yearly statistics, or None if statistics
@@ -233,29 +235,29 @@ def compute_stats_for_stage(
     """
     match stage:
         case DataStage.CANONICAL:
-            return aggregators.compute_stats_in_canonical_bag(files_bag, client=client)
+            return aggregators.compute_stats_in_canonical_bag(files_bag, client=client, title=title)
         case DataStage.REBUILT:
             return aggregators.compute_stats_in_rebuilt_bag(
-                files_bag, include_np=True, client=client
+                files_bag, include_np=True, client=client, title=title
             )
         case DataStage.ENTITIES:
-            return aggregators.compute_stats_in_entities_bag(files_bag, client=client)
+            return aggregators.compute_stats_in_entities_bag(files_bag, client=client, title=title)
         case DataStage.NEWS_AGENCIES:
-            return aggregators.compute_stats_in_entities_bag(files_bag, client=client)
+            return aggregators.compute_stats_in_entities_bag(files_bag, client=client, title=title)
         case DataStage.PASSIM:
             return aggregators.compute_stats_in_rebuilt_bag(
-                files_bag, include_np=True, passim=True, client=client
+                files_bag, include_np=True, passim=True, client=client, title=title
             )
         case DataStage.LANGIDENT:
-            return aggregators.compute_stats_in_langident_bag(files_bag, client=client)
+            return aggregators.compute_stats_in_langident_bag(files_bag, client=client, title=title)
         case DataStage.TEXT_REUSE:
-            return aggregators.compute_stats_in_text_reuse_passage_bag(files_bag, client=client)
+            return aggregators.compute_stats_in_text_reuse_passage_bag(files_bag, client=client, title=title)
         case DataStage.TOPICS:
-            return aggregators.compute_stats_in_topics_bag(files_bag, client=client)
+            return aggregators.compute_stats_in_topics_bag(files_bag, client=client, title=title)
         case DataStage.EMB_IMAGES:
-            return aggregators.compute_stats_in_img_emb_bag(files_bag, client=client)
+            return aggregators.compute_stats_in_img_emb_bag(files_bag, client=client, title=title)
         case DataStage.LINGPROC:
-            return aggregators.compute_stats_in_lingproc_bag(files_bag, client=client)
+            return aggregators.compute_stats_in_lingproc_bag(files_bag, client=client, title=title)
     raise NotImplementedError(
         "The function computing statistics for this DataStage is not yet implemented."
     )
@@ -340,7 +342,7 @@ def process_by_title(
                 "%s - Starting to compute the statistics on the fetched files...",
                 np_title,
             )
-            computed_stats = compute_stats_for_stage(processed_files, stage, client)
+            computed_stats = compute_stats_for_stage(processed_files, stage, client, title=np_title)
 
             manifest = add_stats_to_mft(manifest, np_title, computed_stats)
         else:
@@ -382,7 +384,7 @@ def process_altogether(
             "%s - Starting to compute the statistics on the filtered files...",
             np_title,
         )
-        computed_stats = compute_stats_for_stage(filtered, stage, client)
+        computed_stats = compute_stats_for_stage(filtered, stage, client, title=np_title)
 
         manifest = add_stats_to_mft(manifest, np_title, computed_stats)
 
