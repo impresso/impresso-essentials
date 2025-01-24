@@ -23,6 +23,13 @@ or
 pip install --upgrade impresso-essentials
 ```
 
+### To Clone the repository:
+
+The `--recursive` option needs to be used when cloning the repository so that the [impresso-schemas](https://github.com/impresso/impresso-schemas) submodule is also cloned at the same time.
+```bash
+# with SSH
+git clone --recursive git@github.com:impresso/impresso-essentials.git 
+```
 
 ## Data Versioning
 

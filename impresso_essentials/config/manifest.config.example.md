@@ -30,7 +30,8 @@ Below is an example for the case of NE-processing, as well as a description of e
     "run_id": "",
     "notes": "",
     "file_extensions": ".jsonl.bz2",
-    "compute_altogether": false
+    "compute_altogether": false,
+    "check_s3_archives": true
 }
 ```
 
@@ -73,3 +74,4 @@ Below is an example for the case of NE-processing, as well as a description of e
 - __*file_extensions*__: (required) The extension of the files to consider within `output_bucket`, *including* the first `.` (`.jsonl.bz2` instead of `jsonl.bz2`).
   - Is necessary for the `fixed_s3fs_glob` function used internally, and allows to ensure only desired files are considered (eg. if `.txt` or `.json` files are present in the bucket).
 - __*compute_altogether*__: (optional) Whether the statistics should be computed on the entire dataset at once (eg. for text-reuse). If the output data to version is organized by title, should be `false`. Set to `false` by default.
+- __*check_s3_archives*__: (optional) Set to True to check if there are any corrupted S3 archives before starting the computation of the manifest. This will add an overhead to the processing, so it's set to `false` by default.

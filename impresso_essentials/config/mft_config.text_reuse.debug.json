@@ -1,6 +1,6 @@
 {
     "data_stage": "text-reuse",
-    "output_bucket": "41-processed-data-staging/text-reuse/text-reuse_v1-0-0/passim_output_run_2/tr_passages",
+    "output_bucket": "41-processed-data-staging/text-reuse/text-reuse_v1-0-0/passim_output_run_2/debug_tr_passages",
     "input_bucket": "s3://31-passim-rebuilt-staging/passim",
     "git_repository": "/home/piconti/impresso-passim",
     "newspapers": [],
@@ -9,13 +9,12 @@
     "is_staging": true,
     "is_patch": false,
     "patched_fields": [],
-    "push_to_git": true,
+    "push_to_git": false,
     "relative_git_path": "",
     "only_counting": false,
     "model_id": "",
     "run_id": "",
-    "notes": "Computing the manifest for text-reuse passages.",
+    "notes": "debug manifest for text-reuse passages.",
     "file_extensions": "jsonl.bz2",
-    "compute_altogether": true,
-    "check_s3_archives": false
+    "compute_altogether": true
 }

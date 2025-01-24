@@ -16,5 +16,6 @@
     "run_id": "",
     "notes": "Final passim-rebuilt manifest for April 2024 release.",
     "file_extensions": "jsonl.bz2",
-    "compute_altogether": false
+    "compute_altogether": false,
+    "check_s3_archives": false
 }

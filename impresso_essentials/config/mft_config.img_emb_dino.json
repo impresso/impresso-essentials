@@ -16,5 +16,6 @@
     "run_id": "emb-images_dinov2_v1-0-0",
     "notes": "first manifest on the image embeddings.",
     "file_extensions": "jsonl.bz2",
-    "compute_altogether": false
+    "compute_altogether": false,
+    "check_s3_archives": false
 }

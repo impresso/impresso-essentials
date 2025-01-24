@@ -14,5 +14,6 @@
     "only_counting": true,
     "notes": "Computing the final manifest for text-reuse passages after removing some duplicated data.",
     "file_extensions": "jsonl.bz2",
-    "compute_altogether": false
+    "compute_altogether": false,
+    "check_s3_archives": false
 }

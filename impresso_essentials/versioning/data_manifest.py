@@ -88,7 +88,7 @@ class DataManifest:
         else:
             # for data preparation, the manifest is at the top level of the bucket
             self.output_bucket_name, self.output_s3_partition = s3_output_bucket, None
-        
+
         # define the relative path within the git repository
         if relative_git_path:
             self.output_git_partition = relative_git_path
@@ -200,7 +200,7 @@ class DataManifest:
             ), "Mismatch between s3 path of previous & current version of manifest."
 
         return full_s3_path
-    
+
     def _print_git_path_warning(self) -> None:
         if self.push_to_git and self.output_git_partition is not None:
             out_git_path = self._get_out_path_within_repo()
@@ -351,9 +351,9 @@ class DataManifest:
 
             # only the rebuilt uses the canonical as input
             # text-reuse's input stage, passim rebuilt has various partitions
-            split_path = self.input_bucket_name.replace("s3://", "").split('/')
+            split_path = self.input_bucket_name.replace("s3://", "").split("/")
             (self.input_manifest_s3_path, input_v_mft) = read_manifest_from_s3(
-                split_path[0], self._input_stage, '/'.join(split_path[1:])
+                split_path[0], self._input_stage, "/".join(split_path[1:])
             )
 
             if input_v_mft is not None:
@@ -434,7 +434,7 @@ class DataManifest:
         manifest_dump = json.dumps(self.manifest_data, indent=4)
 
         mft_filename = self._manifest_filename
-        
+
         # if out_repo is None, in debug mode
         if push_to_git:
             try:
@@ -447,7 +447,7 @@ class DataManifest:
                     mft_filename,
                     commit_msg=commit_msg,
                 )
-                
+
                 if not pushed:
                     logger.critical(
                         "Push manifest to git manually using the file added on S3: \ns3://%s/%s.",
@@ -459,11 +459,13 @@ class DataManifest:
                     "Push manifest to git manually using the file added on S3: \ns3://%s/%s. Exception: %s",
                     self.output_bucket_name,
                     out_file_path,
-                    e
+                    e,
                 )
-                # if there was a problem cloning the repository of pushing to git, 
+                # if there was a problem cloning the repository of pushing to git,
                 # write the manifest somewhere in the fs
-                out_file_path = write_dump_to_fs(manifest_dump, self.temp_dir, mft_filename)
+                out_file_path = write_dump_to_fs(
+                    manifest_dump, self.temp_dir, mft_filename
+                )
         else:
             # for debug purposes, write in temp dir and not in git repo
             out_file_path = write_dump_to_fs(manifest_dump, self.temp_dir, mft_filename)
@@ -617,8 +619,11 @@ class DataManifest:
         """
         if any(isinstance(v, str) for v in counts.values()):
             # if any of the count values are not ints of dicts, convert to int
-            counts = {k: int(v) if isinstance(v, str) else v for k,v in counts.items()}
-            logger.debug("Some string values have been found in counts, converting to int: %s.", counts)
+            counts = {k: int(v) if isinstance(v, str) else v for k, v in counts.items()}
+            logger.debug(
+                "Some string values have been found in counts, converting to int: %s.",
+                counts,
+            )
 
         return self._modify_processing_stats(title, str(year), counts)
 

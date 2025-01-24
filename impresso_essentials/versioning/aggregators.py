@@ -80,20 +80,22 @@ def counts_for_rebuilt(
 
 
 def compute_stats_in_canonical_bag(
-    s3_canonical_issues: Bag, client: Client | None = None
+    s3_canonical_issues: Bag, client: Client | None = None, title: str | None = None
 ) -> list[dict[str, Any]]:
     """Computes number of issues and pages per newspaper from a Dask bag of canonical data.
 
     Args:
         s3_canonical_issues (db.core.Bag): Bag with the contents of canonical files to
             compute statistics on.
+        title (str, optional): Media title for which the stats are being computed.
+            Defaults to None.
 
     Returns:
         list[dict[str, Any]]: List of counts that match canonical DataStatistics keys.
     """
 
-    print("Fetched all issues, gathering desired information.")
-    logger.info("Fetched all issues, gathering desired information.")
+    print(f"{title} - Fetched all issues, gathering desired information.")
+    logger.info("%s - Fetched all issues, gathering desired information.", title)
     count_df = (
         s3_canonical_issues.map(
             lambda i: counts_for_canonical_issue(i, include_np_yr=True)
@@ -129,8 +131,10 @@ def compute_stats_in_canonical_bag(
         # only add the progress bar if the client is defined
         progress(aggregated_df)
 
-    print("Finished grouping and aggregating stats by title and year.")
-    logger.info("Finished grouping and aggregating stats by title and year.")
+    print(f"{title} - Finished grouping and aggregating stats by title and year.")
+    logger.info(
+        "%s - Finished grouping and aggregating stats by title and year.", title
+    )
     # return as a list of dicts
     return aggregated_df.to_bag(format="dict").compute()
 
@@ -174,6 +178,7 @@ def compute_stats_in_rebuilt_bag(
     include_np: bool = False,
     passim: bool = False,
     client: Client | None = None,
+    title: str | None = None,
 ) -> list[dict[str, int | str]]:
     """Compute stats on a dask bag of rebuilt output content-items.
 
@@ -185,6 +190,8 @@ def compute_stats_in_rebuilt_bag(
             not necessary for on-the-fly computation. Defaults to False.
         passim (bool, optional): True if rebuilt is in passim format. Defaults to False.
         client (Client | None, optional): Dask client. Defaults to None.
+        title (str, optional): Media title for which the stats are being computed.
+            Defaults to None.
 
     Returns:
         list[dict[str, Union[int, str]]]: List of counts that match rebuilt or paassim
@@ -192,8 +199,8 @@ def compute_stats_in_rebuilt_bag(
     """
     # when called in the rebuilt, all the rebuilt articles in the bag
     # are from the same newspaper and year
-    print("Fetched all files, gathering desired information.")
-    logger.info("Fetched all files, gathering desired information.")
+    print(f"{title} - Fetched all files, gathering desired information.")
+    logger.info("%s - Fetched all files, gathering desired information.", title)
 
     # define the list of columns in the dataframe
     df_meta = {"np_id": str} if include_np else {}
@@ -241,6 +248,11 @@ def compute_stats_in_rebuilt_bag(
     else:
         logger.info(msg)
 
+    print(f"{title} - Finished grouping and aggregating stats by title and year.")
+    logger.info(
+        "%s - Finished grouping and aggregating stats by title and year.", title
+    )
+
     if client is not None:
         # only add the progress bar if the client is defined
         progress(aggregated_df)
@@ -249,17 +261,22 @@ def compute_stats_in_rebuilt_bag(
 
 
 def compute_stats_in_entities_bag(
-    s3_entities: Bag, client: Client | None = None
+    s3_entities: Bag, client: Client | None = None, title: str | None = None
 ) -> list[dict[str, Any]]:
     """Compute stats on a dask bag of entities output content-items.
 
     Args:
         s3_entities (db.core.Bag): Bag with the contents of entity files.
         client (Client | None, optional): Dask client. Defaults to None.
+        title (str, optional): Media title for which the stats are being computed.
+            Defaults to None.
 
     Returns:
         list[dict[str, Any]]: List of counts that match NE DataStatistics keys.
     """
+    print(f"{title} - Fetched all files, gathering desired information.")
+    logger.info("%s - Fetched all files, gathering desired information.", title)
+
     count_df = (
         s3_entities.map(
             lambda ci: {
@@ -275,13 +292,13 @@ def compute_stats_in_entities_bag(
                     else "-".join(ci["ci_id"].split("-")[:-1])
                 ),
                 "content_items_out": 1,
-                "ne_mentions": len(ci["nes"]),
+                "ne_mentions": len(ci.get("nes", [])),
                 "ne_entities": sorted(
                     list(
                         set(
                             [
                                 m["wkd_id"]
-                                for m in ci["nes"]
+                                for m in ci.get("nes", [])
                                 if "wkd_id" in m and m["wkd_id"] not in ["NIL", None]
                             ]
                         )
@@ -303,7 +320,7 @@ def compute_stats_in_entities_bag(
     )
 
     count_df["ne_entities"] = count_df["ne_entities"].apply(
-        lambda x: x if isinstance(x, list) else [x]
+        lambda x: x if isinstance(x, list) else [x], meta=("ne_entities", "object")
     )
     count_df = count_df.explode("ne_entities").persist()
 
@@ -321,29 +338,43 @@ def compute_stats_in_entities_bag(
         .reset_index()
     ).persist()
 
-    print("Finished grouping and aggregating stats by title and year.")
-    logger.info("Finished grouping and aggregating stats by title and year.")
+    print(f"{title} - Finished grouping and aggregating stats by title and year.")
+    logger.info(
+        "%s - Finished grouping and aggregating stats by title and year.", title
+    )
 
     if client is not None:
         # only add the progress bar if the client is defined
         progress(aggregated_df)
+
+    try:
+        test = aggregated_df.head()
+    except Exception as e:
+        msg = f"{title} - Warning! the aggregated_df was empty!! {e}"
+        print(msg)
+        logger.warning(msg)
+        return {}
 
     # return as a list of dicts
     return aggregated_df.to_bag(format="dict").compute()
 
 
 def compute_stats_in_langident_bag(
-    s3_langident: Bag, client: Client | None = None
+    s3_langident: Bag, client: Client | None = None, title: str | None = None
 ) -> list[dict[str, Any]]:
     """Compute stats on a dask bag of langident output content-items.
 
     Args:
         s3_langident (db.core.Bag): Bag of lang-id content-items.
         client (Client | None, optional): Dask client. Defaults to None.
+        title (str, optional): Media title for which the stats are being computed.
+            Defaults to None.
 
     Returns:
         list[dict[str, Any]]: List of counts that match langident DataStatistics keys.
     """
+    print(f"{title} - Fetched all files, gathering desired information.")
+    logger.info("%s - Fetched all files, gathering desired information.", title)
 
     def freq(x, col="lang_fd"):
         x[col] = dict(Counter(literal_eval(x[col])))
@@ -390,6 +421,11 @@ def compute_stats_in_langident_bag(
     # Dask dataframes did not support using literal_eval
     agg_bag = aggregated_df.to_bag(format="dict").map(freq)
 
+    print(f"{title} - Finished grouping and aggregating stats by title and year.")
+    logger.info(
+        "%s - Finished grouping and aggregating stats by title and year.", title
+    )
+
     if client is not None:
         # only add the progress bar if the client is defined
         progress(agg_bag)
@@ -398,17 +434,22 @@ def compute_stats_in_langident_bag(
 
 
 def compute_stats_in_solr_text_bag(
-    s3_solr_text: Bag, client: Client | None = None
+    s3_solr_text: Bag, client: Client | None = None, title: str | None = None
 ) -> list[dict[str, Any]]:
     """Compute stats on a dask bag of content-items formatted for Solr input.
 
     Args:
         s3_solr_text (db.core.Bag): Bag or Solr formatted content-items.
         client (Client | None, optional): Dask client. Defaults to None.
+        title (str, optional): Media title for which the stats are being computed.
+            Defaults to None.
 
     Returns:
         list[dict[str, Any]]: List of counts that match solr text DataStatistics keys.
     """
+    print(f"{title} - Fetched all files, gathering desired information.")
+    logger.info("%s - Fetched all files, gathering desired information.", title)
+
     count_df = (
         s3_solr_text.map(
             lambda ci: {
@@ -441,8 +482,10 @@ def compute_stats_in_solr_text_bag(
         .reset_index()
     ).persist()
 
-    print("Finished grouping and aggregating stats by title and year.")
-    logger.info("Finished grouping and aggregating stats by title and year.")
+    print(f"{title} - Finished grouping and aggregating stats by title and year.")
+    logger.info(
+        "%s - Finished grouping and aggregating stats by title and year.", title
+    )
 
     if client is not None:
         # only add the progress bar if the client is defined
@@ -453,17 +496,22 @@ def compute_stats_in_solr_text_bag(
 
 
 def compute_stats_in_text_reuse_passage_bag(
-    s3_tr_passages: Bag, client: Client | None = None
+    s3_tr_passages: Bag, client: Client | None = None, title: str | None = None
 ) -> list[dict[str, Any]]:
     """Compute stats on a dask bag of text-reuse passages.
 
     Args:
         s3_tr_passages (Bag): Text-reuse passages contained in one output file.
         client (Client | None, optional): Dask client. Defaults to None.
+        title (str, optional): Media title for which the stats are being computed.
+            Defaults to None.
 
     Returns:
         list[dict[str, Any]]: List of counts that match text-reuse DataStatistics keys.
     """
+    print(f"{title} - Fetched all files, gathering desired information.")
+    logger.info("%s - Fetched all files, gathering desired information.", title)
+
     count_df = (
         s3_tr_passages.map(
             lambda passage: {
@@ -502,8 +550,10 @@ def compute_stats_in_text_reuse_passage_bag(
         .sort_values("year")
     ).persist()
 
-    print("Finished grouping and aggregating stats by title and year.")
-    logger.info("Finished grouping and aggregating stats by title and year.")
+    print(f"{title} - Finished grouping and aggregating stats by title and year.")
+    logger.info(
+        "%s - Finished grouping and aggregating stats by title and year.", title
+    )
 
     if client is not None:
         # only add the progress bar if the client is defined
@@ -514,22 +564,28 @@ def compute_stats_in_text_reuse_passage_bag(
 
 
 def compute_stats_in_topics_bag(
-    s3_topics: Bag, client: Client | None = None
+    s3_topics: Bag, client: Client | None = None, title: str | None = None
 ) -> list[dict[str, Any]]:
     """Compute stats on a dask bag of topic modeling output content-items.
 
     Args:
         s3_topics (db.core.Bag): Bag with the contents of topics files.
         client (Client | None, optional): Dask client. Defaults to None.
+        title (str, optional): Media title for which the stats are being computed.
+            Defaults to None.
 
     Returns:
         list[dict[str, Any]]: List of counts that match topics DataStatistics keys.
     """
+    print(f"{title} - Fetched all files, gathering desired information.")
+    logger.info("%s - Fetched all files, gathering desired information.", title)
 
     def flatten_lists(list_elem):
         final_list = []
         for str_list in list_elem:
-            assert isinstance(str_list, str), "Inside topic aggregator flatten_list, and provided list is not str!"
+            assert isinstance(
+                str_list, str
+            ), "Inside topic aggregator flatten_list, and provided list is not str!"
             if str_list == "[]":
                 final_list.append("no-topic")
             else:
@@ -542,9 +598,9 @@ def compute_stats_in_topics_bag(
         if col in x:
             x[col] = dict(Counter(literal_eval(x[col])))
         return x
-    
+
     try:
-        test = s3_topics.take(1, npartitions = -1)
+        test = s3_topics.take(1, npartitions=-1)
     except Exception as e:
         msg = f"Warning! the contents of the topics files were empty!! {e}"
         print(msg)
@@ -584,8 +640,7 @@ def compute_stats_in_topics_bag(
 
     aggregated_df.columns = aggregated_df.columns.to_flat_index()
     aggregated_df = (
-        aggregated_df
-        .reset_index()
+        aggregated_df.reset_index()
         .rename(
             columns={
                 ("np_id", ""): "np_id",
@@ -595,7 +650,7 @@ def compute_stats_in_topics_bag(
                 ("topics", "tunique"): "topics",
                 ("topics", "list"): "topics_fd",
             }
-        ) 
+        )
         .sort_values("year")
     )
 
@@ -603,21 +658,23 @@ def compute_stats_in_topics_bag(
         flatten_lists, meta=("topics_fd", "object")
     )
 
-    print("Finished grouping and aggregating stats by title and year.")
-    logger.info("Finished grouping and aggregating stats by title and year.")
+    print(f"{title} - Finished grouping and aggregating stats by title and year.")
+    logger.info(
+        "%s - Finished grouping and aggregating stats by title and year.", title
+    )
 
-    #if client is not None:
+    if client is not None:
         # only add the progress bar if the client is defined
-        #progress(aggregated_df)
+        progress(aggregated_df)
 
     try:
         test = aggregated_df.head()
     except Exception as e:
-        msg = f"Warning! the aggregated_df was empty!! {e}"
+        msg = f"{title} - Warning! the aggregated_df was empty!! {e}"
         print(msg)
         logger.warning(msg)
         return {}
-    
+
     # return as a list of dicts
     return aggregated_df.to_bag(format="dict").map(freq).compute()
 
@@ -625,12 +682,15 @@ def compute_stats_in_topics_bag(
 def compute_stats_in_img_emb_bag(
     s3_emb_images: Bag,
     client: Client | None = None,
+    title: str | None = None,
 ) -> list[dict[str, int | str]]:
     """Compute stats on a dask bag of image embedding output content-items.
 
     Args:
         s3_emb_images (db.core.Bag): Bag with the contents of the embedded images files.
         client (Client | None, optional): Dask client. Defaults to None.
+        title (str, optional): Media title for which the stats are being computed.
+            Defaults to None.
 
     Returns:
         list[dict[str, Union[int, str]]]: List of counts that match image embeddings
@@ -638,8 +698,8 @@ def compute_stats_in_img_emb_bag(
     """
     # when called in the rebuilt, all the rebuilt articles in the bag
     # are from the same newspaper and year
-    print("Fetched all files, gathering desired information.")
-    logger.info("Fetched all files, gathering desired information.")
+    print(f"{title} - Fetched all files, gathering desired information.")
+    logger.info("%s - Fetched all files, gathering desired information.", title)
 
     # define the list of columns in the dataframe
     count_df = (
@@ -677,8 +737,10 @@ def compute_stats_in_img_emb_bag(
         .sort_values("year")
     ).persist()
 
-    print("Finished grouping and aggregating stats by title and year.")
-    logger.info("Finished grouping and aggregating stats by title and year.")
+    print(f"{title} - Finished grouping and aggregating stats by title and year.")
+    logger.info(
+        "%s - Finished grouping and aggregating stats by title and year.", title
+    )
 
     if client is not None:
         # only add the progress bar if the client is defined
@@ -691,12 +753,15 @@ def compute_stats_in_img_emb_bag(
 def compute_stats_in_lingproc_bag(
     s3_lingprocs: Bag,
     client: Client | None = None,
+    title: str | None = None,
 ) -> list[dict[str, int | str]]:
     """Compute stats on a dask bag of linguistic preprocessing output content-items.
 
     Args:
         s3_lingprocs (db.core.Bag): Bag with the contents of the lingproc files.
         client (Client | None, optional): Dask client. Defaults to None.
+        title (str, optional): Media title for which the stats are being computed.
+            Defaults to None.
 
     Returns:
         list[dict[str, Union[int, str]]]: List of counts that match lingproc.
@@ -704,8 +769,8 @@ def compute_stats_in_lingproc_bag(
     """
     # when called in the rebuilt, all the rebuilt articles in the bag
     # are from the same newspaper and year
-    print("Fetched all files, gathering desired information.")
-    logger.info("Fetched all files, gathering desired information.")
+    print(f"{title} - Fetched all files, gathering desired information.")
+    logger.info("%s - Fetched all files, gathering desired information.", title)
 
     # define the list of columns in the dataframe
     count_df = (
@@ -740,8 +805,10 @@ def compute_stats_in_lingproc_bag(
         .sort_values("year")
     ).persist()
 
-    print("Finished grouping and aggregating stats by title and year.")
-    logger.info("Finished grouping and aggregating stats by title and year.")
+    print(f"{title} - Finished grouping and aggregating stats by title and year.")
+    logger.info(
+        "%s - Finished grouping and aggregating stats by title and year.", title
+    )
 
     if client is not None:
         # only add the progress bar if the client is defined
