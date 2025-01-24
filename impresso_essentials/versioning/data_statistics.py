@@ -227,8 +227,8 @@ class NewspaperStatistics(DataStatistics):
         DataStage.TOPICS: ["topics", "topics_fd"],
         DataStage.MYSQL_CIS: ["pages"],
         DataStage.EMB_IMAGES: ["images"],
-        DataStage.SOLR_TEXT: [], #no additional keys
-        DataStage.LINGPROC: [], #no additional keys
+        DataStage.SOLR_TEXT: [],  # no additional keys
+        DataStage.LINGPROC: [],  # no additional keys
         # TODO Add for solr
         # todo add for embeddings
     }

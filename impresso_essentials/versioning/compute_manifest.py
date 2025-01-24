@@ -45,7 +45,7 @@ OPT_CONFIG_KEYS = [
     "compute_altogether",
     "model_id",
     "run_id",
-    "check_s3_archives"
+    "check_s3_archives",
 ]
 # list of requirec configurations
 REQ_CONFIG_KEYS = [
@@ -73,9 +73,9 @@ def extract_np_key(s3_key: str, bucket: str) -> str:
         str: Name of the corresponding newspaper, extracted form the s3 path.
     """
     # in format: 's3://31-passim-rebuilt-staging/passim/indeplux/indeplux-1889.jsonl.bz2'
-    if not bucket.endswith('/'):
+    if not bucket.endswith("/"):
         bucket = f"{bucket}/"
-        
+
     if "s3://" in bucket:
         key_no_bucket = s3_key.replace(f"{bucket}", "")
     else:
@@ -113,24 +113,31 @@ def remove_corrupted_files(s3_files: dict[str, list[str]]) -> dict[str, list[str
         print(msg)
         try:
             # try to read the file and only take the first one
-            contents = db.read_text(
-                files_np, storage_options=IMPRESSO_STORAGEOPT
-            ).map(lambda x: (len(json.loads(x)), json.loads(x).keys())).compute()
+            contents = (
+                db.read_text(files_np, storage_options=IMPRESSO_STORAGEOPT)
+                .map(lambda x: (len(json.loads(x)), json.loads(x).keys()))
+                .compute()
+            )
 
             # add any non-corrupted files to the list of files to consider
             correct_files[np] = files_np
             del contents
         except Exception as e:
-            msg = f"{np}, an exception occurred trying to read some archives, checking one by 1 for {len(files_np)} archives. \nException: {e}"
+            msg = (
+                f"{np}, an exception occurred trying to read some archives, "
+                f"checking one by 1 for {len(files_np)} archives. \nException: {e}"
+            )
             logger.info(msg)
             print(msg)
             msg = f"List of archives to check one by one: {files_np}"
             logger.debug(msg)
             for file in tqdm(files_np, total=len(files_np)):
-                try: 
-                    corr_contents = db.read_text(
-                        file, storage_options=IMPRESSO_STORAGEOPT
-                    ).map(lambda x: len(json.loads(x))).compute()
+                try:
+                    corr_contents = (
+                        db.read_text(file, storage_options=IMPRESSO_STORAGEOPT)
+                        .map(lambda x: len(json.loads(x)))
+                        .compute()
+                    )
 
                     # add any non-corrupted files to the list of files to consider
                     if np in correct_files:
@@ -138,17 +145,20 @@ def remove_corrupted_files(s3_files: dict[str, list[str]]) -> dict[str, list[str
                     else:
                         correct_files[np] = [file]
                     del corr_contents
-                except:
-                    msg = f"{file}, an exception occurred trying to read it, it is probably corrupted."
+                except Exception as e2:
+                    msg = (
+                        f"{file}, an exception occurred trying to read it, "
+                        f"it is probably corrupted. {e2}"
+                    )
                     logger.info(msg)
                     print(msg)
                     corrupted_files.append(file)
 
     total_num_files = sum(len(v) for v in s3_files.values())
-    total_num_ok_files = sum(len(v) for v in correct_files.values())
+    num_ok_files = sum(len(v) for v in correct_files.values())
     msg = (
         f"Found {total_num_files} files on S3, {len(corrupted_files)} were corrupted. "
-        f"As a result, the remaining {total_num_ok_files} will be considered for the manifest computation."
+        f"As a result, the remaining {num_ok_files} will be considered for the manifest computation."
     )
     logger.info(msg)
     print(msg)
@@ -159,6 +169,7 @@ def remove_corrupted_files(s3_files: dict[str, list[str]]) -> dict[str, list[str
         print(msg)
 
     return correct_files
+
 
 def get_files_to_consider(config: dict[str, Any]) -> Optional[dict[str, list[str]]]:
     """Get the list of S3 files to consider based on the provided configuration.
@@ -193,10 +204,12 @@ def get_files_to_consider(config: dict[str, Any]) -> Optional[dict[str, list[str
                 s3_files[np].append(s3_key)
             else:
                 s3_files[np] = [s3_key]
-        #return s3_files
+        # return s3_files
     else:
         # here list newspapers instead and s3_files becomes a dict np -> liest of files
-        logger.info("Fetching the files to consider for titles %s...", config["newspapers"])
+        logger.info(
+            "Fetching the files to consider for titles %s...", config["newspapers"]
+        )
         s3_files = {}
         for np in config["newspapers"]:
             s3_files[np] = fixed_s3fs_glob(
@@ -207,7 +220,7 @@ def get_files_to_consider(config: dict[str, Any]) -> Optional[dict[str, list[str
         # filter out empty or corrupted files
         correct_s3_files = remove_corrupted_files(s3_files)
         return correct_s3_files
-    
+
     msg = (
         "Not checking for any corrupted S3 archives before launching the manifest computation. "
         "If you encounter any problems regarding the reading of the archives, please set `check_s3_archives` to True."
@@ -218,8 +231,11 @@ def get_files_to_consider(config: dict[str, Any]) -> Optional[dict[str, list[str
 
 
 def compute_stats_for_stage(
-    files_bag: db.core.Bag, stage: DataStage, client: Client|None = None, title: str|None=None
-) -> list[dict]|None:
+    files_bag: db.core.Bag,
+    stage: DataStage,
+    client: Client | None = None,
+    title: str | None = None,
+) -> list[dict] | None:
     """Compute statistics for a specific data stage.
 
     Args:
@@ -235,29 +251,45 @@ def compute_stats_for_stage(
     """
     match stage:
         case DataStage.CANONICAL:
-            return aggregators.compute_stats_in_canonical_bag(files_bag, client=client, title=title)
+            return aggregators.compute_stats_in_canonical_bag(
+                files_bag, client=client, title=title
+            )
         case DataStage.REBUILT:
             return aggregators.compute_stats_in_rebuilt_bag(
                 files_bag, include_np=True, client=client, title=title
             )
         case DataStage.ENTITIES:
-            return aggregators.compute_stats_in_entities_bag(files_bag, client=client, title=title)
+            return aggregators.compute_stats_in_entities_bag(
+                files_bag, client=client, title=title
+            )
         case DataStage.NEWS_AGENCIES:
-            return aggregators.compute_stats_in_entities_bag(files_bag, client=client, title=title)
+            return aggregators.compute_stats_in_entities_bag(
+                files_bag, client=client, title=title
+            )
         case DataStage.PASSIM:
             return aggregators.compute_stats_in_rebuilt_bag(
                 files_bag, include_np=True, passim=True, client=client, title=title
             )
         case DataStage.LANGIDENT:
-            return aggregators.compute_stats_in_langident_bag(files_bag, client=client, title=title)
+            return aggregators.compute_stats_in_langident_bag(
+                files_bag, client=client, title=title
+            )
         case DataStage.TEXT_REUSE:
-            return aggregators.compute_stats_in_text_reuse_passage_bag(files_bag, client=client, title=title)
+            return aggregators.compute_stats_in_text_reuse_passage_bag(
+                files_bag, client=client, title=title
+            )
         case DataStage.TOPICS:
-            return aggregators.compute_stats_in_topics_bag(files_bag, client=client, title=title)
+            return aggregators.compute_stats_in_topics_bag(
+                files_bag, client=client, title=title
+            )
         case DataStage.EMB_IMAGES:
-            return aggregators.compute_stats_in_img_emb_bag(files_bag, client=client, title=title)
+            return aggregators.compute_stats_in_img_emb_bag(
+                files_bag, client=client, title=title
+            )
         case DataStage.LINGPROC:
-            return aggregators.compute_stats_in_lingproc_bag(files_bag, client=client, title=title)
+            return aggregators.compute_stats_in_lingproc_bag(
+                files_bag, client=client, title=title
+            )
     raise NotImplementedError(
         "The function computing statistics for this DataStage is not yet implemented."
     )
@@ -303,7 +335,10 @@ def add_stats_to_mft(
         title = stats["np_id"]
         if title != np_title and np_title in KNOWN_JOURNALS:
             # unless the value for np_title is the name of a file, ensure the correct stats are being added.
-            msg = f"Warning, some stats were computed on the wrong title! np_title={np_title}, title={title}, year={stats['year']}. Not adding them."
+            msg = (
+                "Warning, some stats were computed on the wrong title! Not adding them."
+                f"np_title={np_title}, title={title}, year={stats['year']}."
+            )
             print(msg)
             logger.info(msg)
         else:
@@ -342,11 +377,16 @@ def process_by_title(
                 "%s - Starting to compute the statistics on the fetched files...",
                 np_title,
             )
-            computed_stats = compute_stats_for_stage(processed_files, stage, client, title=np_title)
+            computed_stats = compute_stats_for_stage(
+                processed_files, stage, client, title=np_title
+            )
 
             manifest = add_stats_to_mft(manifest, np_title, computed_stats)
         else:
-            logger.info("Found S3 files for %s which is not an known media title, it will be ignored.", np_title)
+            logger.info(
+                "Found S3 files for %s which is not an known media title, it will be ignored.",
+                np_title,
+            )
 
     return manifest
 
@@ -377,14 +417,16 @@ def process_altogether(
 
         # filter to only keep the tr_passages for this title
         filtered = processed_files.filter(
-            lambda x: x["ci_id"].startswith(f"{np_title}-") # in x["ci_id"]
+            lambda x: x["ci_id"].startswith(f"{np_title}-")  # in x["ci_id"]
         ).persist()
 
         logger.info(
             "%s - Starting to compute the statistics on the filtered files...",
             np_title,
         )
-        computed_stats = compute_stats_for_stage(filtered, stage, client, title=np_title)
+        computed_stats = compute_stats_for_stage(
+            filtered, stage, client, title=np_title
+        )
 
         manifest = add_stats_to_mft(manifest, np_title, computed_stats)
 

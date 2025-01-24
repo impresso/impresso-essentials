@@ -132,7 +132,9 @@ def compute_stats_in_canonical_bag(
         progress(aggregated_df)
 
     print(f"{title} - Finished grouping and aggregating stats by title and year.")
-    logger.info("%s - Finished grouping and aggregating stats by title and year.", title)
+    logger.info(
+        "%s - Finished grouping and aggregating stats by title and year.", title
+    )
     # return as a list of dicts
     return aggregated_df.to_bag(format="dict").compute()
 
@@ -247,7 +249,9 @@ def compute_stats_in_rebuilt_bag(
         logger.info(msg)
 
     print(f"{title} - Finished grouping and aggregating stats by title and year.")
-    logger.info("%s - Finished grouping and aggregating stats by title and year.", title)
+    logger.info(
+        "%s - Finished grouping and aggregating stats by title and year.", title
+    )
 
     if client is not None:
         # only add the progress bar if the client is defined
@@ -335,7 +339,9 @@ def compute_stats_in_entities_bag(
     ).persist()
 
     print(f"{title} - Finished grouping and aggregating stats by title and year.")
-    logger.info("%s - Finished grouping and aggregating stats by title and year.", title)
+    logger.info(
+        "%s - Finished grouping and aggregating stats by title and year.", title
+    )
 
     if client is not None:
         # only add the progress bar if the client is defined
@@ -348,7 +354,7 @@ def compute_stats_in_entities_bag(
         print(msg)
         logger.warning(msg)
         return {}
-    
+
     # return as a list of dicts
     return aggregated_df.to_bag(format="dict").compute()
 
@@ -416,7 +422,9 @@ def compute_stats_in_langident_bag(
     agg_bag = aggregated_df.to_bag(format="dict").map(freq)
 
     print(f"{title} - Finished grouping and aggregating stats by title and year.")
-    logger.info("%s - Finished grouping and aggregating stats by title and year.", title)
+    logger.info(
+        "%s - Finished grouping and aggregating stats by title and year.", title
+    )
 
     if client is not None:
         # only add the progress bar if the client is defined
@@ -475,7 +483,9 @@ def compute_stats_in_solr_text_bag(
     ).persist()
 
     print(f"{title} - Finished grouping and aggregating stats by title and year.")
-    logger.info("%s - Finished grouping and aggregating stats by title and year.", title)
+    logger.info(
+        "%s - Finished grouping and aggregating stats by title and year.", title
+    )
 
     if client is not None:
         # only add the progress bar if the client is defined
@@ -541,7 +551,9 @@ def compute_stats_in_text_reuse_passage_bag(
     ).persist()
 
     print(f"{title} - Finished grouping and aggregating stats by title and year.")
-    logger.info("%s - Finished grouping and aggregating stats by title and year.", title)
+    logger.info(
+        "%s - Finished grouping and aggregating stats by title and year.", title
+    )
 
     if client is not None:
         # only add the progress bar if the client is defined
@@ -571,7 +583,9 @@ def compute_stats_in_topics_bag(
     def flatten_lists(list_elem):
         final_list = []
         for str_list in list_elem:
-            assert isinstance(str_list, str), "Inside topic aggregator flatten_list, and provided list is not str!"
+            assert isinstance(
+                str_list, str
+            ), "Inside topic aggregator flatten_list, and provided list is not str!"
             if str_list == "[]":
                 final_list.append("no-topic")
             else:
@@ -584,9 +598,9 @@ def compute_stats_in_topics_bag(
         if col in x:
             x[col] = dict(Counter(literal_eval(x[col])))
         return x
-    
+
     try:
-        test = s3_topics.take(1, npartitions = -1)
+        test = s3_topics.take(1, npartitions=-1)
     except Exception as e:
         msg = f"Warning! the contents of the topics files were empty!! {e}"
         print(msg)
@@ -626,8 +640,7 @@ def compute_stats_in_topics_bag(
 
     aggregated_df.columns = aggregated_df.columns.to_flat_index()
     aggregated_df = (
-        aggregated_df
-        .reset_index()
+        aggregated_df.reset_index()
         .rename(
             columns={
                 ("np_id", ""): "np_id",
@@ -637,7 +650,7 @@ def compute_stats_in_topics_bag(
                 ("topics", "tunique"): "topics",
                 ("topics", "list"): "topics_fd",
             }
-        ) 
+        )
         .sort_values("year")
     )
 
@@ -646,11 +659,13 @@ def compute_stats_in_topics_bag(
     )
 
     print(f"{title} - Finished grouping and aggregating stats by title and year.")
-    logger.info("%s - Finished grouping and aggregating stats by title and year.", title)
+    logger.info(
+        "%s - Finished grouping and aggregating stats by title and year.", title
+    )
 
-    #if client is not None:
+    if client is not None:
         # only add the progress bar if the client is defined
-        #progress(aggregated_df)
+        progress(aggregated_df)
 
     try:
         test = aggregated_df.head()
@@ -659,7 +674,7 @@ def compute_stats_in_topics_bag(
         print(msg)
         logger.warning(msg)
         return {}
-    
+
     # return as a list of dicts
     return aggregated_df.to_bag(format="dict").map(freq).compute()
 
@@ -723,7 +738,9 @@ def compute_stats_in_img_emb_bag(
     ).persist()
 
     print(f"{title} - Finished grouping and aggregating stats by title and year.")
-    logger.info("%s - Finished grouping and aggregating stats by title and year.", title)
+    logger.info(
+        "%s - Finished grouping and aggregating stats by title and year.", title
+    )
 
     if client is not None:
         # only add the progress bar if the client is defined
@@ -789,7 +806,9 @@ def compute_stats_in_lingproc_bag(
     ).persist()
 
     print(f"{title} - Finished grouping and aggregating stats by title and year.")
-    logger.info("%s - Finished grouping and aggregating stats by title and year.", title)
+    logger.info(
+        "%s - Finished grouping and aggregating stats by title and year.", title
+    )
 
     if client is not None:
         # only add the progress bar if the client is defined
