@@ -65,9 +65,9 @@ class DataStage(StrEnum):
     OCRQA = "ocrqa"
     TEXT_REUSE = "text-reuse"
     TOPICS = "topics"
-    SOLR_TEXT = "solr-ingestion-text"
-    SOLR_ENTITIES = "solr-ingestion-entities"
-    SOLR_EMBS = "solr-ingestion-emb"
+    SOLR_TEXT = "solr-text-ingestion"
+    #SOLR_ENTITIES = "solr-ingestion-entities"
+    #SOLR_EMBS = "solr-ingestion-emb"
     MYSQL_CIS = "mysql-ingestion"
 
     @classmethod

@@ -816,3 +816,208 @@ def compute_stats_in_lingproc_bag(
 
     # return as a list of dicts
     return aggregated_df.to_bag(format="dict").compute()
+
+def compute_stats_in_solr_text_ing_bag(
+    s3_solr_ing_cis: Bag,
+    client: Client | None = None,
+    title: str | None = None,
+) -> list[dict[str, int | str]]:
+    """Compute stats on a dask bag of Solr text post-ingestion reports.
+
+    Args:
+        s3_solr_ing_cis (db.core.Bag): Bag with the CI ids and token lengths from Solr.
+        client (Client | None, optional): Dask client. Defaults to None.
+        title (str, optional): Media title for which the stats are being computed.
+            Defaults to None.
+
+    Returns:
+        list[dict[str, Union[int, str]]]: List of counts that match Solr text ingestion
+            DataStatistics keys.
+    """
+    # when called in the rebuilt, all the rebuilt articles in the bag
+    # are from the same newspaper and year
+    print(f"{title} - Fetched all files, gathering desired information.")
+    logger.info("%s - Fetched all files, gathering desired information.", title)
+
+    # define the list of columns in the dataframe
+    count_df = (
+        s3_solr_ing_cis.map(
+            lambda ci: {
+                "np_id": ci["id"].split("-")[0],
+                "year": ci["id"].split("-")[1],
+                "issues": "-".join(ci["id"].split("-")[:-1]),
+                "content_items_out": 1,
+                "ft_tokens": ci["content_length_i"],
+            }
+        )
+        .to_dataframe(
+            meta={
+                "np_id": str,
+                "year": str,
+                "issues": str,
+                "content_items_out": int,
+                "ft_tokens": int,
+            }
+        )
+        .persist()
+    )
+
+    aggregated_df = (
+        count_df.groupby(by=["np_id", "year"])
+        .agg(
+            {
+                "issues": tunique,
+                "content_items_out": sum,
+                "ft_tokens": sum,
+            }
+        )
+        .reset_index()
+        .sort_values("year")
+    ).persist()
+
+    print(f"{title} - Finished grouping and aggregating stats by title and year.")
+    logger.info(
+        "%s - Finished grouping and aggregating stats by title and year.", title
+    )
+
+    if client is not None:
+        # only add the progress bar if the client is defined
+        progress(aggregated_df)
+
+    # return as a list of dicts
+    return aggregated_df.to_bag(format="dict").compute()
+
+def compute_stats_in_ocrqa_bag(
+    s3_ocrqas: Bag,
+    client: Client | None = None,
+    title: str | None = None,
+) -> list[dict[str, int | str]]:
+    """Compute stats on a dask bag of OCRQA outputs.
+
+    Args:
+        s3_solr_ing_cis (db.core.Bag): Bag with the contents of the OCRQA files.
+        client (Client | None, optional): Dask client. Defaults to None.
+        title (str, optional): Media title for which the stats are being computed.
+            Defaults to None.
+
+    Returns:
+        list[dict[str, Union[int, str]]]: List of counts that match OCRQA output
+            DataStatistics keys.
+    """
+    # when called in the rebuilt, all the rebuilt articles in the bag
+    # are from the same newspaper and year
+    print(f"{title} - Fetched all files, gathering desired information.")
+    logger.info("%s - Fetched all files, gathering desired information.", title)
+
+    # define the list of columns in the dataframe
+    count_df = (
+        s3_ocrqas.map(
+            lambda ci: {
+                "np_id": ci["ci_id"].split("-")[0],
+                "year": ci["ci_id"].split("-")[1],
+                "issues": "-".join(ci["ci_id"].split("-")[:-1]),
+                "content_items_out": 1,
+            }
+        )
+        .to_dataframe(
+            meta={
+                "np_id": str,
+                "year": str,
+                "issues": str,
+                "content_items_out": int,
+            }
+        )
+        .persist()
+    )
+
+    aggregated_df = (
+        count_df.groupby(by=["np_id", "year"])
+        .agg(
+            {
+                "issues": tunique,
+                "content_items_out": sum,
+            }
+        )
+        .reset_index()
+        .sort_values("year")
+    ).persist()
+
+    print(f"{title} - Finished grouping and aggregating stats by title and year.")
+    logger.info(
+        "%s - Finished grouping and aggregating stats by title and year.", title
+    )
+
+    if client is not None:
+        # only add the progress bar if the client is defined
+        progress(aggregated_df)
+
+    # return as a list of dicts
+    return aggregated_df.to_bag(format="dict").compute()
+
+
+def compute_stats_in_doc_emb_bag(
+    s3_doc_embeddings: Bag,
+    client: Client | None = None,
+    title: str | None = None,
+) -> list[dict[str, int | str]]:
+    """Compute stats on a dask bag of document embeddings.
+
+    Args:
+        s3_solr_ing_cis (db.core.Bag): Bag with the contents of doc embeddings files.
+        client (Client | None, optional): Dask client. Defaults to None.
+        title (str, optional): Media title for which the stats are being computed.
+            Defaults to None.
+
+    Returns:
+        list[dict[str, Union[int, str]]]: List of counts that match document embeddings
+            DataStatistics keys.
+    """
+    # when called in the rebuilt, all the rebuilt articles in the bag
+    # are from the same newspaper and year
+    print(f"{title} - Fetched all files, gathering desired information.")
+    logger.info("%s - Fetched all files, gathering desired information.", title)
+
+    # define the list of columns in the dataframe
+    count_df = (
+        s3_doc_embeddings.map(
+            lambda ci: {
+                "np_id": ci["ci_id"].split("-")[0],
+                "year": ci["ci_id"].split("-")[1],
+                "issues": "-".join(ci["ci_id"].split("-")[:-1]),
+                "content_items_out": 1,
+            }
+        )
+        .to_dataframe(
+            meta={
+                "np_id": str,
+                "year": str,
+                "issues": str,
+                "content_items_out": int,
+            }
+        )
+        .persist()
+    )
+
+    aggregated_df = (
+        count_df.groupby(by=["np_id", "year"])
+        .agg(
+            {
+                "issues": tunique,
+                "content_items_out": sum,
+            }
+        )
+        .reset_index()
+        .sort_values("year")
+    ).persist()
+
+    print(f"{title} - Finished grouping and aggregating stats by title and year.")
+    logger.info(
+        "%s - Finished grouping and aggregating stats by title and year.", title
+    )
+
+    if client is not None:
+        # only add the progress bar if the client is defined
+        progress(aggregated_df)
+
+    # return as a list of dicts
+    return aggregated_df.to_bag(format="dict").compute()
