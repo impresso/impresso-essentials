@@ -887,6 +887,7 @@ def compute_stats_in_solr_text_ing_bag(
     # return as a list of dicts
     return aggregated_df.to_bag(format="dict").compute()
 
+
 def compute_stats_in_ocrqa_bag(
     s3_ocrqas: Bag,
     client: Client | None = None,
@@ -917,6 +918,7 @@ def compute_stats_in_ocrqa_bag(
                 "year": ci["ci_id"].split("-")[1],
                 "issues": "-".join(ci["ci_id"].split("-")[:-1]),
                 "content_items_out": 1,
+                "avg_ocrqa": ci['ocrqa'],
             }
         )
         .to_dataframe(
@@ -925,6 +927,7 @@ def compute_stats_in_ocrqa_bag(
                 "year": str,
                 "issues": str,
                 "content_items_out": int,
+                "avg_ocrqa": float,
             }
         )
         .persist()
@@ -936,6 +939,7 @@ def compute_stats_in_ocrqa_bag(
             {
                 "issues": tunique,
                 "content_items_out": sum,
+                "avg_ocrqa": 'mean',
             }
         )
         .reset_index()
@@ -945,6 +949,10 @@ def compute_stats_in_ocrqa_bag(
     print(f"{title} - Finished grouping and aggregating stats by title and year.")
     logger.info(
         "%s - Finished grouping and aggregating stats by title and year.", title
+    )
+
+    aggregated_df["avg_ocrqa"] = aggregated_df["avg_ocrqa"].apply(
+        lambda x: round(x, 3), meta=("avg_ocrqa", "float")
     )
 
     if client is not None:
