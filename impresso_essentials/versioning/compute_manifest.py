@@ -286,8 +286,20 @@ def compute_stats_for_stage(
             return aggregators.compute_stats_in_img_emb_bag(
                 files_bag, client=client, title=title
             )
+        case DataStage.EMB_DOCS:
+            return aggregators.compute_stats_in_doc_emb_bag(
+                files_bag, client=client, title=title
+            )
         case DataStage.LINGPROC:
             return aggregators.compute_stats_in_lingproc_bag(
+                files_bag, client=client, title=title
+            )
+        case DataStage.SOLR_TEXT:
+            return aggregators.compute_stats_in_solr_text_ing_bag(
+                files_bag, client=client, title=title
+            )
+        case DataStage.OCRQA:
+            return aggregators.compute_stats_in_ocrqa_bag(
                 files_bag, client=client, title=title
             )
     raise NotImplementedError(

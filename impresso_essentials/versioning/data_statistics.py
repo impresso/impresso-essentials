@@ -214,6 +214,7 @@ class NewspaperStatistics(DataStatistics):
         "lang_fd",  # '_fd' suffix signifies a frenquency dict
         "text_reuse_clusters",
         "text_reuse_passages",
+        "avg_ocrqa",
     ]
 
     stage_extra_keys = {
@@ -227,8 +228,10 @@ class NewspaperStatistics(DataStatistics):
         DataStage.TOPICS: ["topics", "topics_fd"],
         DataStage.MYSQL_CIS: ["pages"],
         DataStage.EMB_IMAGES: ["images"],
-        DataStage.SOLR_TEXT: [],  # no additional keys
+        DataStage.EMB_DOCS: [], # no additional keys
+        DataStage.SOLR_TEXT: ["ft_tokens"], 
         DataStage.LINGPROC: [],  # no additional keys
+        DataStage.OCRQA: ["avg_ocrqa"],  # no additional keys
         # TODO Add for solr
         # todo add for embeddings
     }

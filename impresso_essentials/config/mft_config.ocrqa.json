@@ -1,0 +1,21 @@
+{
+    "data_stage": "ocrqa",
+    "output_bucket": "42-processed-data-final/ocrqa/ocrqa-ocrqa-wp_v1.0.6_v1-0-0/",
+    "input_bucket": "22-rebuilt-final",
+    "git_repository": # FILL ME,
+    "newspapers": [],
+    "temp_directory": # FILL ME,
+    "previous_mft_s3_path": "",
+    "is_staging": true,
+    "is_patch": false,
+    "patched_fields": [],
+    "push_to_git": false,
+    "relative_git_path": "",
+    "only_counting": false,
+    "model_id": "OCR-quality-assessment-unigram-ocrqa-wp_v1.0.6", # CHECK ME
+    "run_id": "ocrqa-ocrqa-wp_v1.0.6_v1-0-0", # CHECK ME
+    "notes": # FILL ME,
+    "file_extensions": "jsonl.bz2",
+    "compute_altogether": false,
+    "check_s3_archives": false
+}
