@@ -117,8 +117,6 @@
 <li class="toctree-l4"><a class="reference internal" href="#impresso_essentials.versioning.helpers.DataStage.OCRQA"><code class="docutils literal notranslate"><span class="pre">DataStage.OCRQA</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="#impresso_essentials.versioning.helpers.DataStage.PASSIM"><code class="docutils literal notranslate"><span class="pre">DataStage.PASSIM</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="#impresso_essentials.versioning.helpers.DataStage.REBUILT"><code class="docutils literal notranslate"><span class="pre">DataStage.REBUILT</span></code></a></li>
-<li class="toctree-l4"><a class="reference internal" href="#impresso_essentials.versioning.helpers.DataStage.SOLR_EMBS"><code class="docutils literal notranslate"><span class="pre">DataStage.SOLR_EMBS</span></code></a></li>
-<li class="toctree-l4"><a class="reference internal" href="#impresso_essentials.versioning.helpers.DataStage.SOLR_ENTITIES"><code class="docutils literal notranslate"><span class="pre">DataStage.SOLR_ENTITIES</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="#impresso_essentials.versioning.helpers.DataStage.SOLR_TEXT"><code class="docutils literal notranslate"><span class="pre">DataStage.SOLR_TEXT</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="#impresso_essentials.versioning.helpers.DataStage.TEXT_REUSE"><code class="docutils literal notranslate"><span class="pre">DataStage.TEXT_REUSE</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="#impresso_essentials.versioning.helpers.DataStage.TOPICS"><code class="docutils literal notranslate"><span class="pre">DataStage.TOPICS</span></code></a></li>
@@ -153,12 +151,15 @@
 <li class="toctree-l3"><a class="reference internal" href="#impresso_essentials.versioning.aggregators.agg"><code class="docutils literal notranslate"><span class="pre">agg()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#impresso_essentials.versioning.aggregators.chunk"><code class="docutils literal notranslate"><span class="pre">chunk()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#impresso_essentials.versioning.aggregators.compute_stats_in_canonical_bag"><code class="docutils literal notranslate"><span class="pre">compute_stats_in_canonical_bag()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#impresso_essentials.versioning.aggregators.compute_stats_in_doc_emb_bag"><code class="docutils literal notranslate"><span class="pre">compute_stats_in_doc_emb_bag()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#impresso_essentials.versioning.aggregators.compute_stats_in_entities_bag"><code class="docutils literal notranslate"><span class="pre">compute_stats_in_entities_bag()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#impresso_essentials.versioning.aggregators.compute_stats_in_img_emb_bag"><code class="docutils literal notranslate"><span class="pre">compute_stats_in_img_emb_bag()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#impresso_essentials.versioning.aggregators.compute_stats_in_langident_bag"><code class="docutils literal notranslate"><span class="pre">compute_stats_in_langident_bag()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#impresso_essentials.versioning.aggregators.compute_stats_in_lingproc_bag"><code class="docutils literal notranslate"><span class="pre">compute_stats_in_lingproc_bag()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#impresso_essentials.versioning.aggregators.compute_stats_in_ocrqa_bag"><code class="docutils literal notranslate"><span class="pre">compute_stats_in_ocrqa_bag()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#impresso_essentials.versioning.aggregators.compute_stats_in_rebuilt_bag"><code class="docutils literal notranslate"><span class="pre">compute_stats_in_rebuilt_bag()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#impresso_essentials.versioning.aggregators.compute_stats_in_solr_text_bag"><code class="docutils literal notranslate"><span class="pre">compute_stats_in_solr_text_bag()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#impresso_essentials.versioning.aggregators.compute_stats_in_solr_text_ing_bag"><code class="docutils literal notranslate"><span class="pre">compute_stats_in_solr_text_ing_bag()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#impresso_essentials.versioning.aggregators.compute_stats_in_text_reuse_passage_bag"><code class="docutils literal notranslate"><span class="pre">compute_stats_in_text_reuse_passage_bag()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#impresso_essentials.versioning.aggregators.compute_stats_in_topics_bag"><code class="docutils literal notranslate"><span class="pre">compute_stats_in_topics_bag()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#impresso_essentials.versioning.aggregators.counts_for_canonical_issue"><code class="docutils literal notranslate"><span class="pre">counts_for_canonical_issue()</span></code></a></li>
@@ -438,7 +439,7 @@ Defaults to None.</p></li>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="impresso_essentials.versioning.data_statistics.NewspaperStatistics.possible_count_keys">
-<span class="sig-name descname"><span class="pre">possible_count_keys</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">['titles',</span> <span class="pre">'issues',</span> <span class="pre">'pages',</span> <span class="pre">'content_items_out',</span> <span class="pre">'ft_tokens',</span> <span class="pre">'images',</span> <span class="pre">'content_items_in',</span> <span class="pre">'ne_mentions',</span> <span class="pre">'ne_entities',</span> <span class="pre">'embeddings_el',</span> <span class="pre">'topics',</span> <span class="pre">'topics_fd',</span> <span class="pre">'lang_fd',</span> <span class="pre">'text_reuse_clusters',</span> <span class="pre">'text_reuse_passages']</span></em><a class="headerlink" href="#impresso_essentials.versioning.data_statistics.NewspaperStatistics.possible_count_keys" title="Link to this definition"></a></dt>
+<span class="sig-name descname"><span class="pre">possible_count_keys</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">['titles',</span> <span class="pre">'issues',</span> <span class="pre">'pages',</span> <span class="pre">'content_items_out',</span> <span class="pre">'ft_tokens',</span> <span class="pre">'images',</span> <span class="pre">'content_items_in',</span> <span class="pre">'ne_mentions',</span> <span class="pre">'ne_entities',</span> <span class="pre">'embeddings_el',</span> <span class="pre">'topics',</span> <span class="pre">'topics_fd',</span> <span class="pre">'lang_fd',</span> <span class="pre">'text_reuse_clusters',</span> <span class="pre">'text_reuse_passages',</span> <span class="pre">'avg_ocrqa']</span></em><a class="headerlink" href="#impresso_essentials.versioning.data_statistics.NewspaperStatistics.possible_count_keys" title="Link to this definition"></a></dt>
 <dd></dd></dl>
 
 <dl class="py method">
@@ -487,7 +488,7 @@ newspaper statistics or other NewspaperStatistics object.</p>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="impresso_essentials.versioning.data_statistics.NewspaperStatistics.stage_extra_keys">
-<span class="sig-name descname"><span class="pre">stage_extra_keys</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">{DataStage.CANONICAL:</span> <span class="pre">['pages',</span> <span class="pre">'images'],</span> <span class="pre">DataStage.EMB_IMAGES:</span> <span class="pre">['images'],</span> <span class="pre">DataStage.ENTITIES:</span> <span class="pre">['ne_entities',</span> <span class="pre">'ne_mentions'],</span> <span class="pre">DataStage.LANGIDENT:</span> <span class="pre">['images',</span> <span class="pre">'lang_fd'],</span> <span class="pre">DataStage.LINGPROC:</span> <span class="pre">[],</span> <span class="pre">DataStage.MYSQL_CIS:</span> <span class="pre">['pages'],</span> <span class="pre">DataStage.NEWS_AGENCIES:</span> <span class="pre">['ne_entities',</span> <span class="pre">'ne_mentions'],</span> <span class="pre">DataStage.PASSIM:</span> <span class="pre">['ft_tokens'],</span> <span class="pre">DataStage.REBUILT:</span> <span class="pre">['ft_tokens'],</span> <span class="pre">DataStage.SOLR_TEXT:</span> <span class="pre">[],</span> <span class="pre">DataStage.TEXT_REUSE:</span> <span class="pre">['text_reuse_clusters',</span> <span class="pre">'text_reuse_passages'],</span> <span class="pre">DataStage.TOPICS:</span> <span class="pre">['topics',</span> <span class="pre">'topics_fd']}</span></em><a class="headerlink" href="#impresso_essentials.versioning.data_statistics.NewspaperStatistics.stage_extra_keys" title="Link to this definition"></a></dt>
+<span class="sig-name descname"><span class="pre">stage_extra_keys</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">{DataStage.CANONICAL:</span> <span class="pre">['pages',</span> <span class="pre">'images'],</span> <span class="pre">DataStage.EMB_DOCS:</span> <span class="pre">[],</span> <span class="pre">DataStage.EMB_IMAGES:</span> <span class="pre">['images'],</span> <span class="pre">DataStage.ENTITIES:</span> <span class="pre">['ne_entities',</span> <span class="pre">'ne_mentions'],</span> <span class="pre">DataStage.LANGIDENT:</span> <span class="pre">['images',</span> <span class="pre">'lang_fd'],</span> <span class="pre">DataStage.LINGPROC:</span> <span class="pre">[],</span> <span class="pre">DataStage.MYSQL_CIS:</span> <span class="pre">['pages'],</span> <span class="pre">DataStage.NEWS_AGENCIES:</span> <span class="pre">['ne_entities',</span> <span class="pre">'ne_mentions'],</span> <span class="pre">DataStage.OCRQA:</span> <span class="pre">['avg_ocrqa'],</span> <span class="pre">DataStage.PASSIM:</span> <span class="pre">['ft_tokens'],</span> <span class="pre">DataStage.REBUILT:</span> <span class="pre">['ft_tokens'],</span> <span class="pre">DataStage.SOLR_TEXT:</span> <span class="pre">['ft_tokens'],</span> <span class="pre">DataStage.TEXT_REUSE:</span> <span class="pre">['text_reuse_clusters',</span> <span class="pre">'text_reuse_passages'],</span> <span class="pre">DataStage.TOPICS:</span> <span class="pre">['topics',</span> <span class="pre">'topics_fd']}</span></em><a class="headerlink" href="#impresso_essentials.versioning.data_statistics.NewspaperStatistics.stage_extra_keys" title="Link to this definition"></a></dt>
 <dd></dd></dl>
 
 </dd></dl>
@@ -989,7 +990,7 @@ default message. Defaults to None.</p></li>
 <p>Helper functions to read, generate and write data versioning manifests.</p>
 <dl class="py class">
 <dt class="sig sig-object py" id="impresso_essentials.versioning.helpers.DataStage">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">impresso_essentials.versioning.helpers.</span></span><span class="sig-name descname"><span class="pre">DataStage</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">names=&lt;not</span> <span class="pre">given&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">*values</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">module=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">qualname=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">type=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">start=1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">boundary=None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#impresso_essentials.versioning.helpers.DataStage" title="Link to this definition"></a></dt>
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">impresso_essentials.versioning.helpers.</span></span><span class="sig-name descname"><span class="pre">DataStage</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">names</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">values</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">module</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">qualname</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">type</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">start</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">boundary</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#impresso_essentials.versioning.helpers.DataStage" title="Link to this definition"></a></dt>
 <dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">StrEnum</span></code></p>
 <p>Enum all stages requiring a versioning manifest.</p>
 <p>Each member corresponds to a data stage and the associated string is used to name
@@ -1072,18 +1073,8 @@ TODO: add options for data indexing in Solr</p>
 <dd></dd></dl>
 
 <dl class="py attribute">
-<dt class="sig sig-object py" id="impresso_essentials.versioning.helpers.DataStage.SOLR_EMBS">
-<span class="sig-name descname"><span class="pre">SOLR_EMBS</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'solr-ingestion-emb'</span></em><a class="headerlink" href="#impresso_essentials.versioning.helpers.DataStage.SOLR_EMBS" title="Link to this definition"></a></dt>
-<dd></dd></dl>
-
-<dl class="py attribute">
-<dt class="sig sig-object py" id="impresso_essentials.versioning.helpers.DataStage.SOLR_ENTITIES">
-<span class="sig-name descname"><span class="pre">SOLR_ENTITIES</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'solr-ingestion-entities'</span></em><a class="headerlink" href="#impresso_essentials.versioning.helpers.DataStage.SOLR_ENTITIES" title="Link to this definition"></a></dt>
-<dd></dd></dl>
-
-<dl class="py attribute">
 <dt class="sig sig-object py" id="impresso_essentials.versioning.helpers.DataStage.SOLR_TEXT">
-<span class="sig-name descname"><span class="pre">SOLR_TEXT</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'solr-ingestion-text'</span></em><a class="headerlink" href="#impresso_essentials.versioning.helpers.DataStage.SOLR_TEXT" title="Link to this definition"></a></dt>
+<span class="sig-name descname"><span class="pre">SOLR_TEXT</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'solr-text-ingestion'</span></em><a class="headerlink" href="#impresso_essentials.versioning.helpers.DataStage.SOLR_TEXT" title="Link to this definition"></a></dt>
 <dd></dd></dl>
 
 <dl class="py attribute">
@@ -1696,6 +1687,32 @@ Defaults to None.</p></li>
 </dd></dl>
 
 <dl class="py function">
+<dt class="sig sig-object py" id="impresso_essentials.versioning.aggregators.compute_stats_in_doc_emb_bag">
+<span class="sig-prename descclassname"><span class="pre">impresso_essentials.versioning.aggregators.</span></span><span class="sig-name descname"><span class="pre">compute_stats_in_doc_emb_bag</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">s3_doc_embeddings</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Bag</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">client</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Client</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">title</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">int</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">str</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#impresso_essentials.versioning.aggregators.compute_stats_in_doc_emb_bag" title="Link to this definition"></a></dt>
+<dd><p>Compute stats on a dask bag of document embeddings.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>s3_solr_ing_cis</strong> (<em>db.core.Bag</em>) – Bag with the contents of doc embeddings files.</p></li>
+<li><p><strong>client</strong> (<em>Client</em><em> | </em><em>None</em><em>, </em><em>optional</em>) – Dask client. Defaults to None.</p></li>
+<li><p><strong>title</strong> (<em>str</em><em>, </em><em>optional</em>) – Media title for which the stats are being computed.
+Defaults to None.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><dl class="simple">
+<dt>List of counts that match document embeddings</dt><dd><p>DataStatistics keys.</p>
+</dd>
+</dl>
+</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>list[dict[str, Union[int, str]]]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
 <dt class="sig sig-object py" id="impresso_essentials.versioning.aggregators.compute_stats_in_entities_bag">
 <span class="sig-prename descclassname"><span class="pre">impresso_essentials.versioning.aggregators.</span></span><span class="sig-name descname"><span class="pre">compute_stats_in_entities_bag</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">s3_entities</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Bag</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">client</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Client</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">title</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Any</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#impresso_essentials.versioning.aggregators.compute_stats_in_entities_bag" title="Link to this definition"></a></dt>
 <dd><p>Compute stats on a dask bag of entities output content-items.</p>
@@ -1792,6 +1809,32 @@ Defaults to None.</p></li>
 </dd></dl>
 
 <dl class="py function">
+<dt class="sig sig-object py" id="impresso_essentials.versioning.aggregators.compute_stats_in_ocrqa_bag">
+<span class="sig-prename descclassname"><span class="pre">impresso_essentials.versioning.aggregators.</span></span><span class="sig-name descname"><span class="pre">compute_stats_in_ocrqa_bag</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">s3_ocrqas</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Bag</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">client</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Client</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">title</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">int</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">str</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#impresso_essentials.versioning.aggregators.compute_stats_in_ocrqa_bag" title="Link to this definition"></a></dt>
+<dd><p>Compute stats on a dask bag of OCRQA outputs.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>s3_solr_ing_cis</strong> (<em>db.core.Bag</em>) – Bag with the contents of the OCRQA files.</p></li>
+<li><p><strong>client</strong> (<em>Client</em><em> | </em><em>None</em><em>, </em><em>optional</em>) – Dask client. Defaults to None.</p></li>
+<li><p><strong>title</strong> (<em>str</em><em>, </em><em>optional</em>) – Media title for which the stats are being computed.
+Defaults to None.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><dl class="simple">
+<dt>List of counts that match OCRQA output</dt><dd><p>DataStatistics keys.</p>
+</dd>
+</dl>
+</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>list[dict[str, Union[int, str]]]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
 <dt class="sig sig-object py" id="impresso_essentials.versioning.aggregators.compute_stats_in_rebuilt_bag">
 <span class="sig-prename descclassname"><span class="pre">impresso_essentials.versioning.aggregators.</span></span><span class="sig-name descname"><span class="pre">compute_stats_in_rebuilt_bag</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">rebuilt_articles</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Bag</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">''</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">include_np</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">passim</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">client</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Client</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">title</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">int</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">str</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#impresso_essentials.versioning.aggregators.compute_stats_in_rebuilt_bag" title="Link to this definition"></a></dt>
 <dd><p>Compute stats on a dask bag of rebuilt output content-items.</p>
@@ -1840,6 +1883,32 @@ Defaults to None.</p></li>
 </dd>
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
 <dd class="field-odd"><p>list[dict[str, Any]]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="impresso_essentials.versioning.aggregators.compute_stats_in_solr_text_ing_bag">
+<span class="sig-prename descclassname"><span class="pre">impresso_essentials.versioning.aggregators.</span></span><span class="sig-name descname"><span class="pre">compute_stats_in_solr_text_ing_bag</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">s3_solr_ing_cis</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Bag</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">client</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Client</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">title</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">int</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">str</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#impresso_essentials.versioning.aggregators.compute_stats_in_solr_text_ing_bag" title="Link to this definition"></a></dt>
+<dd><p>Compute stats on a dask bag of Solr text post-ingestion reports.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>s3_solr_ing_cis</strong> (<em>db.core.Bag</em>) – Bag with the CI ids and token lengths from Solr.</p></li>
+<li><p><strong>client</strong> (<em>Client</em><em> | </em><em>None</em><em>, </em><em>optional</em>) – Dask client. Defaults to None.</p></li>
+<li><p><strong>title</strong> (<em>str</em><em>, </em><em>optional</em>) – Media title for which the stats are being computed.
+Defaults to None.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><dl class="simple">
+<dt>List of counts that match Solr text ingestion</dt><dd><p>DataStatistics keys.</p>
+</dd>
+</dl>
+</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>list[dict[str, Union[int, str]]]</p>
 </dd>
 </dl>
 </dd></dl>
