@@ -158,7 +158,6 @@
 <li class="toctree-l3"><a class="reference internal" href="#impresso_essentials.versioning.aggregators.compute_stats_in_lingproc_bag"><code class="docutils literal notranslate"><span class="pre">compute_stats_in_lingproc_bag()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#impresso_essentials.versioning.aggregators.compute_stats_in_ocrqa_bag"><code class="docutils literal notranslate"><span class="pre">compute_stats_in_ocrqa_bag()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#impresso_essentials.versioning.aggregators.compute_stats_in_rebuilt_bag"><code class="docutils literal notranslate"><span class="pre">compute_stats_in_rebuilt_bag()</span></code></a></li>
-<li class="toctree-l3"><a class="reference internal" href="#impresso_essentials.versioning.aggregators.compute_stats_in_solr_text_bag"><code class="docutils literal notranslate"><span class="pre">compute_stats_in_solr_text_bag()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#impresso_essentials.versioning.aggregators.compute_stats_in_solr_text_ing_bag"><code class="docutils literal notranslate"><span class="pre">compute_stats_in_solr_text_ing_bag()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#impresso_essentials.versioning.aggregators.compute_stats_in_text_reuse_passage_bag"><code class="docutils literal notranslate"><span class="pre">compute_stats_in_text_reuse_passage_bag()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#impresso_essentials.versioning.aggregators.compute_stats_in_topics_bag"><code class="docutils literal notranslate"><span class="pre">compute_stats_in_topics_bag()</span></code></a></li>
@@ -1700,11 +1699,8 @@ Defaults to None.</p></li>
 </ul>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p><dl class="simple">
-<dt>List of counts that match document embeddings</dt><dd><p>DataStatistics keys.</p>
-</dd>
-</dl>
-</p>
+<dd class="field-even"><p>List of counts that match document embeddings
+DataStatistics keys.</p>
 </dd>
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
 <dd class="field-odd"><p>list[dict[str, Union[int, str]]]</p>
@@ -1748,11 +1744,8 @@ Defaults to None.</p></li>
 </ul>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p><dl class="simple">
-<dt>List of counts that match image embeddings</dt><dd><p>DataStatistics keys.</p>
-</dd>
-</dl>
-</p>
+<dd class="field-even"><p>List of counts that match image embeddings
+DataStatistics keys.</p>
 </dd>
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
 <dd class="field-odd"><p>list[dict[str, Union[int, str]]]</p>
@@ -1796,11 +1789,8 @@ Defaults to None.</p></li>
 </ul>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p><dl class="simple">
-<dt>List of counts that match lingproc.</dt><dd><p>DataStatistics keys.</p>
-</dd>
-</dl>
-</p>
+<dd class="field-even"><p>List of counts that match lingproc.
+DataStatistics keys.</p>
 </dd>
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
 <dd class="field-odd"><p>list[dict[str, Union[int, str]]]</p>
@@ -1822,11 +1812,8 @@ Defaults to None.</p></li>
 </ul>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p><dl class="simple">
-<dt>List of counts that match OCRQA output</dt><dd><p>DataStatistics keys.</p>
-</dd>
-</dl>
-</p>
+<dd class="field-even"><p>List of counts that match OCRQA output
+DataStatistics keys.</p>
 </dd>
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
 <dd class="field-odd"><p>list[dict[str, Union[int, str]]]</p>
@@ -1853,36 +1840,11 @@ Defaults to None.</p></li>
 </ul>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p><dl class="simple">
-<dt>List of counts that match rebuilt or paassim</dt><dd><p>DataStatistics keys.</p>
-</dd>
-</dl>
-</p>
+<dd class="field-even"><p>List of counts that match rebuilt or paassim
+DataStatistics keys.</p>
 </dd>
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
 <dd class="field-odd"><p>list[dict[str, Union[int, str]]]</p>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="py function">
-<dt class="sig sig-object py" id="impresso_essentials.versioning.aggregators.compute_stats_in_solr_text_bag">
-<span class="sig-prename descclassname"><span class="pre">impresso_essentials.versioning.aggregators.</span></span><span class="sig-name descname"><span class="pre">compute_stats_in_solr_text_bag</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">s3_solr_text</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Bag</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">client</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Client</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">title</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Any</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#impresso_essentials.versioning.aggregators.compute_stats_in_solr_text_bag" title="Link to this definition"></a></dt>
-<dd><p>Compute stats on a dask bag of content-items formatted for Solr input.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>s3_solr_text</strong> (<em>db.core.Bag</em>) – Bag or Solr formatted content-items.</p></li>
-<li><p><strong>client</strong> (<em>Client</em><em> | </em><em>None</em><em>, </em><em>optional</em>) – Dask client. Defaults to None.</p></li>
-<li><p><strong>title</strong> (<em>str</em><em>, </em><em>optional</em>) – Media title for which the stats are being computed.
-Defaults to None.</p></li>
-</ul>
-</dd>
-<dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p>List of counts that match solr text DataStatistics keys.</p>
-</dd>
-<dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p>list[dict[str, Any]]</p>
 </dd>
 </dl>
 </dd></dl>
@@ -1901,11 +1863,8 @@ Defaults to None.</p></li>
 </ul>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p><dl class="simple">
-<dt>List of counts that match Solr text ingestion</dt><dd><p>DataStatistics keys.</p>
-</dd>
-</dl>
-</p>
+<dd class="field-even"><p>List of counts that match Solr text ingestion
+DataStatistics keys.</p>
 </dd>
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
 <dd class="field-odd"><p>list[dict[str, Union[int, str]]]</p>

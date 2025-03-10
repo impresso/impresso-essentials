@@ -195,7 +195,7 @@ def compute_stats_in_rebuilt_bag(
 
     Returns:
         list[dict[str, Union[int, str]]]: List of counts that match rebuilt or paassim
-            DataStatistics keys.
+        DataStatistics keys.
     """
     # when called in the rebuilt, all the rebuilt articles in the bag
     # are from the same newspaper and year
@@ -433,68 +433,6 @@ def compute_stats_in_langident_bag(
     return agg_bag.compute()
 
 
-def compute_stats_in_solr_text_bag(
-    s3_solr_text: Bag, client: Client | None = None, title: str | None = None
-) -> list[dict[str, Any]]:
-    """Compute stats on a dask bag of content-items formatted for Solr input.
-
-    Args:
-        s3_solr_text (db.core.Bag): Bag or Solr formatted content-items.
-        client (Client | None, optional): Dask client. Defaults to None.
-        title (str, optional): Media title for which the stats are being computed.
-            Defaults to None.
-
-    Returns:
-        list[dict[str, Any]]: List of counts that match solr text DataStatistics keys.
-    """
-    print(f"{title} - Fetched all files, gathering desired information.")
-    logger.info("%s - Fetched all files, gathering desired information.", title)
-
-    count_df = (
-        s3_solr_text.map(
-            lambda ci: {
-                "np_id": ci["meta_journal_s"],
-                "year": ci["meta_year_i"],
-                "issues": ci["meta_issue_id_s"],
-                "content_items_out": 1,
-            }
-        )
-        .to_dataframe(
-            meta={
-                "np_id": str,
-                "year": str,
-                "issues": str,
-                "content_items_out": int,
-            }
-        )
-        .persist()
-    )
-
-    # cum the counts for all values collected
-    aggregated_df = (
-        count_df.groupby(by=["np_id", "year"])
-        .agg(
-            {
-                "issues": tunique,
-                "content_items_out": sum,
-            }
-        )
-        .reset_index()
-    ).persist()
-
-    print(f"{title} - Finished grouping and aggregating stats by title and year.")
-    logger.info(
-        "%s - Finished grouping and aggregating stats by title and year.", title
-    )
-
-    if client is not None:
-        # only add the progress bar if the client is defined
-        progress(aggregated_df)
-
-    # return as a list of dicts
-    return aggregated_df.to_bag(format="dict").compute()
-
-
 def compute_stats_in_text_reuse_passage_bag(
     s3_tr_passages: Bag, client: Client | None = None, title: str | None = None
 ) -> list[dict[str, Any]]:
@@ -694,7 +632,7 @@ def compute_stats_in_img_emb_bag(
 
     Returns:
         list[dict[str, Union[int, str]]]: List of counts that match image embeddings
-            DataStatistics keys.
+        DataStatistics keys.
     """
     # when called in the rebuilt, all the rebuilt articles in the bag
     # are from the same newspaper and year
@@ -765,7 +703,7 @@ def compute_stats_in_lingproc_bag(
 
     Returns:
         list[dict[str, Union[int, str]]]: List of counts that match lingproc.
-            DataStatistics keys.
+        DataStatistics keys.
     """
     # when called in the rebuilt, all the rebuilt articles in the bag
     # are from the same newspaper and year
@@ -832,7 +770,7 @@ def compute_stats_in_solr_text_ing_bag(
 
     Returns:
         list[dict[str, Union[int, str]]]: List of counts that match Solr text ingestion
-            DataStatistics keys.
+        DataStatistics keys.
     """
     # when called in the rebuilt, all the rebuilt articles in the bag
     # are from the same newspaper and year
@@ -903,7 +841,7 @@ def compute_stats_in_ocrqa_bag(
 
     Returns:
         list[dict[str, Union[int, str]]]: List of counts that match OCRQA output
-            DataStatistics keys.
+        DataStatistics keys.
     """
     # when called in the rebuilt, all the rebuilt articles in the bag
     # are from the same newspaper and year
@@ -978,7 +916,7 @@ def compute_stats_in_doc_emb_bag(
 
     Returns:
         list[dict[str, Union[int, str]]]: List of counts that match document embeddings
-            DataStatistics keys.
+        DataStatistics keys.
     """
     # when called in the rebuilt, all the rebuilt articles in the bag
     # are from the same newspaper and year
