@@ -24,7 +24,7 @@ from tqdm import tqdm
 import dask.bag as db
 from dask.distributed import Client
 from impresso_essentials.io.s3 import fixed_s3fs_glob, IMPRESSO_STORAGEOPT
-from impresso_essentials.utils import init_logger, KNOWN_JOURNALS
+from impresso_essentials.utils import init_logger, KNOWN_MEDIA
 from impresso_essentials.versioning.helpers import validate_stage, DataStage
 from impresso_essentials.versioning import aggregators
 from impresso_essentials.versioning.data_manifest import DataManifest
@@ -345,7 +345,7 @@ def add_stats_to_mft(
 
     for stats in computed_stats:
         title = stats["np_id"]
-        if title != np_title and np_title in KNOWN_JOURNALS:
+        if title != np_title and np_title in KNOWN_MEDIA:
             # unless the value for np_title is the name of a file, ensure the correct stats are being added.
             msg = (
                 "Warning, some stats were computed on the wrong title! Not adding them."
@@ -373,7 +373,7 @@ def process_by_title(
     logger.info("\n-> Starting computing the manifest by title <-")
     for np_title, np_s3_files in s3_files.items():
 
-        if np_title in KNOWN_JOURNALS:
+        if np_title in KNOWN_MEDIA:
             logger.info("---------- %s ----------", np_title)
             logger.info(
                 "The list of files selected for %s is: %s",
@@ -422,8 +422,8 @@ def process_altogether(
         .persist()
     )  # .map(lambda x: (x['ci_id'].split('-')[0], x)).persist()
 
-    total_num = len(KNOWN_JOURNALS)
-    for idx, np_title in enumerate(KNOWN_JOURNALS):
+    total_num = len(KNOWN_MEDIA)
+    for idx, np_title in enumerate(KNOWN_MEDIA):
 
         logger.info("---------- %s - %s/%s ----------", np_title, idx + 1, total_num)
 

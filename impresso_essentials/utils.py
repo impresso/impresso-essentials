@@ -18,10 +18,43 @@ import numpy as np
 from dask.bag.core import Bag
 from dask.diagnostics import ProgressBar
 
+if sys.version < "3.11":
+    # python 3.10
+    from typing_extensions import Self
+    from strenum import StrEnum
+else:
+    from typing import Self
+    from enum import StrEnum
+
 logger = logging.getLogger(__name__)
 
+
+class SourceType(StrEnum):
+    """Enum all types of media source in Impresso."""
+
+    NP = "newspaper"
+    # includes radio bulletins, radio audio broadcasts, and radio tapuscripts
+    RB = "radio_broadcast"
+    RM = "radio_magazine"
+    RS = "radio_schedule"
+    MG = "monograph"
+
+    @classmethod
+    def has_value(cls: Self, value: str) -> bool:
+        """Check if enum contains given value
+
+        Args:
+            cls (Self): This DataStage class
+            value (str): Value to check
+
+        Returns:
+            bool: True if the value provided is in this enum's values, False otherwise.
+        """
+        return value in cls._value2member_map_
+
+
 # changed to dict to include the partner/data origin
-KNOWN_JOURNALS_DICT = {
+KNOWN_MEDIA_DICT = {
     "SNL-RERO": [
         "BDC",
         "CDV",
@@ -172,8 +205,25 @@ KNOWN_JOURNALS_DICT = {
     ],
 }
 # flatten the known journals into a sorted list
-KNOWN_JOURNALS = sorted([j for part_j in KNOWN_JOURNALS_DICT.values() for j in part_j])
+KNOWN_MEDIA = sorted([j for part_j in KNOWN_MEDIA_DICT.values() for j in part_j])
 PARTNERS_WITHOUT_OLR = ["NZZ", "SWA", "BCUL"]
+
+PARTNER_TO_SOURCE_TYPES = {
+    "SNL": [SourceType.NP],
+    "LeTemps": [SourceType.NP],
+    "NZZ": [SourceType.NP],
+    "SWA": [SourceType.NP],
+    "FedGaz": [SourceType.NP],
+    "BNL": [SourceType.NP, SourceType.RM],
+    "BNF": [SourceType.NP, SourceType.RB],
+    "BNF-EN": [SourceType.NP],
+    "BCUL": [SourceType.NP],
+    "BL": [SourceType.NP],
+    "KB": [SourceType.NP, SourceType.RB],
+    "SWISSINFO": [SourceType.RB],
+    # only keep the ones for which we currently have data
+    # "RTS": [SourceType.RB],
+}
 
 # a simple data structure to represent input directories
 # a `Document.zip` file is expected to be found in `IssueDir.path`
