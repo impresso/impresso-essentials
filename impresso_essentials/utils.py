@@ -54,7 +54,7 @@ class SourceType(StrEnum):
 
 
 # changed to dict to include the partner/data origin
-KNOWN_MEDIA_DICT = {
+PARTNER_TO_MEDIA = {
     "SNL-RERO": [
         "BDC",
         "CDV",
@@ -581,7 +581,7 @@ KNOWN_MEDIA_DICT = {
     ],
 }
 # flatten the known journals into a sorted list
-KNOWN_MEDIA = sorted([j for part_j in KNOWN_MEDIA_DICT.values() for j in part_j])
+ALL_MEDIA = sorted([j for part_j in PARTNER_TO_MEDIA.values() for j in part_j])
 PARTNERS_WITHOUT_OLR = ["NZZ", "SWA", "BCUL"]
 
 PARTNER_TO_SOURCE_TYPES = {
