@@ -9,6 +9,7 @@ import random
 from impresso_essentials.bbox_visualizer.get_bbox import (
     get_page_bounding_boxes,
     get_ci_bounding_boxes,
+    get_issue_bounding_boxes
 )
 from impresso_essentials.bbox_visualizer.utils import create_image_url, create_s3_path
 from impresso_essentials.bbox_visualizer.utils import get_base_url
@@ -38,19 +39,24 @@ def build_bbox_json(id: str, level: str = "regions", output_path: str = None) ->
         .filter(lambda r: r.get("id") == id)
         .take(1)[0]
     )
+    
     id_parts = id.split("-")
     if len(id_parts) == 6:  # either a page or a CI
         if "p" in id_parts[-1]:  # it is a page so a canonical manifest
             bounding_boxes = get_page_bounding_boxes(manifest, level)
         elif "i" in id_parts[-1]:
             bounding_boxes = get_ci_bounding_boxes(manifest, level)
-        bbox_json = {
-            "iiif_img_base_uri": list(bounding_boxes.keys()),
-            "bboxes": bounding_boxes,
-        }
-        if not output_path:
-            output_path = f"{id}_bbox.json"
-        with open(output_path, "w") as f:
-            json.dump(bbox_json, f)
+    elif len(id_parts) == 5: # It is an issue
+        bounding_boxes = get_issue_bounding_boxes(manifest, level)
+
+    bbox_json = {
+        "iiif_img_base_uri": list(bounding_boxes.keys()),
+        "bboxes": bounding_boxes,
+    }
+
+    if not output_path:
+        output_path = f"{id}_bbox.json"
+    with open(output_path, "w") as f:
+        json.dump(bbox_json, f)
     return bbox_json
 
