@@ -8,6 +8,17 @@ from dask import bag as db
 from impresso_essentials.bbox_visualizer.utils import create_image_url, create_s3_path, get_base_url
 from impresso_essentials.io.s3 import IMPRESSO_STORAGEOPT
 
+TYPE_MAPPINGS = {
+    "article": "ar",
+    "ar": "ar",
+    "advertisement": "ad",
+    "ad": "ad",
+    "pg": None,
+    "image": "img",
+    "table": "tb",
+    "death_notice": "ob",
+    "weather": "w",
+}
 
 # This could be done recursively to handle nested structures
 # but for now we will keep it simple
@@ -108,7 +119,7 @@ def get_ci_type(ci_id: str) -> str:
     ci_id_parts = ci_id.split("-")
     issue_id = f"{ci_id_parts[0]}-{ci_id_parts[1]}-{ci_id_parts[2]}-{ci_id_parts[3]}-{ci_id_parts[4]}"
     issue_s3_path = create_s3_path(issue_id)
-    return (
+    return TYPE_MAPPINGS[(
         db.read_text(issue_s3_path, storage_options=IMPRESSO_STORAGEOPT)
         .map(json.loads)
         .filter(lambda r: r.get("id") == issue_id)
@@ -118,7 +129,7 @@ def get_ci_type(ci_id: str) -> str:
         .filter(lambda r: r.get("id") == ci_id)
         .pluck("tp")
         .compute()[0]
-    )
+    )]
 
 
 def get_ci_bounding_boxes(ci_manifest: dict, level: str = "regions") -> dict:
