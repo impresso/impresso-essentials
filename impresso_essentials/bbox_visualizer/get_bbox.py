@@ -1,12 +1,12 @@
 """
-Helper functions to extract bounding boxes from the manifest
+Helper functions to extract bounding boxes from the manifest,
+with improvements to reduce S3 calls.
 """
 
 import json
 from dask import bag as db
 
 from impresso_essentials.bbox_visualizer.utils import (
-    create_image_url,
     create_s3_path,
     get_base_url,
 )
@@ -24,44 +24,39 @@ TYPE_MAPPINGS = {
     "weather": "w",
 }
 
+# Global cache for CI type lookups
+_ci_type_cache = {}
 
-# This could be done recursively to handle nested structures
-# but for now we will keep it simple
-def get_page_bounding_boxes(
-    page_dict: dict[dict], level: str = "regions"
-) -> list[list]:
+
+def get_page_bounding_boxes(page_dict: dict, level: str = "regions") -> dict:
     """
     Extract bounding boxes from the manifest at the specified level
 
     Args:
-            page_dict (dict): The manifest of a page
-            level (str): The level at which to extract the bounding boxes
-                    - "regions": Extract the bounding boxes of the regions
-                    - "paragraphs": Extract the bounding boxes of the paragraphs
-                    - "lines": Extract the bounding boxes of the lines
-                    - "tokens": Extract the bounding boxes of the tokens
-                    - Default: "regions"
+        page_dict (dict): The manifest of a page
+        level (str): The level at which to extract the bounding boxes
+                     Options: "regions", "paragraphs", "lines", "tokens"
 
     Returns:
-            list[list]: A list of bounding boxes (coordinates)
+        dict: A dictionary mapping the base image URL to a list of bounding boxes
     """
     base_url = get_base_url(page_dict)
 
     if level == "regions":
-        return {f"{base_url}": _get_page_regions_bboxes(page_dict)}
+        return {base_url: _get_page_regions_bboxes(page_dict)}
     elif level == "paragraphs":
-        return {f"{base_url}": _get_page_paragraphs_bboxes(page_dict)}
+        return {base_url: _get_page_paragraphs_bboxes(page_dict)}
     elif level == "lines":
-        return {f"{base_url}": _get_page_lines_bboxes(page_dict)}
+        return {base_url: _get_page_lines_bboxes(page_dict)}
     elif level == "tokens":
-        return {f"{base_url}": _get_page_tokens_bboxes(page_dict)}
+        return {base_url: _get_page_tokens_bboxes(page_dict)}
     else:
         raise ValueError(f"Unknown level: {level}")
 
 
 def _get_page_regions_bboxes(page_manifest):
     """
-    Extract bounding boxes of the regions from the manifest
+    Extract bounding boxes of the regions from the manifest.
     """
     bboxes = []
     for region in page_manifest["r"]:
@@ -72,7 +67,7 @@ def _get_page_regions_bboxes(page_manifest):
 
 def _get_page_paragraphs_bboxes(page_manifest):
     """
-    Extract bounding boxes of the paragraphs from the manifest
+    Extract bounding boxes of the paragraphs from the manifest.
     """
     bboxes = []
     for region in page_manifest["r"]:
@@ -83,8 +78,8 @@ def _get_page_paragraphs_bboxes(page_manifest):
 
 
 def _get_page_lines_bboxes(page_manifest):
-    """ "
-    Extract bounding boxes of the lines from the manifest
+    """
+    Extract bounding boxes of the lines from the manifest.
     """
     bboxes = []
     for region in page_manifest["r"]:
@@ -96,8 +91,8 @@ def _get_page_lines_bboxes(page_manifest):
 
 
 def _get_page_tokens_bboxes(page_manifest):
-    """ "
-    Extract bounding boxes of the tokens from the manifest
+    """
+    Extract bounding boxes of the tokens from the manifest.
     """
     bboxes = []
     for region in page_manifest["r"]:
@@ -111,66 +106,84 @@ def _get_page_tokens_bboxes(page_manifest):
 
 def get_ci_type(ci_id: str) -> str:
     """
-    Get the type of the CI from its ID from the canonical manifest of the issue
+    Get the type of the CI from its ID from the canonical manifest of the issue.
+
+    Uses a cache to avoid repeated S3 calls.
 
     Args:
-            ci_id (str): The ID of the CI
+        ci_id (str): The ID of the CI
 
     Returns:
-            str: The type of the CI
+        str: The mapped CI type
     """
-    if ci_id is None:  # If there is no associated content item
+    if ci_id is None:
         return None
+
+    if ci_id in _ci_type_cache:
+        return _ci_type_cache[ci_id]
+
     ci_id_parts = ci_id.split("-")
+    # Construct the issue id from the first 5 parts
     issue_id = f"{ci_id_parts[0]}-{ci_id_parts[1]}-{ci_id_parts[2]}-{ci_id_parts[3]}-{ci_id_parts[4]}"
     issue_s3_path = create_s3_path(issue_id)
-    return TYPE_MAPPINGS[
-        (
-            db.read_text(issue_s3_path, storage_options=IMPRESSO_STORAGEOPT)
-            .map(json.loads)
-            .filter(lambda r: r.get("id") == issue_id)
-            .pluck("i")
-            .flatten()
-            .pluck("m")
-            .filter(lambda r: r.get("id") == ci_id)
-            .pluck("tp")
-            .compute()[0]
-        )
-    ]
+
+    # Build the Dask graph and compute once
+    ci_type_raw = (
+        db.read_text(issue_s3_path, storage_options=IMPRESSO_STORAGEOPT)
+        .map(json.loads)
+        .filter(lambda r: r.get("id") == issue_id)
+        .pluck("i")
+        .flatten()
+        .pluck("m")
+        .filter(lambda r: r.get("id") == ci_id)
+        .pluck("tp")
+        .compute()[0]
+    )
+    mapped_type = TYPE_MAPPINGS[ci_type_raw]
+    _ci_type_cache[ci_id] = mapped_type
+    return mapped_type
 
 
 def get_ci_bounding_boxes(ci_manifest: dict, level: str = "regions") -> dict:
     """
     Extract bounding boxes from the CI manifest at the specified level from the rebuilt manifest.
 
+    This version batches S3 calls by reading all page manifests together.
+
     Args:
-            ci_manifest (dict): The manifest of a CI
-            level (str): The level at which to extract the bounding boxes
-                    - "regions": Extract the bounding boxes of the regions
-                    - "tokens": Extract the bounding boxes of the tokens
-                    - Default: "regions"
+        ci_manifest (dict): The manifest of a CI
+        level (str): The level at which to extract the bounding boxes
+                     Options: "regions", "tokens"
+
     Returns:
-            dict: A dictionary of bounding boxes (coordinates) type and CI ID with the image URL as key
+        dict: A dictionary mapping the image URL to a list of bounding boxes
     """
     bounding_boxes = {}
-    # We have to fetch the page canonical manifests to get the image URLs
+    # Build list of S3 paths for pages
+    page_ids = [page["id"] for page in ci_manifest["ppreb"]]
+    paths = [create_s3_path(page_id) for page_id in page_ids]
+
+    # Batch read all page manifests from S3
+    manifests = (
+        db.read_text(paths, storage_options=IMPRESSO_STORAGEOPT)
+        .map(json.loads)
+        .compute()
+    )
+    # Build a mapping from page id to manifest
+    manifests_dict = {m["id"]: m for m in manifests}
+
     for page in ci_manifest["ppreb"]:
-        page_s3_path = create_s3_path(page["id"])
-        page_manifest = (
-            db.read_text(page_s3_path, storage_options=IMPRESSO_STORAGEOPT)
-            .map(json.loads)
-            .filter(lambda r: r.get("id") == page["id"])
-            .take(1)[0]
-        )
+        page_manifest = manifests_dict.get(page["id"])
+        if not page_manifest:
+            continue  # Skip if manifest not found
         image_url = get_base_url(page_manifest)
+        bounding_boxes.setdefault(image_url, [])
         if level == "regions":
-            bounding_boxes[image_url] = []
-            for region in page["r"]:  # For each box given as region
+            for region in page["r"]:
                 bounding_boxes[image_url].append(
                     {"t": ci_manifest["tp"], "ci": ci_manifest["id"], "c": region}
                 )
         elif level == "tokens":
-            bounding_boxes[image_url] = []
             for token in page["t"]:
                 bounding_boxes[image_url].append(
                     {"t": ci_manifest["tp"], "ci": ci_manifest["id"], "c": token["c"]}
@@ -178,27 +191,25 @@ def get_ci_bounding_boxes(ci_manifest: dict, level: str = "regions") -> dict:
     return bounding_boxes
 
 
-# TODO : Make this function parallelizable for all pages of an issue
 def get_issue_bounding_boxes(issue_manifest: dict, level: str = "regions") -> dict:
     """
     Extract bounding boxes from the issue manifest at the specified level from the rebuilt manifest.
 
     Args:
-            issue_manifest (dict): The manifest of an issue
-            level (str): The level at which to extract the bounding boxes
-                    - "regions": Extract the bounding boxes of the regions
-                    - "tokens": Extract the bounding boxes of the tokens
-                    - Default: "regions"
+        issue_manifest (dict): The manifest of an issue
+        level (str): The level at which to extract the bounding boxes
+                     Options: "regions", "tokens"
+
     Returns:
-            dict: A dictionary of bounding boxes (coordinates) type and CI ID with the image URL as key
+        dict: A dictionary mapping image URLs to lists of bounding boxes.
     """
     bounding_boxes = {}
     pages_manifest_s3_path = create_s3_path(issue_manifest["pp"][0])
-    issue_manifest = (
+    pages = (
         db.read_text(pages_manifest_s3_path, storage_options=IMPRESSO_STORAGEOPT)
         .map(json.loads)
         .take(len(issue_manifest["pp"]))
     )
-    for page_manifest in issue_manifest:
+    for page_manifest in pages:
         bounding_boxes.update(get_page_bounding_boxes(page_manifest, level))
     return bounding_boxes
