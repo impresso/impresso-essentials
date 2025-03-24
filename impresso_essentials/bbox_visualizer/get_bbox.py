@@ -5,6 +5,7 @@ with improvements to reduce S3 calls.
 
 import json
 from dask import bag as db
+from tqdm import tqdm
 
 from impresso_essentials.bbox_visualizer.utils import (
     create_s3_path,
@@ -59,9 +60,15 @@ def _get_page_regions_bboxes(page_manifest):
     Extract bounding boxes of the regions from the manifest.
     """
     bboxes = []
-    for region in page_manifest["r"]:
-        ci_type = get_ci_type(region["pOf"])
-        bboxes.append({"t": ci_type, "ci": region["pOf"], "c": region["c"]})
+    page_number = page_number = int(page_manifest["id"].split("-")[-1].replace("p", ""))
+    for region in tqdm(
+        page_manifest["r"], desc=f"Getting bboxes for page {page_number}"
+    ):
+        ci = None
+        if "pOf" in region:
+            ci = region["pOf"]
+        ci_type = get_ci_type(ci)
+        bboxes.append({"t": ci_type, "ci": ci, "c": region["c"]})
     return bboxes
 
 
@@ -69,11 +76,17 @@ def _get_page_paragraphs_bboxes(page_manifest):
     """
     Extract bounding boxes of the paragraphs from the manifest.
     """
+    page_number = page_number = int(page_manifest["id"].split("-")[-1].replace("p", ""))
     bboxes = []
-    for region in page_manifest["r"]:
-        ci_type = get_ci_type(region["pOf"])
+    for region in tqdm(
+        page_manifest["r"], desc=f"Getting bboxes for page {page_number}"
+    ):
+        ci = None
+        if "pOf" in region:
+            ci = region["pOf"]
+        ci_type = get_ci_type(ci)
         for p in region["p"]:
-            bboxes.append({"t": ci_type, "ci": region["pOf"], "c": p["c"]})
+            bboxes.append({"t": ci_type, "ci": ci, "c": p["c"]})
     return bboxes
 
 
@@ -82,11 +95,17 @@ def _get_page_lines_bboxes(page_manifest):
     Extract bounding boxes of the lines from the manifest.
     """
     bboxes = []
-    for region in page_manifest["r"]:
-        ci_type = get_ci_type(region["pOf"])
+    page_number = page_number = int(page_manifest["id"].split("-")[-1].replace("p", ""))
+    for region in tqdm(
+        page_manifest["r"], desc=f"Getting bboxes for page {page_number}"
+    ):
+        ci = None
+        if "pOf" in region:
+            ci = region["pOf"]
+        ci_type = get_ci_type(ci)
         for p in region["p"]:
             for l in p["l"]:
-                bboxes.append({"t": ci_type, "ci": region["pOf"], "c": l["c"]})
+                bboxes.append({"t": ci_type, "ci": ci, "c": l["c"]})
     return bboxes
 
 
@@ -95,12 +114,18 @@ def _get_page_tokens_bboxes(page_manifest):
     Extract bounding boxes of the tokens from the manifest.
     """
     bboxes = []
-    for region in page_manifest["r"]:
-        ci_type = get_ci_type(region["pOf"])
+    page_number = page_number = int(page_manifest["id"].split("-")[-1].replace("p", ""))
+    for region in tqdm(
+        page_manifest["r"], desc=f"Getting bboxes for page {page_number}"
+    ):
+        ci = None
+        if "pOf" in region:
+            ci = region["pOf"]
+        ci_type = get_ci_type(ci)
         for p in region["p"]:
             for l in p["l"]:
                 for t in l["t"]:
-                    bboxes.append({"t": ci_type, "ci": region["pOf"], "c": t["c"]})
+                    bboxes.append({"t": ci_type, "ci": ci, "c": t["c"]})
     return bboxes
 
 
@@ -148,42 +173,39 @@ def get_ci_bounding_boxes(ci_manifest: dict, level: str = "regions") -> dict:
     """
     Extract bounding boxes from the CI manifest at the specified level from the rebuilt manifest.
 
-    This version batches S3 calls by reading all page manifests together.
-
     Args:
-        ci_manifest (dict): The manifest of a CI
-        level (str): The level at which to extract the bounding boxes
-                     Options: "regions", "tokens"
-
+            ci_manifest (dict): The manifest of a CI
+            level (str): The level at which to extract the bounding boxes
+                    - "regions": Extract the bounding boxes of the regions
+                    - "tokens": Extract the bounding boxes of the tokens
+                    - Default: "regions"
     Returns:
-        dict: A dictionary mapping the image URL to a list of bounding boxes
+            dict: A dictionary of bounding boxes (coordinates) type and CI ID with the image URL as key
     """
     bounding_boxes = {}
-    # Build list of S3 paths for pages
-    page_ids = [page["id"] for page in ci_manifest["ppreb"]]
-    paths = [create_s3_path(page_id) for page_id in page_ids]
-
-    # Batch read all page manifests from S3
-    manifests = (
-        db.read_text(paths, storage_options=IMPRESSO_STORAGEOPT)
+    # We have to fetch the page canonical manifests to get the image URLs
+    pages_s3_path = create_s3_path(ci_manifest["ppreb"][0]["id"])
+    page_manifests = (
+        db.read_text(pages_s3_path, storage_options=IMPRESSO_STORAGEOPT)
         .map(json.loads)
         .compute()
     )
-    # Build a mapping from page id to manifest
-    manifests_dict = {m["id"]: m for m in manifests}
-
-    for page in ci_manifest["ppreb"]:
-        page_manifest = manifests_dict.get(page["id"])
-        if not page_manifest:
-            continue  # Skip if manifest not found
+    for page in tqdm(
+        ci_manifest["ppreb"],
+        desc=f"Getting bboxes for each page of CI {ci_manifest['id']}",
+    ):
+        page_manifest = next(
+            (page_m for page_m in page_manifests if page_m.get("id") == page["id"])
+        )
         image_url = get_base_url(page_manifest)
-        bounding_boxes.setdefault(image_url, [])
         if level == "regions":
-            for region in page["r"]:
+            bounding_boxes[image_url] = []
+            for region in page["r"]:  # For each box given as region
                 bounding_boxes[image_url].append(
                     {"t": ci_manifest["tp"], "ci": ci_manifest["id"], "c": region}
                 )
         elif level == "tokens":
+            bounding_boxes[image_url] = []
             for token in page["t"]:
                 bounding_boxes[image_url].append(
                     {"t": ci_manifest["tp"], "ci": ci_manifest["id"], "c": token["c"]}
@@ -210,6 +232,7 @@ def get_issue_bounding_boxes(issue_manifest: dict, level: str = "regions") -> di
         .map(json.loads)
         .take(len(issue_manifest["pp"]))
     )
+    print(f"Getting bboxes for {len(pages)} pages:")
     for page_manifest in pages:
         bounding_boxes.update(get_page_bounding_boxes(page_manifest, level))
     return bounding_boxes
