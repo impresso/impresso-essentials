@@ -215,6 +215,14 @@ Based on the information that was updated, the version increment varies:
     - The computation of the manifest in this context is meant more as a sanity-check of the bucket's contents.
     - The counts and statistics will be computed like in other cases, but the update information (modification date, updated years, git commit url etc) will not be updated unless a change in the statstics is identified (in which case the resulting manifest version is incremented accordingly).
 
+---
+## BBOX visualizer JSON extractor
+### TODO
+
+```bash
+python json_builder.py 'actionfem-1927-10-15-a'
+```
+---
 ## About Impresso
 
 ### Impresso project

@@ -1,4 +1,5 @@
 import json
+import argparse
 from dask import bag as db
 from impresso_essentials.io.s3 import IMPRESSO_STORAGEOPT
 
@@ -62,30 +63,29 @@ def build_bbox_json(
     return bbox_json
 
 
-# if __name__ == "__main__":
-#     import argparse
+if __name__ == "__main__":
 
-#     parser = argparse.ArgumentParser(
-#         description="Build the JSON of bounding boxes for a given element."
-#     )
-#     parser.add_argument(
-#         "element_id", type=str, help="The id of the element (page, CI, or issue)"
-#     )
-#     parser.add_argument(
-#         "--level",
-#         type=str,
-#         default="regions",
-#         choices=["regions", "paragraphs", "lines", "tokens"],
-#         help="The level at which to extract bounding boxes (default: regions)",
-#     )
-#     parser.add_argument(
-#         "--output",
-#         type=str,
-#         default=None,
-#         help="Optional output file path (default: <element_id>_bbox.json)",
-#     )
-#     args = parser.parse_args()
+    parser = argparse.ArgumentParser(
+        description="Build the JSON of bounding boxes for a given element."
+    )
+    parser.add_argument(
+        "element_id", type=str, help="The id of the element (page, CI, or issue)"
+    )
+    parser.add_argument(
+        "--level",
+        type=str,
+        default="regions",
+        choices=["regions", "paragraphs", "lines", "tokens"],
+        help="The level at which to extract bounding boxes (default: regions)",
+    )
+    parser.add_argument(
+        "--output",
+        type=str,
+        default=None,
+        help="Optional output file path (default: <element_id>_bbox.json)",
+    )
+    args = parser.parse_args()
 
-#     # Call your function
-#     result = build_bbox_json(args.element_id, args.level, args.output)
-#     print("JSON built successfully:", result)
+    # Call your function
+    build_bbox_json(args.element_id, args.level, args.output)
+    print("JSON built successfully.")
