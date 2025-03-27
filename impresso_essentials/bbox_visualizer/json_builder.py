@@ -1,8 +1,10 @@
 import json
 import argparse
 from dask import bag as db
-from impresso_essentials.io.s3 import IMPRESSO_STORAGEOPT
+import logging
 
+from impresso_essentials.io.s3 import IMPRESSO_STORAGEOPT
+from impresso_essentials.utils import init_logger
 from impresso_essentials.bbox_visualizer.get_bbox import (
     get_page_bounding_boxes,
     get_ci_bounding_boxes,
@@ -12,6 +14,7 @@ from impresso_essentials.bbox_visualizer.utils import (
     create_s3_path,
 )
 
+logger = logging.getLogger(__name__)
 
 def build_bbox_json(
     element_id: str, level: str = "regions", output_path: str = None
@@ -26,7 +29,10 @@ def build_bbox_json(
         output_path (str): Optional output file path
 
     Returns:
-        dict: The JSON structure containing the bounding boxes.
+        dict: The JSON structure containing the bounding boxes
+
+    Raises:
+        ValueError: If the level is not recognized or if the element_id is invalid
     """
     s3_path = create_s3_path(element_id)
     # Build Dask graph and compute manifest list in one go
@@ -38,16 +44,16 @@ def build_bbox_json(
     )
     if not manifest_list:
         raise ValueError(f"Manifest for id {element_id} not found.")
-    manifest = manifest_list[0]
+    manifest_json = manifest_list[0]
 
     id_parts = element_id.split("-")
     if len(id_parts) == 6:  # either a page or a CI
         if "p" in id_parts[-1]:  # a page (canonical manifest)
-            bounding_boxes = get_page_bounding_boxes(manifest, level)
-        elif "i" in id_parts[-1]:
-            bounding_boxes = get_ci_bounding_boxes(manifest, level)
+            bounding_boxes = get_page_bounding_boxes(manifest_json, level)
+        elif "i" in id_parts[-1]: # a CI (rebuilt manifest)
+            bounding_boxes = get_ci_bounding_boxes(manifest_json, level)
     elif len(id_parts) == 5:  # It is an issue
-        bounding_boxes = get_issue_bounding_boxes(manifest, level)
+        bounding_boxes = get_issue_bounding_boxes(manifest_json, level)
     else:
         raise ValueError("Invalid id format.")
 
@@ -60,11 +66,11 @@ def build_bbox_json(
         output_path = f"{element_id}_bbox.json"
     with open(output_path, "w", encoding="utf-8") as f:
         json.dump(bbox_json, f)
+
     return bbox_json
 
 
 if __name__ == "__main__":
-
     parser = argparse.ArgumentParser(
         description="Build the JSON of bounding boxes for a given element."
     )
@@ -84,8 +90,24 @@ if __name__ == "__main__":
         default=None,
         help="Optional output file path (default: <element_id>_bbox.json)",
     )
-    args = parser.parse_args()
+    parser.add_argument(
+        "--verbose",
+        action="store_true",
+        help="Enable verbose logging (default: False)",
+    )
+    parser.add_argument(
+        "--log-file",
+        type=str,
+        default=None,
+        help="Path to the log file (default: None)",
+    )
 
-    # Call your function
+    args = parser.parse_args()
+    log_level = logging.DEBUG if args.verbose else logging.INFO
+
+    init_logger(logger, args.log_level, args.log_file) 
+
     build_bbox_json(args.element_id, args.level, args.output)
-    print("JSON built successfully.")
+    logger.info(
+        f"Bounding boxes JSON for {args.element_id} at level {args.level} saved to {args.output}"
+    )

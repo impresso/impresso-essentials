@@ -7,6 +7,9 @@ def create_s3_path(element_id: str) -> str:
 
     Returns:
         str: S3 path string.
+
+    Raises:
+        ValueError: If the id format is invalid.
     """
     s3_path = "s3://"
     id_parts = element_id.split("-")
@@ -36,32 +39,33 @@ def create_s3_path(element_id: str) -> str:
         raise ValueError("Invalid id format")
 
 
-def get_base_url(page_manifest: dict) -> str:
+def get_base_url(canonical_page_json: dict) -> str:
     """
-    Retrieves the base URL of the IIIF server from the manifest.
+    Retrieves the base URL of the IIIF server from page JSON in canonical format.
 
     Args:
-        page_manifest (dict): The manifest of the page.
+        canonical_page_json (dict): JSON object of the page in canonical format.
+        This should contain either "iiif" or "iiif_img_base_uri".
 
     Returns:
         str: The IIIF base URL.
     """
-    if "iiif" in page_manifest:
-        return page_manifest["iiif"]
-    elif "iiif_img_base_uri" in page_manifest:
-        return page_manifest["iiif_img_base_uri"]
+    if "iiif" in canonical_page_json:
+        return canonical_page_json["iiif"]
+    elif "iiif_img_base_uri" in canonical_page_json:
+        return canonical_page_json["iiif_img_base_uri"]
     else:
         raise ValueError("No IIIF base URL found in the manifest")
 
 
-def create_image_url(page_manifest: dict) -> str:
+def create_image_url(canonical_page_json: dict) -> str:
     """
     Creates the URL for the page image using the base IIIF URL.
 
     Args:
-        page_manifest (dict): The manifest of the page.
+        canonical_page_json (dict): JSON object of the page in canonical format.
 
     Returns:
         str: URL of the page image.
     """
-    return f"{get_base_url(page_manifest)}/full/full/0/default.jpg"
+    return f"{get_base_url(canonical_page_json)}/full/full/0/default.jpg"
