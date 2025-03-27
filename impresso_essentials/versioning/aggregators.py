@@ -714,9 +714,9 @@ def compute_stats_in_lingproc_bag(
     count_df = (
         s3_lingprocs.map(
             lambda ci: {
-                "np_id": ci["ci_id"].split("-")[0],
-                "year": ci["ci_id"].split("-")[1],
-                "issues": "-".join(ci["ci_id"].split("-")[:-1]),
+                "np_id": ci.get("ci_id",ci.get("id")).split("-")[0],
+                "year": ci.get("ci_id",ci.get("id")).split("-")[1],
+                "issues": "-".join(ci.get("ci_id",ci.get("id")).split("-")[:-1]),
                 "content_items_out": 1,
             }
         )
