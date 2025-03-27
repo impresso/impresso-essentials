@@ -216,6 +216,7 @@ Based on the information that was updated, the version increment varies:
     - The counts and statistics will be computed like in other cases, but the update information (modification date, updated years, git commit url etc) will not be updated unless a change in the statstics is identified (in which case the resulting manifest version is incremented accordingly).
 
 ---
+---
 ## BBOX visualizer JSON extractor
 ### Motivation 
 The impresso corpus is very large, and aggregates data from a wide variety of data providers, each in their own unique format, with varying quality.
@@ -230,18 +231,30 @@ The motivation for this tool is thus to:
   - visualize better the canonical and rebuilt data when it’s generated and at various steps of the pipeline
   - enable easier debugging, and identification/correction of potential issues and bugs in the code.
   - allow for quick checks of content-items against the facsimile at later stages of the pipeline, helping in all development phases.
-
+---
 ### Usage
-The functions built are found in `impresso_essentials/bbox_visualizer/`. We focus on extracting from element (issue, page, content item) id, the corresponding JSON formatted to be seen by a JSON visualizer.
+The functions built are found in `impresso_essentials/bbox_visualizer/`. We focus on extracting from element (issue, page, content item) id, the corresponding JSON formatted to be seen by a JSON visualizer. The schema for the format outputed can found in `impresso-schema/json/visualizer/bbox_visualizer_schema.json`.
 You can either call `build_bbox_json()` in a notebook by importing it with
 ```python
 from impresso_essentials.bbox_visualizer.json_builder import build_bbox_json
 ```
 or call it as a **CLI** with 
 ```bash
-python json_builder.py <element_ID> --level <level of bboxes default:regions> --output <output_path.json>
+python json_builder.py <element_ID> --level <level of bboxes> --output <output_path.json> --verbose --log-file <path/to/log_file>
 ```
+#### Arguments
+  - `element_id` **(positional)** : ID of the element you want to extract the JSON from
+  - `level` : level of the bounding boxes you want to visualize, it can be from `{regions,paragraphs,lines,tokens}`
+  - `output` : path where the correspondin JSON with the bounding boxes will be outputed. 
 ---
+### Testing
+You can make some tests in `notebooks/viz-test.ipynb`.
+
+### Visualizing BBoxes
+
+Once you have extracted your JSON, you can visualize the bounding boxes from the given element by installing the [impresso/bbox-viewer](https://github.com/impresso/bbox-viewer) repository.
+
+Once you have launched the web app, you can copy-paste your JSON file in the left text box and visualize on the right your elements with bounding boxes overlayed.
 ## About Impresso
 
 ### Impresso project
