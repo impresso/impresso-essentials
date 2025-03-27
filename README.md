@@ -221,21 +221,16 @@ Based on the information that was updated, the version increment varies:
 The impresso corpus is very large, and aggregates data from a wide variety of data providers, each in their own unique format, with varying quality.
 
 This data is first converted to a unified data format - specific to impresso - the canonical format.
+When converting the original OCR (sometimes including OLR) data into this canonical format, many errors and mistakes can arise, due to the low quality of the OCR/OLR, complexity of the logical structure or code bugs. 
 
-When converting the original OCR (sometimes including OLR) data into this canonical format, many errors and mistakes can arise, due to:
-  - the low quality of the OCR/OLR,
-  - complexity of the logical structure 
-  - code bugs. 
-  - …
-
-It is usually hard to visualize the extracted structure into (logical) content items of issues, along with their bounding boxes before the very end of the data processing pipeline, when it’s ingested into the interface.
-
+It is not straightfoward to visualize the extracted structure of content-items and issues (and their bounding boxes) before the very end of the data processing pipeline, when it’s ingested into the interface.
 As a result, many issues (like misplaced coordinates, faulty content-items or else) are only uncovered at the very end of the process, once the data is already public. 
 
 The motivation for this tool is thus to:
   - visualize better the canonical and rebuilt data when it’s generated and at various steps of the pipeline
   - enable easier debugging, and identification/correction of potential issues and bugs in the code.
   - allow for quick checks of content-items against the facsimile at later stages of the pipeline, helping in all development phases.
+
 ### Usage
 The functions built are found in `impresso_essentials/bbox_visualizer/`. We focus on extracting from element (issue, page, content item) id, the corresponding JSON formatted to be seen by a JSON visualizer.
 You can either call `build_bbox_json()` in a notebook by importing it with
