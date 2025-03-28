@@ -1,7 +1,18 @@
+"""Module allowing to generate a JSON file used to visualize the bounding boxes of a canonical Newspaper element (issue, page or content-item).
+
+Usage:
+    python json_builder.py <element_ID> --level <level of bboxes> --output <output_path.json> --verbose --log-file <path/to/log_file>
+
+- element_id (positional) : ID of the element you want to extract the JSON from
+- level : level of the bounding boxes you want to visualize, it can be from {regions,paragraphs,lines,tokens}
+- output : path where the correspondin JSON with the bounding boxes will be outputed.
+- verbose : set the log level to DEBUG, otherwise will be INFO.
+- log-file : path to logfile to use, otherwise will print in stdout.
+"""
 import json
+import logging
 import argparse
 from dask import bag as db
-import logging
 
 from impresso_essentials.io.s3 import IMPRESSO_STORAGEOPT
 from impresso_essentials.utils import init_logger
@@ -47,6 +58,7 @@ def build_bbox_json(
     manifest_json = manifest_list[0]
 
     id_parts = element_id.split("-")
+    bounding_boxes = {}
     if len(id_parts) == 6:  # either a page or a CI
         if "p" in id_parts[-1]:  # a page (canonical manifest)
             bounding_boxes = get_page_bounding_boxes(manifest_json, level)
@@ -105,7 +117,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
     log_level = logging.DEBUG if args.verbose else logging.INFO
 
-    init_logger(logger, args.log_level, args.log_file) 
+    init_logger(logger, log_level, args.log_file) 
 
     build_bbox_json(args.element_id, args.level, args.output)
     logger.info(
