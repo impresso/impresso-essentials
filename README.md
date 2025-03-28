@@ -248,13 +248,14 @@ python json_builder.py <element_ID> --level <level of bboxes> --output <output_p
   - `output` : path where the correspondin JSON with the bounding boxes will be outputed. 
 ---
 ### Testing
-You can make some tests in `notebooks/viz-test.ipynb`.
+You can make some tests in `notebooks/json_bbox_extractor.ipynb`.
 
 ### Visualizing BBoxes
 
 Once you have extracted your JSON, you can visualize the bounding boxes from the given element by installing the [impresso/bbox-viewer](https://github.com/impresso/bbox-viewer) repository.
 
 Once you have launched the web app, you can copy-paste your JSON file in the left text box and visualize on the right your elements with bounding boxes overlayed.
+![](images/viewer.png)
 ## About Impresso
 
 ### Impresso project
