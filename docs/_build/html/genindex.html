@@ -46,6 +46,7 @@
 <li class="toctree-l1"><a class="reference internal" href="io.html">Input/Output</a></li>
 <li class="toctree-l1"><a class="reference internal" href="versioning.html">Data Versioning</a></li>
 <li class="toctree-l1"><a class="reference internal" href="utils.html">Utilities</a></li>
+<li class="toctree-l1"><a class="reference internal" href="bbox_visualizer.html">BBOX visualizer JSON extractor</a></li>
 </ul>
 
         </div>
@@ -127,6 +128,10 @@
 <h2 id="B">B</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="bbox_visualizer.html#impresso_essentials.bbox_visualizer.json_builder.build_bbox_json">build_bbox_json() (in module impresso_essentials.bbox_visualizer.json_builder)</a>
+</li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="utils.html#impresso_essentials.utils.bytes_to">bytes_to() (in module impresso_essentials.utils)</a>
 </li>
   </ul></td>
@@ -163,10 +168,10 @@
 </li>
       <li><a href="versioning.html#impresso_essentials.versioning.aggregators.compute_stats_in_img_emb_bag">compute_stats_in_img_emb_bag() (in module impresso_essentials.versioning.aggregators)</a>
 </li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="versioning.html#impresso_essentials.versioning.aggregators.compute_stats_in_langident_bag">compute_stats_in_langident_bag() (in module impresso_essentials.versioning.aggregators)</a>
 </li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="versioning.html#impresso_essentials.versioning.aggregators.compute_stats_in_lingproc_bag">compute_stats_in_lingproc_bag() (in module impresso_essentials.versioning.aggregators)</a>
 </li>
       <li><a href="versioning.html#impresso_essentials.versioning.aggregators.compute_stats_in_ocrqa_bag">compute_stats_in_ocrqa_bag() (in module impresso_essentials.versioning.aggregators)</a>
@@ -195,7 +200,11 @@
 </li>
       <li><a href="versioning.html#impresso_essentials.versioning.aggregators.counts_for_rebuilt">counts_for_rebuilt() (in module impresso_essentials.versioning.aggregators)</a>
 </li>
+      <li><a href="bbox_visualizer.html#impresso_essentials.bbox_visualizer.get_bbox.create_image_url">create_image_url() (in module impresso_essentials.bbox_visualizer.get_bbox)</a>
+</li>
       <li><a href="versioning.html#impresso_essentials.versioning.compute_manifest.create_manifest">create_manifest() (in module impresso_essentials.versioning.compute_manifest)</a>
+</li>
+      <li><a href="bbox_visualizer.html#impresso_essentials.bbox_visualizer.get_bbox.create_s3_path">create_s3_path() (in module impresso_essentials.bbox_visualizer.get_bbox)</a>
 </li>
   </ul></td>
 </tr></table>
@@ -277,7 +286,13 @@
   <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="versioning.html#impresso_essentials.versioning.data_manifest.DataManifest.generate_media_dict">generate_media_dict() (impresso_essentials.versioning.data_manifest.DataManifest method)</a>
 </li>
+      <li><a href="bbox_visualizer.html#impresso_essentials.bbox_visualizer.get_bbox.get_base_url">get_base_url() (in module impresso_essentials.bbox_visualizer.get_bbox)</a>
+</li>
       <li><a href="io.html#impresso_essentials.io.s3.get_bucket">get_bucket() (in module impresso_essentials.io.s3)</a>
+</li>
+      <li><a href="bbox_visualizer.html#impresso_essentials.bbox_visualizer.get_bbox.get_ci_bounding_boxes">get_ci_bounding_boxes() (in module impresso_essentials.bbox_visualizer.get_bbox)</a>
+</li>
+      <li><a href="bbox_visualizer.html#impresso_essentials.bbox_visualizer.get_bbox.get_ci_type">get_ci_type() (in module impresso_essentials.bbox_visualizer.get_bbox)</a>
 </li>
       <li><a href="versioning.html#impresso_essentials.versioning.data_manifest.DataManifest.get_count_keys">get_count_keys() (impresso_essentials.versioning.data_manifest.DataManifest method)</a>
 </li>
@@ -285,17 +300,21 @@
 </li>
       <li><a href="versioning.html#impresso_essentials.versioning.helpers.get_head_commit_url">get_head_commit_url() (in module impresso_essentials.versioning.helpers)</a>
 </li>
+      <li><a href="bbox_visualizer.html#impresso_essentials.bbox_visualizer.get_bbox.get_issue_bounding_boxes">get_issue_bounding_boxes() (in module impresso_essentials.bbox_visualizer.get_bbox)</a>
+</li>
       <li><a href="io.html#impresso_essentials.io.fs_utils.get_issueshortpath">get_issueshortpath() (in module impresso_essentials.io.fs_utils)</a>
 </li>
       <li><a href="utils.html#impresso_essentials.utils.get_list_intersection">get_list_intersection() (in module impresso_essentials.utils)</a>
 </li>
       <li><a href="versioning.html#impresso_essentials.versioning.helpers.get_media_item_years">get_media_item_years() (in module impresso_essentials.versioning.helpers)</a>
 </li>
-      <li><a href="versioning.html#impresso_essentials.versioning.helpers.get_media_titles">get_media_titles() (in module impresso_essentials.versioning.helpers)</a>
-</li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="versioning.html#impresso_essentials.versioning.helpers.get_media_titles">get_media_titles() (in module impresso_essentials.versioning.helpers)</a>
+</li>
       <li><a href="io.html#impresso_essentials.io.s3.get_or_create_bucket">get_or_create_bucket() (in module impresso_essentials.io.s3)</a>
+</li>
+      <li><a href="bbox_visualizer.html#impresso_essentials.bbox_visualizer.get_bbox.get_page_bounding_boxes">get_page_bounding_boxes() (in module impresso_essentials.bbox_visualizer.get_bbox)</a>
 </li>
       <li><a href="utils.html#impresso_essentials.utils.get_pkg_resource">get_pkg_resource() (in module impresso_essentials.utils)</a>
 </li>
@@ -338,6 +357,20 @@
       <li><a href="utils.html#impresso_essentials.utils.id_to_issuedir">id_to_issuedir() (in module impresso_essentials.utils)</a>
 </li>
       <li>
+    impresso_essentials.bbox_visualizer.get_bbox
+
+      <ul>
+        <li><a href="bbox_visualizer.html#module-impresso_essentials.bbox_visualizer.get_bbox">module</a>
+</li>
+      </ul></li>
+      <li>
+    impresso_essentials.bbox_visualizer.json_builder
+
+      <ul>
+        <li><a href="bbox_visualizer.html#module-impresso_essentials.bbox_visualizer.json_builder">module</a>
+</li>
+      </ul></li>
+      <li>
     impresso_essentials.io.fs_utils
 
       <ul>
@@ -379,6 +412,8 @@
         <li><a href="versioning.html#module-impresso_essentials.versioning.aggregators">module</a>
 </li>
       </ul></li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
       <li>
     impresso_essentials.versioning.compute_manifest
 
@@ -386,8 +421,6 @@
         <li><a href="versioning.html#module-impresso_essentials.versioning.compute_manifest">module</a>
 </li>
       </ul></li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
       <li>
     impresso_essentials.versioning.data_manifest
 
@@ -477,6 +510,10 @@
     module
 
       <ul>
+        <li><a href="bbox_visualizer.html#module-impresso_essentials.bbox_visualizer.get_bbox">impresso_essentials.bbox_visualizer.get_bbox</a>
+</li>
+        <li><a href="bbox_visualizer.html#module-impresso_essentials.bbox_visualizer.json_builder">impresso_essentials.bbox_visualizer.json_builder</a>
+</li>
         <li><a href="io.html#module-impresso_essentials.io.fs_utils">impresso_essentials.io.fs_utils</a>
 </li>
         <li><a href="io.html#module-impresso_essentials.io.s3">impresso_essentials.io.s3</a>

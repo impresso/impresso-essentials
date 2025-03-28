@@ -15,3 +15,4 @@ Python module with bits of code (objects, functions) highly reusable within impr
    io
    versioning
    utils
+   bbox_visualizer
