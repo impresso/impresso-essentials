@@ -38,6 +38,9 @@ dependencies = {file = ["requirements.txt"]}
 include = ["impresso_essentials*"]
 namespaces = false
 
+[tool.setuptools]
+license-files = []
+
 [tool.setuptools.package-data]
 impresso_essentials = [
     "data/xmi/*.xml",
