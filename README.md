@@ -255,7 +255,7 @@ You can make some tests in `notebooks/json_bbox_extractor.ipynb`.
 Once you have extracted your JSON, you can visualize the bounding boxes from the given element by installing the [impresso/bbox-viewer](https://github.com/impresso/bbox-viewer) repository.
 
 Once you have launched the web app, you can copy-paste your JSON file in the left text box and visualize on the right your elements with bounding boxes overlayed.
-![](images/viewer.png)
+![](impresso_essentials/bbox_visualizer/images/viewer.png)
 ## About Impresso
 
 ### Impresso project
