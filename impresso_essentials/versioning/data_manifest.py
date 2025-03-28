@@ -1093,6 +1093,7 @@ class DataManifest:
                 "mft_s3_path": self.output_mft_s3_path,
                 "input_mft_s3_path": self.input_manifest_s3_path,
                 "input_mft_git_path": input_mft_git_path,
+                "previous_mft_s3_path": self._prev_mft_s3_path,
                 "code_git_commit": self.commit_url,
                 "model_id": self.model_id,
                 "run_id": self.run_id,

@@ -6,7 +6,6 @@
     "newspapers": [],
     "temp_directory": FILL ME,
     "previous_mft_s3_path": "",
-    "is_staging": true,
     "is_patch": false,
     "patched_fields": [],
     "push_to_git": false,

@@ -52,7 +52,6 @@ REQ_CONFIG_KEYS = [
     "data_stage",
     "output_bucket",
     "git_repository",
-    "is_staging",
     "file_extensions",
 ]
 
@@ -499,7 +498,6 @@ def create_manifest(
         s3_input_bucket=in_bucket if in_bucket != "" else None,
         git_repo=repo,
         temp_dir=config_dict["temp_directory"],
-        staging=config_dict["is_staging"],
         is_patch=config_dict["is_patch"],
         patched_fields=p_fields,
         previous_mft_path=prev_mft if prev_mft != "" else None,

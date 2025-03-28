@@ -20,7 +20,6 @@ Below is an example for the case of NE-processing, as well as a description of e
     ],
     "temp_directory": "/local/path/to/a/temp/file",
     "previous_mft_s3_path": "",
-    "is_staging": true,
     "is_patch": false,
     "patched_fields": [],
     "push_to_git": true,
@@ -50,8 +49,6 @@ Below is an example for the case of NE-processing, as well as a description of e
 - __*previous_mft_s3_path*__: (optional) S3 path of the *previous* manifest to use, if it is not located inside `output_bucket`.
   - Should be left empty (`""` or `null`) if a versioning manifest for this specific `data_stage` is already present inside `output_bucket`.
   - The *previous* manifest is the most recent manifest that had been generated for this specific `data_stage`, and can sometimes be in another bucket.
-- __*is_staging*__: (required) Boolean value, set to `true` if the manifest is versioning 'staging' data, that is not yet final or ready for production.
-  - Also determines to which *branch* of the `impresso/impresso-data-release` git repository the generated manifest will be pushed to: `staging` if `true`, `master` otherwise.
 - __*is_patch*__: (optional) Whether the update made to the current data to be versioned in `output_bucket` was a patch.
   - An update is considered to be a patch if only some of the output's properties were modified, and that the update was not performed by a re-ingestion/recomputation from the input data (rather the modification of the existing one).
   - If set to `true`, the version of the generated manifest will reflect with a patch increment.
