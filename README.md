@@ -125,7 +125,6 @@ To do so, some simple modifications should be made to the process' code:
         s3_input_bucket="22-rebuilt-final", # includes partition within bucket
         git_repo="/local/path/to/impresso-essentials",
         temp_dir="/local/path/to/git_temp_folder",
-        staging=False, # If True, will be pushed to 'staging' branch of impresso-data-release, else 'master'
         is_patch=True,
         patched_fields=["series", "id"], # example of modified fields in the passim-rebuilt schema
         previous_mft_path=None, # a manifest already exists on S3 inside "32-passim-rebuilt-final/passim"

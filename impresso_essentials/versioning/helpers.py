@@ -51,23 +51,23 @@ class DataStage(StrEnum):
     REBUILT = "rebuilt"
     # EVENIZED = "evenized-rebuilt"  # TODO remove?
     PASSIM = "passim"
-    EMB_WORDS = "embeddings-words"
-    EMB_SENTS = "embeddings-sents"
-    EMB_DOCS = "embeddings-docs"
-    EMB_ENTITIES = "embeddings-entities"
-    EMB_PARAGRAPHS = "embeddings-paragraphs"
-    EMB_IMAGES = "embeddings-images"
+    EMB_WORDS = "emb-words"
+    EMB_SENTS = "emb-sents"
+    EMB_DOCS = "emb-docs"
+    EMB_ENTITIES = "emb-entities"
+    EMB_PARAGRAPHS = "emb-paragraphs"
+    EMB_IMAGES = "emb-images"
     # EMBED_ARTICLES = "embeddings-article"
     ENTITIES = "entities"
     NEWS_AGENCIES = "newsagencies"
     LANGIDENT = "langident"
     LINGPROC = "lingproc"
     OCRQA = "ocrqa"
-    TEXT_REUSE = "text-reuse"
+    TEXT_REUSE = "textreuse"
     TOPICS = "topics"
     SOLR_TEXT = "solr-text-ingestion"
-    #SOLR_ENTITIES = "solr-ingestion-entities"
-    #SOLR_EMBS = "solr-ingestion-emb"
+    # SOLR_ENTITIES = "solr-entities-post"
+    # SOLR_EMBS = "solr-emb-post"
     MYSQL_CIS = "mysql-ingestion"
 
     @classmethod
@@ -565,6 +565,9 @@ def get_head_commit_url(repo: str | git.Repo) -> str:
     Returns:
         str: The HTTPS URL of the last commit on the git repository's master branch.
     """
+    # ensure they are defined (will always be re-assigned later)
+    raw_url = ""
+    commit_hash = ""
     not_repo_url = True
     if isinstance(repo, str):
         if "https" in repo:

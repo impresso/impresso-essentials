@@ -1,20 +1,19 @@
 {
-    "data_stage": "embeddings-docs",
+    "data_stage": "emb-docs",
     "output_bucket": "42-processed-data-final/embeddings/docs/doc-embeddings_v1-1-0/",
     "input_bucket": "22-rebuilt-final",
-    "git_repository": FILL ME,
+    "git_repository": "FILL ME",
     "newspapers": [],
-    "temp_directory": FILL ME,
+    "temp_directory": "FILL ME",
     "previous_mft_s3_path": "",
-    "is_staging": true,
     "is_patch": false,
     "patched_fields": [],
     "push_to_git": false,
     "relative_git_path": "",
     "only_counting": false,
-    "model_id": "emb-docs_gte-multilingual_v1.0.0", # CHECK ME
-    "run_id": "emb-docs_gte-multilingual_v1-1-0", # CHECK ME
-    "notes": FILL ME,
+    "model_id": "FILL ME",
+    "run_id": "FILL ME",
+    "notes": "FILL ME",
     "file_extensions": "jsonl.bz2",
     "compute_altogether": false,
     "check_s3_archives": false

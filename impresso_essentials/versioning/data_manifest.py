@@ -53,7 +53,6 @@ class DataManifest:
         temp_dir: str,
         # S3 bucket of the previous stage, None if stage='canonical'
         s3_input_bucket: Optional[str] = None,
-        staging: Optional[bool] = None,
         # to directly provide the next version
         new_version: Optional[str] = None,
         # to indicate if patch in later stages
@@ -100,8 +99,6 @@ class DataManifest:
         os.makedirs(temp_dir, exist_ok=True)
         self.notes = notes
 
-        # attributes relating to GitHub
-        self.branch = self._get_output_branch(staging)
         # get code version used for processing.
         self.commit_url = get_head_commit_url(git_repo)
 
@@ -210,34 +207,6 @@ class DataManifest:
             )
             logger.info(info_msg)
             print(info_msg)
-
-    def _get_output_branch(self, for_staging: Optional[bool]) -> str:
-        """Get the git repository branch on which to add the manifest once generated-
-
-        The logic to choose the branch is the following:
-            - If no `for_staging` argument was provided, only the output bucket name is used
-                to infer the branch.
-                - If "final" -> "master", and "staging" -> "staging"
-                - If the stage is not in the bucket name, use "staging" branch by default
-            - If the `for_staging` argument was provided, it can override the result.
-
-        Hence, "master" branch is chosen only if:
-            - `for_staging` was defined and False
-            - `final` was in the output bucket name and `for_staging` was None
-
-        Args:
-            for_staging (Optional[bool]): Whether this manifest is meant for staging.
-
-        Returns:
-            str: Branch to use on the repo, either "staging" or "master"
-        """
-        staging_out_bucket = "staging" in self.output_bucket_name
-        final_out_bucket = "final" in self.output_bucket_name
-
-        if for_staging is None:
-            for_staging = not (staging_out_bucket or final_out_bucket)
-
-        return "staging" if staging_out_bucket or for_staging else "master"
 
     def _get_prev_version_manifest(self) -> Union[dict[str, Any], None]:
         """Find and return the previous version manifest of this DataStage and bucket.
@@ -423,8 +392,8 @@ class DataManifest:
         validate_against_schema(self.manifest_data)
 
         if push_to_git:
-            # clone the data release repository locally if not for debug
-            out_repo = clone_git_repo(self.temp_dir, branch=self.branch)
+            # clone the data release repository locally if not for debug - always staging branch
+            out_repo = clone_git_repo(self.temp_dir, branch='staging')
 
             logger.info("%s and GitHub!", msg)
         else:
@@ -1124,6 +1093,7 @@ class DataManifest:
                 "mft_s3_path": self.output_mft_s3_path,
                 "input_mft_s3_path": self.input_manifest_s3_path,
                 "input_mft_git_path": input_mft_git_path,
+                "previous_mft_s3_path": self._prev_mft_s3_path,
                 "code_git_commit": self.commit_url,
                 "model_id": self.model_id,
                 "run_id": self.run_id,
