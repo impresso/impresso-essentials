@@ -20,9 +20,7 @@ from impresso_essentials.bbox_visualizer.get_bbox import (
     get_page_bounding_boxes,
     get_ci_bounding_boxes,
     get_issue_bounding_boxes,
-)
-from impresso_essentials.bbox_visualizer.utils import (
-    create_s3_path,
+    create_s3_path
 )
 
 logger = logging.getLogger(__name__)
