@@ -19,6 +19,7 @@ TYPE_MAPPINGS = {
     "table": "tb",
     "death_notice": "ob",
     "weather": "w",
+    "page":"page"
 }
 
 # Global cache for CI type lookups
