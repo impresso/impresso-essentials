@@ -76,7 +76,8 @@ def build_bbox_json(
             if "unibas" in iiif_img_base_uri:
                 bbox_json["bboxes"][iiif_img_base_uri + "/info.json"] = bbox_json["bboxes"].pop(iiif_img_base_uri)   
                 new_uri.append(iiif_img_base_uri + "/info.json")
-    bbox_json["iiif_img_base_uri"] = new_uri
+    if new_uri:            
+        bbox_json["iiif_img_base_uri"] = new_uri
             
     if not output_path:
         output_path = f"{element_id}_bbox.json"
