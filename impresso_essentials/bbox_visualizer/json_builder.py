@@ -71,7 +71,13 @@ def build_bbox_json(
         "iiif_img_base_uri": list(bounding_boxes.keys()),
         "bboxes": bounding_boxes,
     }
-
+    new_uri =  []
+    for iiif_img_base_uri in bbox_json["iiif_img_base_uri"]:
+            if "unibas" in iiif_img_base_uri:
+                bbox_json["bboxes"][iiif_img_base_uri + "/info.json"] = bbox_json["bboxes"].pop(iiif_img_base_uri)   
+                new_uri.append(iiif_img_base_uri + "/info.json")
+    bbox_json["iiif_img_base_uri"] = new_uri
+            
     if not output_path:
         output_path = f"{element_id}_bbox.json"
     with open(output_path, "w", encoding="utf-8") as f:
