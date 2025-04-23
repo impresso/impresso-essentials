@@ -55,9 +55,9 @@ class SourceType(StrEnum):
 class SourceMedium(StrEnum):
     """Enum all mediums of media sources in Impresso."""
 
-    PRINT = "print"
-    TYPESCRIPT = "typescript"
-    AUDIO = "audio"
+    PT = "print"
+    TPS = "typescript"
+    AO = "audio"
 
     @classmethod
     def has_value(cls: Self, value: str) -> bool:
