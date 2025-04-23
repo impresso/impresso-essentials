@@ -44,7 +44,27 @@ class SourceType(StrEnum):
         """Check if enum contains given value
 
         Args:
-            cls (Self): This DataStage class
+            cls (Self): This source type
+            value (str): Value to check
+
+        Returns:
+            bool: True if the value provided is in this enum's values, False otherwise.
+        """
+        return value in cls._value2member_map_
+
+class SourceMedium(StrEnum):
+    """Enum all mediums of media sources in Impresso."""
+
+    PRINT = "print"
+    TYPESCRIPT = "typescript"
+    AUDIO = "audio"
+
+    @classmethod
+    def has_value(cls: Self, value: str) -> bool:
+        """Check if enum contains given value
+
+        Args:
+            cls (Self): This source medium
             value (str): Value to check
 
         Returns:
@@ -151,6 +171,7 @@ PARTNER_TO_MEDIA = {
         "oecaen",
         "oerennes",
     ],
+    # TODO add new titles
     "BCUL": [
         "ACI",
         "Castigat",
@@ -245,7 +266,6 @@ PARTNER_TO_MEDIA = {
         "DRHE",
         "DHEX",
         "DYMR",
-        "DCWA",
         "DCEA",
         "DJWN",
         "DDIS",
@@ -299,7 +319,6 @@ PARTNER_TO_MEDIA = {
         "LNLF",
         "LMNA",
         "LRNW",
-        "MEXM",
         "MRTM",
         "MRTT",
         "MCLN",
@@ -603,7 +622,8 @@ PARTNER_TO_SOURCE_TYPES = {
 
 # a simple data structure to represent input directories
 # a `Document.zip` file is expected to be found in `IssueDir.path`
-IssueDir = namedtuple("IssueDir", ["journal", "date", "edition", "path"])
+#IssueDir = namedtuple("IssueDir", ["alias", "date", "edition", "path", "src_type", "src_medium"])
+IssueDir = namedtuple("IssueDir", ["alias", "date", "edition", "path"])
 
 
 def user_confirmation(question: str, default: str | None = None) -> bool:
