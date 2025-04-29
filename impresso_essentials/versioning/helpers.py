@@ -1,5 +1,4 @@
-"""Helper functions to read, generate and write data versioning manifests.
-"""
+"""Helper functions to read, generate and write data versioning manifests."""
 
 import sys
 import copy
@@ -205,7 +204,12 @@ def extract_version(name_or_path: str, as_int: bool = False) -> Union[str, int]:
     basename = os.path.basename(name_or_path)
     version = basename.replace(".json", "").split("_")[-1]
 
-    return int(version[1:].replace("-", "")) if as_int else version.replace("-", ".")
+    if as_int:
+        ind_nums = version[1:].split("-")
+        # multiply each part of the version with a larger multiple of 10
+        as_ints = [int(n) * (10 ** (2 * i)) for i, n in enumerate(ind_nums[::-1])][::-1]
+        return sum(as_ints)
+    return version.replace("-", ".")
 
 
 def increment_version(prev_version: str, increment: str) -> str:
@@ -230,11 +234,13 @@ def increment_version(prev_version: str, increment: str) -> str:
         list_v[incr_val] = str(int(list_v[incr_val]) + 1)
         if incr_val < 2:
             list_v[incr_val + 1 :] = ["0"] * (2 - incr_val)
+
+        logger.warning(
+            f"MANIFEST - increment: {increment}, incr_val: {incr_val}, prev_version: {prev_version}, list_v: {list_v}, 'v' + '.'.join(list_v): {'v' + '.'.join(list_v)}"
+        )
         return "v" + ".".join(list_v)
     except ValueError as e:
-        logger.error(
-            "Provided invalid increment %s: not in %s", increment, VERSION_INCREMENTS
-        )
+        logger.error("Provided invalid increment %s: not in %s", increment, VERSION_INCREMENTS)
         raise e
 
 
@@ -325,9 +331,7 @@ def read_manifest_from_s3(
         logger.info("No %s manifest found in bucket %s", data_stage, bucket_name)
         return None, None
 
-    raw_text = alternative_read_text(
-        manifest_s3_path, IMPRESSO_STORAGEOPT, line_by_line=False
-    )
+    raw_text = alternative_read_text(manifest_s3_path, IMPRESSO_STORAGEOPT, line_by_line=False)
 
     return manifest_s3_path, json.loads(raw_text)
 
@@ -380,9 +384,7 @@ def write_dump_to_fs(file_contents: str, abs_path: str, filename: str) -> Option
 
         return full_file_path
     except IOError as e:
-        logger.error(
-            "Writing dump %s to local fs triggered the error: %s", full_file_path, e
-        )
+        logger.error("Writing dump %s to local fs triggered the error: %s", full_file_path, e)
         return None
 
 
@@ -438,9 +440,7 @@ def clone_git_repo(
         repo = git.Repo(repo_path)
         # check if the current branch is the correct one & pull latest version
         if branch not in repo.active_branch.name:
-            logger.info(
-                "Switching branch from %s to %s", repo.active_branch.name, branch
-            )
+            logger.info("Switching branch from %s to %s", repo.active_branch.name, branch)
             print("Switching branch from %s to %s", repo.active_branch.name, branch)
             repo.git.checkout(branch)
         repo.remotes.origin.pull()
@@ -643,9 +643,7 @@ def media_list_from_mft_json(json_mft: dict[str, Any]) -> dict[str, dict]:
             new_media_list[media["media_title"]] = media
             new_media_list[media["media_title"]]["stats_as_dict"] = yearly_media_stats
         else:
-            logger.info(
-                "Skipping %s as it's BL and only a sample.", media["media_title"]
-            )
+            logger.info("Skipping %s as it's BL and only a sample.", media["media_title"])
 
     return new_media_list
 
@@ -788,9 +786,7 @@ def filter_new_or_modified_media(
 
     # Extract last modification date of each media item of the previous process
     previous_media_items = {
-        media["media_title"]: strptime(
-            media["last_modification_date"], "%Y-%m-%d %H:%M:%S"
-        )
+        media["media_title"]: strptime(media["last_modification_date"], "%Y-%m-%d %H:%M:%S")
         for media in previous_mft_json["media_list"]
     }
 
@@ -813,9 +809,7 @@ def filter_new_or_modified_media(
         "\nInput (rebuilt) manifest has %s media items.",
         len(get_media_titles(rebuilt_mft_json)),
     )
-    logger.info(
-        "Resulting filtered manifest has %s media items.", len(filtered_media_list)
-    )
+    logger.info("Resulting filtered manifest has %s media items.", len(filtered_media_list))
     logger.info(
         "Media items that will be newly processed:\n %s\n",
         get_media_titles(filtered_media_list),
@@ -826,9 +820,7 @@ def filter_new_or_modified_media(
     return filtered_manifest
 
 
-def get_media_titles(
-    input_data: Union[dict[str, Any], list[dict[str, Any]]]
-) -> list[str]:
+def get_media_titles(input_data: Union[dict[str, Any], list[dict[str, Any]]]) -> list[str]:
     """
     Extracts media titles from the input data which can be either a manifest
     or a media list.
@@ -879,9 +871,7 @@ def get_media_item_years(mnf_json: dict[str, Any]) -> dict[str, dict[str, float]
             s3_key = bucket_name + "/" + year_key
             year_size_b = get_s3_object_size(bucket_name.split("//")[1], year_key)
             year_size_m = (
-                round(bytes_to(year_size_b, "m"), 2)
-                if year_size_b is not None
-                else None
+                round(bytes_to(year_size_b, "m"), 2) if year_size_b is not None else None
             )
             # print(f"Size in b: {year_size_b}, in mb: {year_size_m}")
 
