@@ -87,7 +87,7 @@ def canonical_path(
     sep = "/" if as_dir else "-"
     base = sep.join(
         [
-            issuedir.alias,
+            issuedir.journal,
             str(issuedir.date.year),
             str(issuedir.date.month).zfill(2),
             str(issuedir.date.day).zfill(2),
@@ -165,7 +165,7 @@ def get_issueshortpath(issuedir: IssueDir) -> str:
         str: Canonical path to the issue starting at the journal name.
     """
     path = issuedir.path
-    return path[path.index(issuedir.alias) :]
+    return path[path.index(issuedir.journal) :]
 
 
 def parse_canonical_filename(filename: str) -> tuple[str, tuple, str, str, int, str]:
@@ -183,16 +183,16 @@ def parse_canonical_filename(filename: str) -> tuple[str, tuple, str, str, int, 
     """
     regex = re.compile(
         (
-            r"^(?P<alias>[A-Za-z0-9_]+)-(?P<year>\d{4})"
+            r"^(?P<np>[A-Za-z0-9_]+)-(?P<year>\d{4})"
             r"-(?P<month>\d{2})-(?P<day>\d{2})"
             r"-(?P<ed>[a-z])-(?P<type>[p|i])(?P<pgnb>\d{4})(?P<ext>.*)?$"
         )
     )
     result = re.match(regex, filename)
-    alias = result.group("alias")
+    newspaper_id = result.group("np")
     date = (result.group("year"), result.group("month"), result.group("day"))
     page_number = int(result.group("pgnb"))
     edition = result.group("ed")
     filetype = result.group("type")
     extension = result.group("ext")
-    return (alias, date, edition, filetype, page_number, extension)
+    return (newspaper_id, date, edition, filetype, page_number, extension)

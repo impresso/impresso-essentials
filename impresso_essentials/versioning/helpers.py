@@ -235,9 +235,6 @@ def increment_version(prev_version: str, increment: str) -> str:
         if incr_val < 2:
             list_v[incr_val + 1 :] = ["0"] * (2 - incr_val)
 
-        logger.warning(
-            f"MANIFEST - increment: {increment}, incr_val: {incr_val}, prev_version: {prev_version}, list_v: {list_v}, 'v' + '.'.join(list_v): {'v' + '.'.join(list_v)}"
-        )
         return "v" + ".".join(list_v)
     except ValueError as e:
         logger.error("Provided invalid increment %s: not in %s", increment, VERSION_INCREMENTS)
