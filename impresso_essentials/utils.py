@@ -623,7 +623,7 @@ PARTNER_TO_SOURCE_TYPES = {
 # a simple data structure to represent input directories
 # a `Document.zip` file is expected to be found in `IssueDir.path`
 #IssueDir = namedtuple("IssueDir", ["alias", "date", "edition", "path", "src_type", "src_medium"])
-IssueDir = namedtuple("IssueDir", ["alias", "date", "edition", "path"])
+IssueDir = namedtuple("IssueDir", ["journal", "date", "edition", "path"])
 
 
 def user_confirmation(question: str, default: str | None = None) -> bool:
