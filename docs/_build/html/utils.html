@@ -57,6 +57,13 @@
 <li class="toctree-l4"><a class="reference internal" href="#impresso_essentials.utils.IssueDir.path"><code class="docutils literal notranslate"><span class="pre">IssueDir.path</span></code></a></li>
 </ul>
 </li>
+<li class="toctree-l3"><a class="reference internal" href="#impresso_essentials.utils.SourceMedium"><code class="docutils literal notranslate"><span class="pre">SourceMedium</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#impresso_essentials.utils.SourceMedium.AO"><code class="docutils literal notranslate"><span class="pre">SourceMedium.AO</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#impresso_essentials.utils.SourceMedium.PT"><code class="docutils literal notranslate"><span class="pre">SourceMedium.PT</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#impresso_essentials.utils.SourceMedium.TPS"><code class="docutils literal notranslate"><span class="pre">SourceMedium.TPS</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#impresso_essentials.utils.SourceMedium.has_value"><code class="docutils literal notranslate"><span class="pre">SourceMedium.has_value()</span></code></a></li>
+</ul>
+</li>
 <li class="toctree-l3"><a class="reference internal" href="#impresso_essentials.utils.SourceType"><code class="docutils literal notranslate"><span class="pre">SourceType</span></code></a><ul>
 <li class="toctree-l4"><a class="reference internal" href="#impresso_essentials.utils.SourceType.MG"><code class="docutils literal notranslate"><span class="pre">SourceType.MG</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="#impresso_essentials.utils.SourceType.NP"><code class="docutils literal notranslate"><span class="pre">SourceType.NP</span></code></a></li>
@@ -157,6 +164,48 @@
 </dd></dl>
 
 <dl class="py class">
+<dt class="sig sig-object py" id="impresso_essentials.utils.SourceMedium">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">impresso_essentials.utils.</span></span><span class="sig-name descname"><span class="pre">SourceMedium</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">names=&lt;not</span> <span class="pre">given&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">*values</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">module=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">qualname=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">type=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">start=1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">boundary=None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#impresso_essentials.utils.SourceMedium" title="Link to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">StrEnum</span></code></p>
+<p>Enum all mediums of media sources in Impresso.</p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="impresso_essentials.utils.SourceMedium.AO">
+<span class="sig-name descname"><span class="pre">AO</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'audio'</span></em><a class="headerlink" href="#impresso_essentials.utils.SourceMedium.AO" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="impresso_essentials.utils.SourceMedium.PT">
+<span class="sig-name descname"><span class="pre">PT</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'print'</span></em><a class="headerlink" href="#impresso_essentials.utils.SourceMedium.PT" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="impresso_essentials.utils.SourceMedium.TPS">
+<span class="sig-name descname"><span class="pre">TPS</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'typescript'</span></em><a class="headerlink" href="#impresso_essentials.utils.SourceMedium.TPS" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="impresso_essentials.utils.SourceMedium.has_value">
+<em class="property"><span class="pre">classmethod</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">has_value</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">bool</span></span></span><a class="headerlink" href="#impresso_essentials.utils.SourceMedium.has_value" title="Link to this definition"></a></dt>
+<dd><p>Check if enum contains given value</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>cls</strong> (<em>Self</em>) – This source medium</p></li>
+<li><p><strong>value</strong> (<em>str</em>) – Value to check</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>True if the value provided is in this enum’s values, False otherwise.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>bool</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
 <dt class="sig sig-object py" id="impresso_essentials.utils.SourceType">
 <em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">impresso_essentials.utils.</span></span><span class="sig-name descname"><span class="pre">SourceType</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">names=&lt;not</span> <span class="pre">given&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">*values</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">module=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">qualname=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">type=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">start=1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">boundary=None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#impresso_essentials.utils.SourceType" title="Link to this definition"></a></dt>
 <dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">StrEnum</span></code></p>
@@ -193,7 +242,7 @@
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>cls</strong> (<em>Self</em>) – This DataStage class</p></li>
+<li><p><strong>cls</strong> (<em>Self</em>) – This source type</p></li>
 <li><p><strong>value</strong> (<em>str</em>) – Value to check</p></li>
 </ul>
 </dd>
