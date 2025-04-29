@@ -44,7 +44,27 @@ class SourceType(StrEnum):
         """Check if enum contains given value
 
         Args:
-            cls (Self): This DataStage class
+            cls (Self): This source type
+            value (str): Value to check
+
+        Returns:
+            bool: True if the value provided is in this enum's values, False otherwise.
+        """
+        return value in cls._value2member_map_
+
+class SourceMedium(StrEnum):
+    """Enum all mediums of media sources in Impresso."""
+
+    PT = "print"
+    TPS = "typescript"
+    AO = "audio"
+
+    @classmethod
+    def has_value(cls: Self, value: str) -> bool:
+        """Check if enum contains given value
+
+        Args:
+            cls (Self): This source medium
             value (str): Value to check
 
         Returns:
@@ -55,7 +75,7 @@ class SourceType(StrEnum):
 
 # changed to dict to include the partner/data origin
 PARTNER_TO_MEDIA = {
-    "SNL-RERO": [
+    "SNL": [
         "BDC",
         "CDV",
         "DLE",
@@ -76,6 +96,34 @@ PARTNER_TO_MEDIA = {
         "LTF",
         "LVE",
         "EVT",
+        "BLB",
+        "BNN",
+        "DFS",
+        "DVF",
+        "EZR",
+        "FZG",
+        "HRV",
+        "LAB",
+        "LLE",
+        "MGS",
+        "NTS",
+        "NZG",
+        "SGZ",
+        "SRT",
+        "WHD",
+        "ZBT",
+        "CON",
+        "DTT",
+        "FCT",
+        "GAV",
+        "GAZ",
+        "LLS",
+        "OIZ",
+        "SAX",
+        "SDT",
+        "SMZ",
+        "VDR",
+        "VHT",
     ],
     "LeTemps": ["JDG", "GDL"],
     "NZZ": ["NZZ"],
@@ -109,38 +157,6 @@ PARTNER_TO_MEDIA = {
         "waechtersauer",
         "waeschfra",
     ],
-    "SNL-RERO2": [
-        "BLB",
-        "BNN",
-        "DFS",
-        "DVF",
-        "EZR",
-        "FZG",
-        "HRV",
-        "LAB",
-        "LLE",
-        "MGS",
-        "NTS",
-        "NZG",
-        "SGZ",
-        "SRT",
-        "WHD",
-        "ZBT",
-    ],
-    "SNL-RERO3": [
-        "CON",
-        "DTT",
-        "FCT",
-        "GAV",
-        "GAZ",
-        "LLS",
-        "OIZ",
-        "SAX",
-        "SDT",
-        "SMZ",
-        "VDR",
-        "VHT",
-    ],
     "BNF": ["excelsior", "lafronde", "marieclaire", "oeuvre"],
     "BNF-EN": [
         "jdpl",
@@ -151,6 +167,7 @@ PARTNER_TO_MEDIA = {
         "oecaen",
         "oerennes",
     ],
+    # TODO add new titles
     "BCUL": [
         "ACI",
         "Castigat",
@@ -245,7 +262,6 @@ PARTNER_TO_MEDIA = {
         "DRHE",
         "DHEX",
         "DYMR",
-        "DCWA",
         "DCEA",
         "DJWN",
         "DDIS",
@@ -299,7 +315,6 @@ PARTNER_TO_MEDIA = {
         "LNLF",
         "LMNA",
         "LRNW",
-        "MEXM",
         "MRTM",
         "MRTT",
         "MCLN",
@@ -579,6 +594,13 @@ PARTNER_TO_MEDIA = {
         "GLAD",
         "YOHP",
     ],
+    "SWISSINFO": [
+        "SOC_CJ",
+        "SOC_CP",
+        "SOC_SO",
+        "SOC_TH",
+        "SOC_VS",
+    ]
 }
 # flatten the known journals into a sorted list
 ALL_MEDIA = sorted([j for part_j in PARTNER_TO_MEDIA.values() for j in part_j])
@@ -603,6 +625,7 @@ PARTNER_TO_SOURCE_TYPES = {
 
 # a simple data structure to represent input directories
 # a `Document.zip` file is expected to be found in `IssueDir.path`
+#IssueDir = namedtuple("IssueDir", ["alias", "date", "edition", "path", "src_type", "src_medium"])
 IssueDir = namedtuple("IssueDir", ["journal", "date", "edition", "path"])
 
 

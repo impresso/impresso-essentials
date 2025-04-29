@@ -183,7 +183,7 @@ def parse_canonical_filename(filename: str) -> tuple[str, tuple, str, str, int, 
     """
     regex = re.compile(
         (
-            r"^(?P<np>[A-Za-z0-9]+)-(?P<year>\d{4})"
+            r"^(?P<np>[A-Za-z0-9_]+)-(?P<year>\d{4})"
             r"-(?P<month>\d{2})-(?P<day>\d{2})"
             r"-(?P<ed>[a-z])-(?P<type>[p|i])(?P<pgnb>\d{4})(?P<ext>.*)?$"
         )
