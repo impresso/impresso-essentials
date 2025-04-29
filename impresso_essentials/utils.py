@@ -52,6 +52,7 @@ class SourceType(StrEnum):
         """
         return value in cls._value2member_map_
 
+
 class SourceMedium(StrEnum):
     """Enum all mediums of media sources in Impresso."""
 
@@ -600,7 +601,7 @@ PARTNER_TO_MEDIA = {
         "SOC_SO",
         "SOC_TH",
         "SOC_VS",
-    ]
+    ],
 }
 # flatten the known journals into a sorted list
 ALL_MEDIA = sorted([j for part_j in PARTNER_TO_MEDIA.values() for j in part_j])
@@ -625,8 +626,8 @@ PARTNER_TO_SOURCE_TYPES = {
 
 # a simple data structure to represent input directories
 # a `Document.zip` file is expected to be found in `IssueDir.path`
-#IssueDir = namedtuple("IssueDir", ["alias", "date", "edition", "path", "src_type", "src_medium"])
-IssueDir = namedtuple("IssueDir", ["journal", "date", "edition", "path"])
+# IssueDir = namedtuple("IssueDir", ["alias", "date", "edition", "path", "src_type", "src_medium"])
+IssueDir = namedtuple("IssueDir", ["alias", "date", "edition", "path"])
 
 
 def user_confirmation(question: str, default: str | None = None) -> bool:
@@ -812,7 +813,7 @@ def validate_against_schema(
 
     try:
         jsonschema.validate(json_to_validate, json_schema)
-    except Exception as e:
+    except jsonschema.ValidationError as e:
         logger.error(
             "The provided JSON could not be validated against its schema: %s.",
             json_to_validate,
@@ -868,9 +869,7 @@ def partitioner(bag: Bag, path: str, nb_partitions: int) -> None:
     Returns:
         None: The function writes partitioned files to the specified path.
     """
-    grouped_items = bag.groupby(
-        lambda x: np.random.randint(500), npartitions=nb_partitions
-    )
+    grouped_items = bag.groupby(lambda x: np.random.randint(500), npartitions=nb_partitions)
     items = grouped_items.map(lambda x: x[1]).flatten()
     path = os.path.join(path, "*.jsonl.bz2")
     with ProgressBar():

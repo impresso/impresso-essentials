@@ -87,7 +87,7 @@ def canonical_path(
     sep = "/" if as_dir else "-"
     base = sep.join(
         [
-            issuedir.journal,
+            issuedir.alias,
             str(issuedir.date.year),
             str(issuedir.date.month).zfill(2),
             str(issuedir.date.day).zfill(2),
@@ -107,9 +107,7 @@ def canonical_path(
     return base
 
 
-def check_filenaming(
-    file_basename: str, object_type: str = "issue"
-) -> re.Match[str] | None:
+def check_filenaming(file_basename: str, object_type: str = "issue") -> re.Match[str] | None:
     """Check whether a file's basename complies with the naming convention.
 
     Args:
@@ -165,7 +163,7 @@ def get_issueshortpath(issuedir: IssueDir) -> str:
         str: Canonical path to the issue starting at the journal name.
     """
     path = issuedir.path
-    return path[path.index(issuedir.journal) :]
+    return path[path.index(issuedir.alias) :]
 
 
 def parse_canonical_filename(filename: str) -> tuple[str, tuple, str, str, int, str]:
@@ -183,16 +181,16 @@ def parse_canonical_filename(filename: str) -> tuple[str, tuple, str, str, int, 
     """
     regex = re.compile(
         (
-            r"^(?P<np>[A-Za-z0-9_]+)-(?P<year>\d{4})"
+            r"^(?P<alias>[A-Za-z0-9_]+)-(?P<year>\d{4})"
             r"-(?P<month>\d{2})-(?P<day>\d{2})"
             r"-(?P<ed>[a-z])-(?P<type>[p|i])(?P<pgnb>\d{4})(?P<ext>.*)?$"
         )
     )
     result = re.match(regex, filename)
-    newspaper_id = result.group("np")
+    alias = result.group("alias")
     date = (result.group("year"), result.group("month"), result.group("day"))
     page_number = int(result.group("pgnb"))
     edition = result.group("ed")
     filetype = result.group("type")
     extension = result.group("ext")
-    return (newspaper_id, date, edition, filetype, page_number, extension)
+    return (alias, date, edition, filetype, page_number, extension)
