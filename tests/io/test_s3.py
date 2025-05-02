@@ -14,9 +14,7 @@ from impresso_essentials.utils import IssueDir, get_pkg_resource
 def test_get_storage_options():
     storage = s3.get_storage_options()
     assert "client_kwargs" in storage
-    assert storage["client_kwargs"] == {
-        "endpoint_url": "https://os.zhdk.cloud.switch.ch"
-    }
+    assert storage["client_kwargs"] == {"endpoint_url": "https://os.zhdk.cloud.switch.ch"}
     assert "key" in storage and storage["key"] is not None
     assert "secret" in storage and storage["secret"] is not None
 
@@ -56,6 +54,7 @@ def test_read_jsonlines(bucket, key, expected):
     except ValueError:
         assert expected is None
     else:
+        some_lines = None
         count_lines = lines.count().compute()
         if expected == "issues":
             some_lines = lines.map(json.loads).pluck("i").take(10)
@@ -286,9 +285,7 @@ def test_get_s3_object_size_client_error(mock_get_s3_client):
     result = s3.get_s3_object_size("11-canonical-staging", "my_key")
 
     # Assertions
-    mock_s3.head_object.assert_called_once_with(
-        Bucket="11-canonical-staging", Key="my_key"
-    )
+    mock_s3.head_object.assert_called_once_with(Bucket="11-canonical-staging", Key="my_key")
     assert result is None
 
 
@@ -303,9 +300,7 @@ s3_iter_bucket_testdata = [
 ]
 
 
-@pytest.mark.parametrize(
-    "bucket,prefix,suffix,accept_key,expected", s3_iter_bucket_testdata
-)
+@pytest.mark.parametrize("bucket,prefix,suffix,accept_key,expected", s3_iter_bucket_testdata)
 def test_s3_iter_bucket(bucket, prefix, suffix, accept_key, expected):
 
     if accept_key is not None:
@@ -337,7 +332,7 @@ read_s3_issues_testdata = [
         "DLE",
         "1910",
         IssueDir(
-            journal="DLE",
+            alias="DLE",
             date=date(1910, 1, 1),
             edition="a",
             path="s3://11-canonical-staging/DLE/issues/DLE-1910-issues.jsonl.bz2",
@@ -352,15 +347,15 @@ read_s3_issues_testdata = [
 ]
 
 
-@pytest.mark.parametrize("bucket,newspaper,year,expected", read_s3_issues_testdata)
-def test_read_s3_issues(bucket, newspaper, year, expected):
+@pytest.mark.parametrize("bucket,alias,year,expected", read_s3_issues_testdata)
+def test_read_s3_issues(bucket, alias, year, expected):
 
-    result = s3.read_s3_issues(newspaper, year, bucket)
+    result = s3.read_s3_issues(alias, year, bucket)
 
     if expected == "not None":
         assert result is not None
         assert len(result) > 1
-        assert all(f"{newspaper}-{year}" in r[1]["id"] for r in result)
+        assert all(f"{alias}-{year}" in r[1]["id"] for r in result)
     elif isinstance(expected, list):
         assert len(result) == len(expected)
     elif isinstance(expected, IssueDir):
@@ -371,7 +366,7 @@ def test_read_s3_issues(bucket, newspaper, year, expected):
 
 
 @mock.patch("impresso_essentials.io.s3.get_s3_client")
-def test_list_newspapers(mock_get_s3_client):
+def test_list_media_titles(mock_get_s3_client):
     # Mock the S3 client and paginator
     mock_s3 = mock.Mock()
     mock_get_s3_client.return_value = mock_s3
@@ -382,18 +377,18 @@ def test_list_newspapers(mock_get_s3_client):
     ]
 
     # Call the function
-    result = s3.list_newspapers("11-canonical-staging")
+    result = s3.list_media_titles("11-canonical-staging")
 
     # Assertions
     mock_s3.get_paginator.assert_called_once_with("list_objects")
     assert result == ["ACI", "BLB"]
 
 
-@mock.patch("impresso_essentials.io.s3.list_newspapers")
+@mock.patch("impresso_essentials.io.s3.list_media_titles")
 @mock.patch("impresso_essentials.io.s3.fixed_s3fs_glob")
-def test_list_files(mock_fixed_s3fs_glob, mock_list_newspapers):
+def test_list_files(mock_fixed_s3fs_glob, mock_list_media_titles):
     # Mock the newspaper listing and glob output
-    mock_list_newspapers.return_value = ["ACI", "BLB"]
+    mock_list_media_titles.return_value = ["ACI", "BLB"]
     mock_fixed_s3fs_glob.side_effect = [
         ["ACI/issues/file1.jsonl.bz2", "ACI/issues/file2.jsonl.bz2"],
         ["BLB/issues/file3.jsonl.bz2"],
@@ -403,7 +398,7 @@ def test_list_files(mock_fixed_s3fs_glob, mock_list_newspapers):
     result = s3.list_files("11-canonical-staging", "issues")
 
     # Assertions
-    mock_list_newspapers.assert_called_once_with("11-canonical-staging")
+    mock_list_media_titles.assert_called_once_with("11-canonical-staging")
     mock_fixed_s3fs_glob.assert_any_call("11-canonical-staging/ACI/issues/*")
     assert result == (
         [
@@ -415,11 +410,11 @@ def test_list_files(mock_fixed_s3fs_glob, mock_list_newspapers):
     )
 
 
-@mock.patch("impresso_essentials.io.s3.list_newspapers")
+@mock.patch("impresso_essentials.io.s3.list_media_titles")
 @mock.patch("impresso_essentials.io.s3.fixed_s3fs_glob")
-def test_list_files_pages(mock_fixed_s3fs_glob, mock_list_newspapers):
+def test_list_files_pages(mock_fixed_s3fs_glob, mock_list_media_titles):
     # Mock the newspaper listing and glob output
-    mock_list_newspapers.return_value = ["ACI", "BLB"]
+    mock_list_media_titles.return_value = ["ACI", "BLB"]
     mock_fixed_s3fs_glob.side_effect = [
         ["ACI/pages/file1.jsonl.bz2", "ACI/pages/file2.jsonl.bz2"],
         ["BLB/pages/file3.jsonl.bz2"],
@@ -429,7 +424,7 @@ def test_list_files_pages(mock_fixed_s3fs_glob, mock_list_newspapers):
     result = s3.list_files("11-canonical-staging", "pages")
 
     # Assertions
-    mock_list_newspapers.assert_called_once_with("11-canonical-staging")
+    mock_list_media_titles.assert_called_once_with("11-canonical-staging")
     mock_fixed_s3fs_glob.assert_any_call("11-canonical-staging/ACI/pages/*")
     assert result == (
         None,

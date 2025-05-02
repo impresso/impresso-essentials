@@ -1,5 +1,4 @@
-"""Reusable functions to read/write data from/to our S3 drive.
-"""
+"""Reusable functions to read/write data from/to our S3 drive."""
 
 import bz2
 import json
@@ -196,9 +195,7 @@ def read_jsonlines(key_name: str, bucket_name: str) -> Generator:
         body = s3r.Object(bucket_name, key_name).get()["Body"]
 
     except s3r.meta.client.exceptions.NoSuchKey as e:
-        msg = (
-            f"The provided key_name {bucket_name}/{key_name} isn't in this bucket: {e}"
-        )
+        msg = f"The provided key_name {bucket_name}/{key_name} isn't in this bucket: {e}"
         raise ValueError(msg) from e
 
     data = body.read()
@@ -242,9 +239,7 @@ def readtext_jsonlines(
     try:
         body = s3r.Object(bucket_name, key_name).get()["Body"]
     except s3r.meta.client.exceptions.NoSuchKey as e:
-        msg = (
-            f"The provided key_name {bucket_name}/{key_name} isn't in this bucket: {e}"
-        )
+        msg = f"The provided key_name {bucket_name}/{key_name} isn't in this bucket: {e}"
         raise ValueError(msg) from e
     data = body.read()
     text = bz2.decompress(data).decode("utf-8")
@@ -301,9 +296,7 @@ def get_bucket(bucket_name: str):
     return s3.Bucket(bucket_name)
 
 
-def fixed_s3fs_glob(
-    path: str, suffix: str | None = None, boto3_bucket=None
-) -> list[str]:
+def fixed_s3fs_glob(path: str, suffix: str | None = None, boto3_bucket=None) -> list[str]:
     """Custom glob function able to list more than 1000 elements on s3 (fix of s3fs).
 
     Note:
@@ -341,9 +334,7 @@ def fixed_s3fs_glob(
 
     filenames = [
         "s3://"
-        + os.path.join(
-            bucket_name, o.key
-        )  # prepend bucket-name as it is necessary for s3fs
+        + os.path.join(bucket_name, o.key)  # prepend bucket-name as it is necessary for s3fs
         for o in boto3_bucket.objects.filter(Prefix=base_path)
         if o.key.endswith(suffix_path)
     ]
@@ -517,22 +508,18 @@ def s3_iter_bucket(
     return keys if keys else []
 
 
-def read_s3_issues(
-    newspaper: str, year: str, input_bucket: str
-) -> list[tuple[IssueDir, dict]]:
+def read_s3_issues(alias: str, year: str, input_bucket: str) -> list[tuple[IssueDir, dict]]:
     """Read the contents of canonical issues from a given S3 bucket.
 
     Args:
-        newspaper (str): Name of the newspaper to read the issues from.
+        alias (str): Alias of the media title to read the issues from.
         year (str): Target year to tread issues from.
         input_bucket (str): Bucket from where to fetch the issues.
 
     Returns:
         list[tuple[IssueDir, dict]]: List of IssueDirs and the issues' contents.
     """
-    issue_path_on_s3 = (
-        f"s3://{input_bucket}/{newspaper}/issues/{newspaper}-{year}-issues.jsonl.bz2"
-    )
+    issue_path_on_s3 = f"s3://{input_bucket}/{alias}/issues/{alias}-{year}-issues.jsonl.bz2"
     try:
         issues = (
             db.read_text(issue_path_on_s3, storage_options=IMPRESSO_STORAGEOPT)
@@ -547,12 +534,12 @@ def read_s3_issues(
     return issues
 
 
-def list_newspapers(
+def list_media_titles(
     bucket_name: str,
     s3_client=get_s3_client(),
     page_size: int = 10000,
 ) -> list[str]:
-    """List newspapers contained in an s3 bucket with impresso data.
+    """List media titles contained in an s3 bucket with impresso data.
 
     Note:
         25,000 seems to be the maximum `PageSize` value supported by
@@ -566,16 +553,16 @@ def list_newspapers(
         page_size (int, optional): Pagination configuration. Defaults to 10000.
 
     Returns:
-        list[str]: List of newspaper (aliases) present in the given S3 bucket.
+        list[str]: List of media titles (aliases) present in the given S3 bucket.
     """
-    print(f"Fetching list of newspapers from {bucket_name}")
+    print(f"Fetching list of media titles from {bucket_name}")
 
     if "s3://" in bucket_name:
         bucket_name = bucket_name.replace("s3://", "").split("/")[0]
 
     paginator = s3_client.get_paginator("list_objects")
 
-    newspapers = set()
+    titles = set()
     for n, resp in enumerate(
         paginator.paginate(Bucket=bucket_name, PaginationConfig={"PageSize": page_size})
     ):
@@ -584,22 +571,22 @@ def list_newspapers(
             continue
 
         for f in resp["Contents"]:
-            newspapers.add(f["Key"].split("/")[0])
+            titles.add(f["Key"].split("/")[0])
         msg = (
             f"Paginated listing of keys in {bucket_name}: page {n + 1}, listed "
             f"{len(resp['Contents'])}"
         )
         logger.info(msg)
 
-    print(f"{bucket_name} contains {len(newspapers)} newspapers")
+    print(f"{bucket_name} contains {len(titles)} media titles")
 
-    return newspapers
+    return titles
 
 
 def list_files(
     bucket_name: str,
     file_type: str = "issues",
-    newspapers_filter: list[str] | None = None,
+    aliases_filter: list[str] | None = None,
 ) -> tuple[list[str] | None, list[str] | None]:
     """List the canonical files located in a given S3 bucket.
 
@@ -607,7 +594,7 @@ def list_files(
         bucket_name (str): S3 bucket name.
         file_type (str, optional): Type of files to list, possible values are "issues",
             "pages" and "both". Defaults to "issues".
-        newspapers_filter (list[str] | None, optional): List of newspapers to consider.
+        aliases_filter (list[str] | None, optional): List of aliases to consider.
             If None, all will be considered. Defaults to None.
 
     Raises:
@@ -624,27 +611,27 @@ def list_files(
     # initialize the output lists
     issue_files, page_files = None, None
     # list the newspapers in the bucket
-    newspapers = list_newspapers(bucket_name)
+    media_titles = list_media_titles(bucket_name)
 
-    if newspapers_filter is not None:
-        suffix = f"for the provided newspapers {newspapers_filter}"
+    if aliases_filter is not None:
+        suffix = f"for the provided media aliases {aliases_filter}"
     else:
         suffix = ""
 
     if file_type in ["issues", "both"]:
         issue_files = [
             file
-            for np in newspapers
-            if newspapers_filter is not None and np in newspapers_filter
-            for file in fixed_s3fs_glob(os.path.join(bucket_name, f"{np}/issues/*"))
+            for alias in media_titles
+            if aliases_filter is not None and alias in aliases_filter
+            for file in fixed_s3fs_glob(os.path.join(bucket_name, f"{alias}/issues/*"))
         ]
         print(f"{bucket_name} contains {len(issue_files)} .bz2 issue files {suffix}")
     if file_type in ["pages", "both"]:
         page_files = [
             file
-            for np in newspapers
-            if newspapers_filter is not None and np in newspapers_filter
-            for file in fixed_s3fs_glob(f"{os.path.join(bucket_name, f'{np}/pages/*')}")
+            for alias in media_titles
+            if aliases_filter is not None and alias in aliases_filter
+            for file in fixed_s3fs_glob(f"{os.path.join(bucket_name, f'{alias}/pages/*')}")
         ]
         print(f"{bucket_name} contains {len(page_files)} .bz2 page files {suffix}")
 
@@ -656,10 +643,7 @@ def fetch_files(
     compute: bool = True,
     file_type: str = "issues",
     newspapers_filter: list[str] | None = None,
-) -> (
-    tuple[db.core.Bag | None, db.core.Bag | None]
-    | tuple[list[str] | None, list[str] | None]
-):
+) -> tuple[db.core.Bag | None, db.core.Bag | None] | tuple[list[str] | None, list[str] | None]:
     """Fetch issue and/or page canonical JSON files from an s3 bucket.
 
     If compute=True, the output will be a list of the contents of all files in the
@@ -705,9 +689,7 @@ def fetch_files(
     if page_files is not None:
         # make sure all files are .bz2 files and exactly have the naming format they should
         prev_len = len(page_files)
-        page_files = [
-            p for p in page_files if ".jsonl.bz2" in p and len(p.split("-")) > 5
-        ]
+        page_files = [p for p in page_files if ".jsonl.bz2" in p and len(p.split("-")) > 5]
         msg = f"{msg} page ids from {len(page_files)} .bz2 files ({prev_len} files before filtering), "
         page_bag = db.read_text(page_files, storage_options=IMPRESSO_STORAGEOPT).map(
             json.loads
