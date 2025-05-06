@@ -1,5 +1,4 @@
-"""Helper functions to used to compute and aggragate the statistics of manifests.
-"""
+"""Helper functions to used to compute and aggragate the statistics of manifests."""
 
 import logging
 from ast import literal_eval
@@ -97,9 +96,7 @@ def compute_stats_in_canonical_bag(
     print(f"{title} - Fetched all issues, gathering desired information.")
     logger.info("%s - Fetched all issues, gathering desired information.", title)
     count_df = (
-        s3_canonical_issues.map(
-            lambda i: counts_for_canonical_issue(i, include_np_yr=True)
-        )
+        s3_canonical_issues.map(lambda i: counts_for_canonical_issue(i, include_np_yr=True))
         .to_dataframe(
             meta={
                 "np_id": str,
@@ -132,9 +129,7 @@ def compute_stats_in_canonical_bag(
         progress(aggregated_df)
 
     print(f"{title} - Finished grouping and aggregating stats by title and year.")
-    logger.info(
-        "%s - Finished grouping and aggregating stats by title and year.", title
-    )
+    logger.info("%s - Finished grouping and aggregating stats by title and year.", title)
     # return as a list of dicts
     return aggregated_df.to_bag(format="dict").compute()
 
@@ -199,6 +194,8 @@ def compute_stats_in_rebuilt_bag(
     """
     # when called in the rebuilt, all the rebuilt articles in the bag
     # are from the same newspaper and year
+    if title is None:
+        title = key.split("-")[0]
     print(f"{title} - Fetched all files, gathering desired information.")
     logger.info("%s - Fetched all files, gathering desired information.", title)
 
@@ -249,9 +246,7 @@ def compute_stats_in_rebuilt_bag(
         logger.info(msg)
 
     print(f"{title} - Finished grouping and aggregating stats by title and year.")
-    logger.info(
-        "%s - Finished grouping and aggregating stats by title and year.", title
-    )
+    logger.info("%s - Finished grouping and aggregating stats by title and year.", title)
 
     if client is not None:
         # only add the progress bar if the client is defined
@@ -280,12 +275,8 @@ def compute_stats_in_entities_bag(
     count_df = (
         s3_entities.map(
             lambda ci: {
-                "np_id": (
-                    ci["id"].split("-")[0] if "id" in ci else ci["ci_id"].split("-")[0]
-                ),
-                "year": (
-                    ci["id"].split("-")[1] if "id" in ci else ci["ci_id"].split("-")[1]
-                ),
+                "np_id": (ci["id"].split("-")[0] if "id" in ci else ci["ci_id"].split("-")[0]),
+                "year": (ci["id"].split("-")[1] if "id" in ci else ci["ci_id"].split("-")[1]),
                 "issues": (
                     "-".join(ci["id"].split("-")[:-1])
                     if "id" in ci
@@ -339,9 +330,7 @@ def compute_stats_in_entities_bag(
     ).persist()
 
     print(f"{title} - Finished grouping and aggregating stats by title and year.")
-    logger.info(
-        "%s - Finished grouping and aggregating stats by title and year.", title
-    )
+    logger.info("%s - Finished grouping and aggregating stats by title and year.", title)
 
     if client is not None:
         # only add the progress bar if the client is defined
@@ -422,9 +411,7 @@ def compute_stats_in_langident_bag(
     agg_bag = aggregated_df.to_bag(format="dict").map(freq)
 
     print(f"{title} - Finished grouping and aggregating stats by title and year.")
-    logger.info(
-        "%s - Finished grouping and aggregating stats by title and year.", title
-    )
+    logger.info("%s - Finished grouping and aggregating stats by title and year.", title)
 
     if client is not None:
         # only add the progress bar if the client is defined
@@ -489,9 +476,7 @@ def compute_stats_in_text_reuse_passage_bag(
     ).persist()
 
     print(f"{title} - Finished grouping and aggregating stats by title and year.")
-    logger.info(
-        "%s - Finished grouping and aggregating stats by title and year.", title
-    )
+    logger.info("%s - Finished grouping and aggregating stats by title and year.", title)
 
     if client is not None:
         # only add the progress bar if the client is defined
@@ -597,9 +582,7 @@ def compute_stats_in_topics_bag(
     )
 
     print(f"{title} - Finished grouping and aggregating stats by title and year.")
-    logger.info(
-        "%s - Finished grouping and aggregating stats by title and year.", title
-    )
+    logger.info("%s - Finished grouping and aggregating stats by title and year.", title)
 
     if client is not None:
         # only add the progress bar if the client is defined
@@ -676,9 +659,7 @@ def compute_stats_in_img_emb_bag(
     ).persist()
 
     print(f"{title} - Finished grouping and aggregating stats by title and year.")
-    logger.info(
-        "%s - Finished grouping and aggregating stats by title and year.", title
-    )
+    logger.info("%s - Finished grouping and aggregating stats by title and year.", title)
 
     if client is not None:
         # only add the progress bar if the client is defined
@@ -714,9 +695,9 @@ def compute_stats_in_lingproc_bag(
     count_df = (
         s3_lingprocs.map(
             lambda ci: {
-                "np_id": ci.get("ci_id",ci.get("id")).split("-")[0],
-                "year": ci.get("ci_id",ci.get("id")).split("-")[1],
-                "issues": "-".join(ci.get("ci_id",ci.get("id")).split("-")[:-1]),
+                "np_id": ci.get("ci_id", ci.get("id")).split("-")[0],
+                "year": ci.get("ci_id", ci.get("id")).split("-")[1],
+                "issues": "-".join(ci.get("ci_id", ci.get("id")).split("-")[:-1]),
                 "content_items_out": 1,
             }
         )
@@ -744,9 +725,7 @@ def compute_stats_in_lingproc_bag(
     ).persist()
 
     print(f"{title} - Finished grouping and aggregating stats by title and year.")
-    logger.info(
-        "%s - Finished grouping and aggregating stats by title and year.", title
-    )
+    logger.info("%s - Finished grouping and aggregating stats by title and year.", title)
 
     if client is not None:
         # only add the progress bar if the client is defined
@@ -754,6 +733,7 @@ def compute_stats_in_lingproc_bag(
 
     # return as a list of dicts
     return aggregated_df.to_bag(format="dict").compute()
+
 
 def compute_stats_in_solr_text_ing_bag(
     s3_solr_ing_cis: Bag,
@@ -814,9 +794,7 @@ def compute_stats_in_solr_text_ing_bag(
     ).persist()
 
     print(f"{title} - Finished grouping and aggregating stats by title and year.")
-    logger.info(
-        "%s - Finished grouping and aggregating stats by title and year.", title
-    )
+    logger.info("%s - Finished grouping and aggregating stats by title and year.", title)
 
     if client is not None:
         # only add the progress bar if the client is defined
@@ -856,7 +834,7 @@ def compute_stats_in_ocrqa_bag(
                 "year": ci["ci_id"].split("-")[1],
                 "issues": "-".join(ci["ci_id"].split("-")[:-1]),
                 "content_items_out": 1,
-                "avg_ocrqa": ci['ocrqa'],
+                "avg_ocrqa": ci["ocrqa"],
             }
         )
         .to_dataframe(
@@ -877,7 +855,7 @@ def compute_stats_in_ocrqa_bag(
             {
                 "issues": tunique,
                 "content_items_out": sum,
-                "avg_ocrqa": 'mean',
+                "avg_ocrqa": "mean",
             }
         )
         .reset_index()
@@ -885,9 +863,7 @@ def compute_stats_in_ocrqa_bag(
     ).persist()
 
     print(f"{title} - Finished grouping and aggregating stats by title and year.")
-    logger.info(
-        "%s - Finished grouping and aggregating stats by title and year.", title
-    )
+    logger.info("%s - Finished grouping and aggregating stats by title and year.", title)
 
     aggregated_df["avg_ocrqa"] = aggregated_df["avg_ocrqa"].apply(
         lambda x: round(x, 3), meta=("avg_ocrqa", "float")
@@ -957,9 +933,7 @@ def compute_stats_in_doc_emb_bag(
     ).persist()
 
     print(f"{title} - Finished grouping and aggregating stats by title and year.")
-    logger.info(
-        "%s - Finished grouping and aggregating stats by title and year.", title
-    )
+    logger.info("%s - Finished grouping and aggregating stats by title and year.", title)
 
     if client is not None:
         # only add the progress bar if the client is defined

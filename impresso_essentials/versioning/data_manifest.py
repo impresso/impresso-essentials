@@ -1,7 +1,7 @@
 """This module contains the definition of a manifest class.
 
 A manifest object should be instantiated for each processing step of the data
-preprocessing and augmentation of the Impresso project.  
+preprocessing and augmentation of the Impresso project.
 """
 
 import copy
@@ -174,9 +174,7 @@ class DataManifest:
                 the empty string otherwise.
         """
         if self.version is None:
-            logger.warning(
-                "The manifest s3 path is only available once the version is."
-            )
+            logger.warning("The manifest s3 path is only available once the version is.")
             return ""
 
         if self.output_s3_partition is not None:
@@ -283,20 +281,14 @@ class DataManifest:
             logger.info("Computation is patch, patch version increase.")
             return increment_version(self.prev_version, "patch")
 
-        if (
-            self.only_counting is not None
-            and self.only_counting
-            and not self.modified_info
-        ):
+        if self.only_counting is not None and self.only_counting and not self.modified_info:
             # manifest computed to count contents of a bucket
             # (eg. after a copy from one bucket to another)
             logger.info("Only counting, and no modified info, patch version increase.")
             return increment_version(self.prev_version, "patch")
 
         # modifications were made by re-ingesting/re-generating the data, not patching
-        logger.info(
-            "No additional keys or patch, but modified info, minor version increase."
-        )
+        logger.info("No additional keys or patch, but modified info, minor version increase.")
         return increment_version(self.prev_version, "minor")
 
     def _get_input_data_overall_stats(self) -> list[dict[str, Any]]:
@@ -393,7 +385,7 @@ class DataManifest:
 
         if push_to_git:
             # clone the data release repository locally if not for debug - always staging branch
-            out_repo = clone_git_repo(self.temp_dir, branch='staging')
+            out_repo = clone_git_repo(self.temp_dir, branch="staging")
 
             logger.info("%s and GitHub!", msg)
         else:
@@ -432,9 +424,7 @@ class DataManifest:
                 )
                 # if there was a problem cloning the repository of pushing to git,
                 # write the manifest somewhere in the fs
-                out_file_path = write_dump_to_fs(
-                    manifest_dump, self.temp_dir, mft_filename
-                )
+                out_file_path = write_dump_to_fs(manifest_dump, self.temp_dir, mft_filename)
         else:
             # for debug purposes, write in temp dir and not in git repo
             out_file_path = write_dump_to_fs(manifest_dump, self.temp_dir, mft_filename)
@@ -609,9 +599,7 @@ class DataManifest:
         Returns:
             bool: True if all the updates were successful, False otherwise.
         """
-        return all(
-            self._modify_processing_stats(title, str(year), c) for c in all_counts
-        )
+        return all(self._modify_processing_stats(title, str(year), c) for c in all_counts)
 
     def replace_by_ci_id(self, ci_id: str, counts: dict[str, int]) -> bool:
         """Replace the current counts for a CI id's title-year pair with new ones.
@@ -638,9 +626,7 @@ class DataManifest:
         )
         return self._modify_processing_stats(title, year, counts, adding=False)
 
-    def replace_by_title_year(
-        self, title: str, year: str, counts: dict[str, int]
-    ) -> bool:
+    def replace_by_title_year(self, title: str, year: str, counts: dict[str, int]) -> bool:
         """Replace the current counts for a given title-year pair with new ones.
 
         Warning:
@@ -656,9 +642,7 @@ class DataManifest:
         Returns:
             bool: True if the stats' modification was successful, False otherwise.
         """
-        logger.warning(
-            "The counts for %s-%s will be replaced by %s", title, year, counts
-        )
+        logger.warning("The counts for %s-%s will be replaced by %s", title, year, counts)
         return self._modify_processing_stats(title, str(year), counts, adding=False)
 
     def append_to_notes(self, contents: str, to_start: bool = True) -> None:
@@ -802,7 +786,8 @@ class DataManifest:
         # modif_media_info = False
         # list of modified years
         modif_years = []
-        logger.debug("---- INSIDE update_media_stats for %s ----", title)
+        msg = f"---- INSIDE update_media_stats for {title} ----"
+        logger.debug(msg)
         for year, stats in yearly_stats.items():
 
             # newly added title
@@ -821,18 +806,14 @@ class DataManifest:
                 # modif_media_info = True
                 modif_years.append(year)
                 if not self.only_counting:
-                    logger.debug(
-                        "update_media_stats - modified stats -> Setting stats for %s-%s",
-                        title,
-                        year,
-                    )
+                    msg = f"update_media_stats - modified stats -> Setting stats for {title}-{year}"
+                    logger.debug(msg)
                 old_media_list[title]["stats_as_dict"][year] = stats
 
-        logger.info(
-            "---- FINISHED update_media_stats for %s – had modifications:%s ----",
-            title,
-            len(modif_years) != 0,
-        )
+        msg = f"---- FINISHED update_media_stats for {title} – had modifications: {len(modif_years) != 0} ----"
+        logger.info(msg)
+        print(msg)
+
         return old_media_list, modif_years
 
     def generate_media_dict(self, old_media_list: dict[str, dict]) -> tuple[dict, bool]:
@@ -877,9 +858,7 @@ class DataManifest:
 
                     # if only counting, only consider the years which were actually modified/added
                     processed_years = (
-                        set(modif_years)
-                        if self.only_counting
-                        else set(yearly_stats.keys())
+                        set(modif_years) if self.only_counting else set(yearly_stats.keys())
                     )
 
                     media_update_info = self.define_update_info_for_title(
@@ -1045,9 +1024,7 @@ class DataManifest:
                 old_media_list = media_list_from_mft_json(old_mft)
 
             else:
-                logger.info(
-                    "No previous version found, reinitializaing the media list."
-                )
+                logger.info("No previous version found, reinitializaing the media list.")
                 # if no previous version media list, generate media list from scratch
                 old_media_list = {}
 
@@ -1072,10 +1049,7 @@ class DataManifest:
             self.version = self._get_current_version(addition)
 
             # the canonical has no input stage
-            if (
-                self.stage != DataStage.CANONICAL
-                and self.input_manifest_s3_path is not None
-            ):
+            if self.stage != DataStage.CANONICAL and self.input_manifest_s3_path is not None:
                 input_mft_git_path = os.path.join(
                     self._get_out_path_within_repo(stage=self._input_stage),
                     self.input_manifest_s3_path.split("/")[-1],

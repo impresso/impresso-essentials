@@ -11,13 +11,14 @@ logger = logging.getLogger(__name__)
 
 WHITESPACE_RULES = {
     "fr": {
-        "pct_no_ws_before": [".", ",", ")", "]", "}", "°", "...", ".-", "%"],
-        "pct_no_ws_after": ["(", "[", "{"],
-        "pct_no_ws_before_after": ["'", "-"],
+        "pct_no_ws_before": [" ", ".", ",", ")", "]", "}", "°", "...", ".-", "%"],
+        "pct_no_ws_after": [" ", "(", "[", "{"],
+        "pct_no_ws_before_after": [" ", "'", "-"],
         "pct_number": [".", ","],
     },
     "de": {
         "pct_no_ws_before": [
+            " ",
             ".",
             ",",
             ")",
@@ -32,12 +33,13 @@ WHITESPACE_RULES = {
             ".-",
             "%",
         ],
-        "pct_no_ws_after": ["(", "[", "{"],
-        "pct_no_ws_before_after": ["'", "-"],
+        "pct_no_ws_after": [" ", "(", "[", "{"],
+        "pct_no_ws_before_after": [" ", "'", "-"],
         "pct_number": [".", ","],
     },
     "other": {
         "pct_no_ws_before": [
+            " ",
             ".",
             ",",
             ")",
@@ -52,8 +54,8 @@ WHITESPACE_RULES = {
             ".-",
             "%",
         ],
-        "pct_no_ws_after": ["(", "[", "{"],
-        "pct_no_ws_before_after": ["'", "-"],
+        "pct_no_ws_after": [" ", "(", "[", "{"],
+        "pct_no_ws_before_after": [" ", "'", "-"],
         "pct_number": [".", ","],
     },
 }
