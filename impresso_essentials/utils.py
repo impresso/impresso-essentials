@@ -605,23 +605,35 @@ PARTNER_TO_MEDIA = {
 }
 # flatten the known journals into a sorted list
 ALL_MEDIA = sorted([j for part_j in PARTNER_TO_MEDIA.values() for j in part_j])
-PARTNERS_WITHOUT_OLR = ["NZZ", "SWA", "BCUL"]
+PARTNERS_WITHOUT_OLR = ["NZZ", "SWA", "BCUL", "SWISSINFO"]
 
-PARTNER_TO_SOURCE_TYPES = {
-    "SNL": [SourceType.NP],
-    "LeTemps": [SourceType.NP],
-    "NZZ": [SourceType.NP],
-    "SWA": [SourceType.NP],
-    "FedGaz": [SourceType.NP],
-    "BNL": [SourceType.NP, SourceType.RM],
-    "BNF": [SourceType.NP, SourceType.RB],
-    "BNF-EN": [SourceType.NP],
-    "BCUL": [SourceType.NP],
-    "BL": [SourceType.NP],
-    "KB": [SourceType.NP, SourceType.RB],
-    "SWISSINFO": [SourceType.RB],
-    # only keep the ones for which we currently have data
-    # "RTS": [SourceType.RB],
+# values can either be a list of aliases or "all"
+SOURCE_MEDIUMS_TO_PARTNERS_TO_MEDIA = {
+    SourceMedium.PT: {
+        "SNL": "all",
+        "LeTemps": "all",
+        "NZZ": "all",
+        "SWA": "all",
+        "FedGaz": "all",
+        "BNL": "all",
+        "BNF": "all",
+        "BNF-EN": "all",
+        "BCUL": "all",
+        "BL": "all",
+        "KB": {
+            # SourceType.NP: [], # all KB NP titles should be listed
+        },
+    },
+    SourceMedium.TPS: {
+        "KB": ["ANP"],
+        "SWISSINFO": "all",
+    },
+    SourceMedium.AO: {"RTS": "all"},  # "RTS": [RTS_titles],
+}
+# define list of media aliases that are not print (newspapers)
+NON_PRINT_MEDIA = {
+    SourceMedium.TPS: ["SOC_CJ", "SOC_CP", "SOC_SO", "SOC_TH", "SOC_VS", "ANP"],
+    # SourceMedium.AO: #[INA_titles],
 }
 
 # a simple data structure to represent input directories
