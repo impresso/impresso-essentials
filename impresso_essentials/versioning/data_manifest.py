@@ -697,11 +697,12 @@ class DataManifest:
         """
         # adding a new media means by default addition update type and title update level.
         logger.info("Creating new media dict for %s.", title)
+        provider = get_provider_for_alias(title)
         media = {
             "media_title": title,
-            "data_provider": "",
-            "source_type": "",
-            "source_medium": "",
+            "data_provider": provider,
+            "source_type": get_src_info_for_alias(title, provider, False),
+            "source_medium": get_src_info_for_alias(title, provider),
             "last_modification_date": self._generation_date,
         }
         media.update(init_media_info(fields=self.patched_fields))
@@ -846,8 +847,17 @@ class DataManifest:
             title == old_media_title_info["media_title"]
         ), f"Title mismatch: {title} != {old_media_title_info['media_title']}"
 
+        provider = get_provider_for_alias(title)
         if "data_provider" not in old_media_title_info:
-            provider = get_provider_for_alias(title)
+            old_media_title_info["data_provider"] = provider
+        if "source_medium" not in old_media_title_info:
+            old_media_title_info["source_medium"] = get_src_info_for_alias(title, provider)
+        if "source_type" not in old_media_title_info:
+            old_media_title_info["source_type"] = get_src_info_for_alias(
+                title, provider, False
+            )
+
+        return old_media_title_info
 
     def generate_media_dict(self, old_media_list: dict[str, dict]) -> tuple[dict, bool]:
         """Given the previous manifest's and current statistics, generate new media dict.
@@ -942,6 +952,7 @@ class DataManifest:
                 corresponding title-level DataStatistics object.
         """
         logger.debug("Aggregating title-level stats for %s.", title)
+
         title_cumm_stats = MediaStatistics(self.stage, "title", title)
         pretty_counts = []
 

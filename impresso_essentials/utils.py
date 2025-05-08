@@ -699,7 +699,7 @@ def get_provider_for_alias(media_alias: str) -> str:
 
 
 def get_src_info_for_alias(
-    media_alias: str, medium: bool | None = True, prodiver: str | None = None
+    media_alias: str, prodiver: str | None = None, medium: bool | None = True
 ) -> str:
     """Get the provider for a given media alias.
 
