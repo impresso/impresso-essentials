@@ -14,9 +14,14 @@ from typing import Any, Union, Optional
 from git import Repo
 
 from impresso_essentials.io.s3 import get_storage_options, upload_to_s3
-from impresso_essentials.utils import validate_against_schema
+from impresso_essentials.utils import (
+    validate_against_schema,
+    get_provider_for_alias,
+    get_src_info_for_alias,
+    SOURCE_MEDIUMS_TO_PARTNERS_TO_MEDIA,
+)
 from impresso_essentials.versioning.data_statistics import (
-    NewspaperStatistics,
+    MediaStatistics,
     DataStatistics,
 )
 from impresso_essentials.versioning.helpers import (
@@ -69,9 +74,7 @@ class DataManifest:
         run_id: Optional[str] = "",
     ) -> None:
 
-        # TODO when integrating radio data: init a media_type attribute and add RadioStatistics.
-
-        self.stage = validate_stage(data_stage)  # update once all stages are final
+        self.stage = validate_stage(data_stage)
         self.input_bucket_name = s3_input_bucket
         self.only_counting = only_counting
         self.modified_info = False
@@ -274,21 +277,25 @@ class DataManifest:
         if addition:
             # any new title-year pair was added during processing
             logger.info("Addition is True, major version increase.")
+            print("Addition is True, major version increase.")
             return increment_version(self.prev_version, "major")
 
         if self.is_patch or self.patched_fields is not None:
             # processing is a patch
             logger.info("Computation is patch, patch version increase.")
+            print("Computation is patch, patch version increase.")
             return increment_version(self.prev_version, "patch")
 
         if self.only_counting is not None and self.only_counting and not self.modified_info:
             # manifest computed to count contents of a bucket
             # (eg. after a copy from one bucket to another)
             logger.info("Only counting, and no modified info, patch version increase.")
+            print("Only counting, and no modified info, patch version increase.")
             return increment_version(self.prev_version, "patch")
 
         # modifications were made by re-ingesting/re-generating the data, not patching
         logger.info("No additional keys or patch, but modified info, minor version increase.")
+        print("No additional keys or patch, but modified info, minor version increase.")
         return increment_version(self.prev_version, "minor")
 
     def _get_input_data_overall_stats(self) -> list[dict[str, Any]]:
@@ -443,7 +450,7 @@ class DataManifest:
         Returns:
             list[str]: Count keys corresponding to this manifest's DataStage.
         """
-        return NewspaperStatistics(self.stage, "year").count_keys
+        return MediaStatistics(self.stage, "year").count_keys
 
     def init_yearly_count_dict(self) -> dict[str, int]:
         """Initialize new newspaper statistics counts for this manifest.
@@ -453,7 +460,7 @@ class DataManifest:
         Returns:
             dict[str, int]: Initialized counts for this manifest.
         """
-        return NewspaperStatistics(self.stage, "year").init_counts()
+        return MediaStatistics(self.stage, "year").init_counts()
 
     def _log_failed_action(self, title: str, year: str, action: str) -> None:
         """Log and add to the notes that an action on the counts/statistics failed.
@@ -469,8 +476,13 @@ class DataManifest:
         self.append_to_notes(failed_note, to_start=False)
 
     def _init_yearly_stats(
-        self, title: str, year: str, counts: dict[str, int]
-    ) -> tuple[NewspaperStatistics, bool]:
+        self,
+        title: str,
+        year: str,
+        counts: dict[str, int],
+        src_medium: str | None = None,
+        src_type: str | None = None,
+    ) -> tuple[MediaStatistics, bool]:
         """Initialize the stats fro a given title and year given precomputed counts.
 
         TODO when integrating radio data: init RadioStatistics instead.
@@ -481,12 +493,12 @@ class DataManifest:
             counts (dict[str, int]): Precomputed counts used directly to initialize.
 
         Returns:
-            tuple[NewspaperStatistics, bool]: The initiailized stats and whether this
+            tuple[MediaStatistics, bool]: The initiailized stats and whether this
                 initialization was successful.
         """
         logger.debug("Initializing counts for %s-%s", title, year)
         elem = f"{title}-{year}"
-        np_stats = NewspaperStatistics(self.stage, "year", elem, counts=counts)
+        np_stats = MediaStatistics(self.stage, "year", elem, src_medium, counts=counts)
         success = True
         # if the created stats don't have the initialized values
         if np_stats.counts != counts:
@@ -565,7 +577,14 @@ class DataManifest:
         title, year = ci_id.split("-")[0:2]
         return self._modify_processing_stats(title, year, counts)
 
-    def add_by_title_year(self, title: str, year: str, counts: dict[str, int]) -> bool:
+    def add_by_title_year(
+        self,
+        title: str,
+        year: str,
+        counts: dict[str, int],
+        src_medium: str | None = None,
+        src_type: str | None = None,
+    ) -> bool:
         """Add new counts corresponding to a specific media title and year.
 
         Args:
@@ -680,6 +699,9 @@ class DataManifest:
         logger.info("Creating new media dict for %s.", title)
         media = {
             "media_title": title,
+            "data_provider": "",
+            "source_type": "",
+            "source_medium": "",
             "last_modification_date": self._generation_date,
         }
         media.update(init_media_info(fields=self.patched_fields))
@@ -816,6 +838,17 @@ class DataManifest:
 
         return old_media_list, modif_years
 
+    def add_media_source_metadata(
+        self, title: str, old_media_title_info: dict[str, dict]
+    ) -> dict[str, Any]:
+        # ensure that the title is the right one
+        assert (
+            title == old_media_title_info["media_title"]
+        ), f"Title mismatch: {title} != {old_media_title_info['media_title']}"
+
+        if "data_provider" not in old_media_title_info:
+            provider = get_provider_for_alias(title)
+
     def generate_media_dict(self, old_media_list: dict[str, dict]) -> tuple[dict, bool]:
         """Given the previous manifest's and current statistics, generate new media dict.
 
@@ -847,6 +880,11 @@ class DataManifest:
                     title, yearly_stats, old_media_list
                 )
             else:
+                # add provider, source type and medium if not already present
+                old_media_list[title] = self.add_media_source_metadata(
+                    title, old_media_list[title]
+                )
+
                 prev_version_years = set(old_media_list[title]["stats_as_dict"].keys())
 
                 # update the statistics and identify if the media info needs to change
@@ -887,7 +925,7 @@ class DataManifest:
 
     def aggregate_stats_for_title(
         self, title: str, media_dict: dict[str, Any]
-    ) -> tuple[dict[str, Any], NewspaperStatistics]:
+    ) -> tuple[dict[str, Any], MediaStatistics]:
         """Aggregate all stats of given title and export them to a "pretty print" dict.
 
         TODO once the radio data is handled, add RadioStatistics
@@ -900,11 +938,11 @@ class DataManifest:
             media_dict (dict[str, Any]): Title's media dict with formatted statistics.
 
         Returns:
-            tuple[dict[str, Any], NewspaperStatistics]: Updated media dict and
+            tuple[dict[str, Any], MediaStatistics]: Updated media dict and
                 corresponding title-level DataStatistics object.
         """
         logger.debug("Aggregating title-level stats for %s.", title)
-        title_cumm_stats = NewspaperStatistics(self.stage, "title", title)
+        title_cumm_stats = MediaStatistics(self.stage, "title", title)
         pretty_counts = []
 
         for _, np_year_stat in media_dict["stats_as_dict"].items():
@@ -932,7 +970,7 @@ class DataManifest:
         """Compute the title-level statistics from the new media list.
 
         Also removes the `stats_as_dict` field from the media list, and returns
-        the media list with each NewspaperStatistics object "pretty printed".
+        the media list with each MediaStatistics object "pretty printed".
 
         Args:
             media_list (dict[str, dict]): Updated media list for this manifest.
@@ -964,7 +1002,7 @@ class DataManifest:
         Returns:
             list[dict]: This manifest's overall stats with the ones of previous stages.
         """
-        corpus_stats = NewspaperStatistics(self.stage, "corpus", "")
+        corpus_stats = MediaStatistics(self.stage, "corpus", "")
         for np_stats in title_stats:
             corpus_stats.add_counts(np_stats.counts)
         # add the number of titles present in corpus

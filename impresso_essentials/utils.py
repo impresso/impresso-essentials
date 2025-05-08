@@ -621,25 +621,111 @@ SOURCE_MEDIUMS_TO_PARTNERS_TO_MEDIA = {
         "BCUL": "all",
         "BL": "all",
         "KB": {
-            # SourceType.NP: [], # all KB NP titles should be listed
+            # SourceMedium.PT: [], # all KB NP titles should be listed
         },
     },
     SourceMedium.TPS: {
         "KB": ["ANP"],
         "SWISSINFO": "all",
     },
-    SourceMedium.AO: {"RTS": "all"},  # "RTS": [RTS_titles],
+    SourceMedium.AO: {"RTS": "all", "INA": "all"},  # "RTS": [RTS_titles],
 }
 # define list of media aliases that are not print (newspapers)
 NON_PRINT_MEDIA = {
     SourceMedium.TPS: ["SOC_CJ", "SOC_CP", "SOC_SO", "SOC_TH", "SOC_VS", "ANP"],
     # SourceMedium.AO: #[INA_titles],
 }
+PARTNERS_TO_SRC_MEDIUM_TO_MEDIA = {
+    "SNL": {SourceMedium.PT: "all"},
+    "LeTemps": {SourceMedium.PT: "all"},
+    "NZZ": {SourceMedium.PT: "all"},
+    "SWA": {SourceMedium.PT: "all"},
+    "FedGaz": {SourceMedium.PT: "all"},
+    "BNL": {SourceMedium.PT: "all"},
+    "BNF": {SourceMedium.PT: "all"},
+    "BNF-EN": {SourceMedium.PT: "all"},
+    "BCUL": {SourceMedium.PT: "all"},
+    "BL": {SourceMedium.PT: "all"},
+    "KB": {
+        SourceMedium.TPS: ["ANP"],
+        # SourceMedium.PT: [], # all KB NP titles should be listed
+    },
+    "SWISSINFO": {SourceMedium.TPS: "all"},
+    "RTS": {SourceMedium.AO: "all"},
+    "INA": {SourceMedium.AO: "all"},
+}
+PARTNERS_TO_SRC_TYPE_TO_MEDIA = {
+    "SNL": {SourceType.NP: "all"},
+    "LeTemps": {SourceType.NP: "all"},
+    "NZZ": {SourceType.NP: "all"},
+    "SWA": {SourceType.NP: "all"},
+    "FedGaz": {SourceType.NP: "all"},
+    "BNL": {SourceType.NP: "all"},
+    "BNF": {SourceType.NP: "all"},
+    "BNF-EN": {SourceType.NP: "all"},
+    "BCUL": {SourceType.NP: "all"},
+    "BL": {SourceType.NP: "all"},
+    "KB": {
+        SourceType.RB: ["ANP"],
+        # SourceType.NP: [], # all KB NP titles should be listed
+    },
+    "SWISSINFO": {SourceType.RB: "all"},
+    "RTS": {SourceType.RB: "all"},
+    "INA": {SourceType.RB: "all"},
+}
 
 # a simple data structure to represent input directories
 # a `Document.zip` file is expected to be found in `IssueDir.path`
 # IssueDir = namedtuple("IssueDir", ["alias", "date", "edition", "path", "src_type", "src_medium"])
 IssueDir = namedtuple("IssueDir", ["alias", "date", "edition", "path"])
+
+
+def get_provider_for_alias(media_alias: str) -> str:
+    """Get the provider for a given media alias.
+
+    Args:
+        media_alias (str): The media alias to get the provider for.
+
+    Returns:
+        str: The provider for the given media alias.
+    """
+    for provider, aliases in PARTNER_TO_MEDIA.items():
+        if media_alias in aliases:
+            return provider
+
+    raise ValueError(
+        f"Unknown media alias: {media_alias}! Please check the list of known media aliases."
+    )
+
+
+def get_src_info_for_alias(
+    media_alias: str, medium: bool | None = True, prodiver: str | None = None
+) -> str:
+    """Get the provider for a given media alias.
+
+    Args:
+        media_alias (str): The media alias to get the provider for.
+        prodiver (str | None, optional): The provider for the media. If None, the
+            provider will be determined from the media alias. Defaults to None.
+
+    Returns:
+        str: The source medium for the given media alias.
+    """
+    if not prodiver:
+        prodiver = get_provider_for_alias(media_alias)
+
+    info_dict = PARTNERS_TO_SRC_MEDIUM_TO_MEDIA if medium else PARTNERS_TO_SRC_TYPE_TO_MEDIA
+
+    for medium, aliases in info_dict[prodiver].items():
+        # aliases can be a list of aliases or "all"
+        if aliases == "all":
+            return medium
+        if media_alias in aliases:
+            return medium
+
+    raise ValueError(
+        f"Could not find the source {'medium' if medium else 'type'} for {media_alias}!"
+    )
 
 
 def user_confirmation(question: str, default: str | None = None) -> bool:

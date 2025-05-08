@@ -54,7 +54,6 @@ class DataStatistics(ABC):
         data_stage: Union[DataStage, str],
         granularity: str,
         element: str | None = None,
-        source_type: SourceType | str | None = None,
         source_medium: SourceMedium | str | None = None,
         counts: Union[dict[str, Union[int, dict[str, int]]], None] = None,
     ) -> None:
@@ -62,7 +61,6 @@ class DataStatistics(ABC):
         self.stage = validate_stage(data_stage)
         self.granularity = validate_granularity(granularity)
         self.element = element
-        self.source_type = validate_source(source_type, medium=False) if source_type else None
         self.source_medium = validate_source(source_medium) if source_medium else None
         self.count_keys = self._define_count_keys()
 
@@ -204,7 +202,6 @@ class MediaStatistics(DataStatistics):
         "content_items_out",
         "ft_tokens",
         "images",
-        "content_items_in",  # TODO remove
         "ne_mentions",
         "ne_entities",
         "embeddings_el",
@@ -217,7 +214,8 @@ class MediaStatistics(DataStatistics):
     ]
 
     stage_extra_keys = {
-        DataStage.CANONICAL: ["pages", "images"],
+        # audios and pages don't need to be defined for the same mediums
+        DataStage.CANONICAL: ["pages", "audios", "images"],
         DataStage.REBUILT: ["ft_tokens"],
         DataStage.ENTITIES: ["ne_entities", "ne_mentions"],
         DataStage.NEWS_AGENCIES: ["ne_entities", "ne_mentions"],
@@ -225,14 +223,12 @@ class MediaStatistics(DataStatistics):
         DataStage.LANGIDENT: ["images", "lang_fd"],
         DataStage.TEXT_REUSE: ["text_reuse_clusters", "text_reuse_passages"],
         DataStage.TOPICS: ["topics", "topics_fd"],
-        DataStage.MYSQL_CIS: ["pages"],
+        DataStage.MYSQL_CIS: ["pages", "audios"],
         DataStage.EMB_IMAGES: ["images"],
         DataStage.EMB_DOCS: [],  # no additional keys
         DataStage.SOLR_TEXT: ["ft_tokens"],
         DataStage.LINGPROC: [],  # no additional keys
         DataStage.OCRQA: ["avg_ocrqa"],  # no additional keys
-        # TODO Add for solr
-        # todo add for embeddings
     }
 
     def _define_count_keys(self) -> list[str]:
@@ -277,6 +273,21 @@ class MediaStatistics(DataStatistics):
             )
             logger.error(warn_msg)
             return False
+
+        # TODO add a check that the keys for other mediums are not defined?? needs to have the medium defined always
+        if self.source_medium:
+            if self.source_medium == "audio" and "pages" in new_counts:
+                warn_msg = (
+                    f"Source medium is '{self.source_medium}' but 'pages' counts are defined!"
+                )
+                logger.error(warn_msg)
+                return False
+            if self.source_medium != "audio" and "audios" in new_counts:
+                warn_msg = (
+                    f"Source medium is '{self.source_medium}' but 'audios' counts are defined!"
+                )
+                logger.error(warn_msg)
+                return False
 
         if not all(
             v >= 0 if "fd" not in k else all(fv > 0 for fv in v.values())
