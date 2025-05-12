@@ -19,6 +19,7 @@ from impresso_essentials.utils import (
     get_provider_for_alias,
     get_src_info_for_alias,
     SOURCE_MEDIUMS_TO_PARTNERS_TO_MEDIA,
+    PARTNER_TO_MEDIA,
 )
 from impresso_essentials.versioning.data_statistics import (
     MediaStatistics,
@@ -455,7 +456,7 @@ class DataManifest:
     def init_yearly_count_dict(self) -> dict[str, int]:
         """Initialize new newspaper statistics counts for this manifest.
 
-        TODO when integrating radio data: init RadioStatistics instead.
+        TODO remove as it's not used
 
         Returns:
             dict[str, int]: Initialized counts for this manifest.
@@ -481,11 +482,9 @@ class DataManifest:
         year: str,
         counts: dict[str, int],
         src_medium: str | None = None,
-        src_type: str | None = None,
+        provider: str | None = None,
     ) -> tuple[MediaStatistics, bool]:
         """Initialize the stats fro a given title and year given precomputed counts.
-
-        TODO when integrating radio data: init RadioStatistics instead.
 
         Args:
             title (str): Media title to add the stats to.
@@ -498,6 +497,12 @@ class DataManifest:
         """
         logger.debug("Initializing counts for %s-%s", title, year)
         elem = f"{title}-{year}"
+
+        # if the source medium is not defined, fetch the information from utils
+        if not src_medium:
+            # already defining the provider prevents some overhead
+            src_medium = get_src_info_for_alias(title, provider=provider)
+
         np_stats = MediaStatistics(self.stage, "year", elem, src_medium, counts=counts)
         success = True
         # if the created stats don't have the initialized values
@@ -523,7 +528,13 @@ class DataManifest:
         return False
 
     def _modify_processing_stats(
-        self, title: str, year: str, counts: dict[str, int], adding: bool = True
+        self,
+        title: str,
+        year: str,
+        counts: dict[str, int],
+        adding: bool = True,
+        src_medium: str | None = None,
+        provider: str | None = None,
     ) -> bool:
         """Update or replace the processing stats for a given title-year pair.
 
@@ -559,12 +570,18 @@ class DataManifest:
             self._processing_stats[title] = {}
         # initialize new statistics for this title-year pair:
         self._processing_stats[title][year], success = self._init_yearly_stats(
-            title, year, counts
+            title, year, counts, src_medium=src_medium, provider=provider
         )
 
         return success
 
-    def add_by_ci_id(self, ci_id: str, counts: dict[str, int]) -> bool:
+    def add_by_ci_id(
+        self,
+        ci_id: str,
+        counts: dict[str, int],
+        src_medium: str | None = None,
+        provider: str | None = None,
+    ) -> bool:
         """Add new counts corresponding to a specific content-item ID.
 
         Args:
@@ -575,7 +592,9 @@ class DataManifest:
             bool: True if the processing stats' update was successful, False otherwise.
         """
         title, year = ci_id.split("-")[0:2]
-        return self._modify_processing_stats(title, year, counts)
+        return self._modify_processing_stats(
+            title, year, counts, src_medium=src_medium, provider=provider
+        )
 
     def add_by_title_year(
         self,
@@ -583,7 +602,7 @@ class DataManifest:
         year: str,
         counts: dict[str, int],
         src_medium: str | None = None,
-        src_type: str | None = None,
+        provider: str | None = None,
     ) -> bool:
         """Add new counts corresponding to a specific media title and year.
 
@@ -603,10 +622,17 @@ class DataManifest:
                 counts,
             )
 
-        return self._modify_processing_stats(title, str(year), counts)
+        return self._modify_processing_stats(
+            title, str(year), counts, src_medium=src_medium, provider=provider
+        )
 
     def add_count_list_by_title_year(
-        self, title: str, year: str, all_counts: list[dict[str, int]]
+        self,
+        title: str,
+        year: str,
+        all_counts: list[dict[str, int]],
+        src_medium: str | None = None,
+        provider: str | None = None,
     ) -> bool:
         """Add a list of new counts corresponding to a specific media title and year.
 
@@ -618,9 +644,20 @@ class DataManifest:
         Returns:
             bool: True if all the updates were successful, False otherwise.
         """
-        return all(self._modify_processing_stats(title, str(year), c) for c in all_counts)
+        return all(
+            self._modify_processing_stats(
+                title, str(year), c, src_medium=src_medium, provider=provider
+            )
+            for c in all_counts
+        )
 
-    def replace_by_ci_id(self, ci_id: str, counts: dict[str, int]) -> bool:
+    def replace_by_ci_id(
+        self,
+        ci_id: str,
+        counts: dict[str, int],
+        src_medium: str | None = None,
+        provider: str | None = None,
+    ) -> bool:
         """Replace the current counts for a CI id's title-year pair with new ones.
 
         Warning:
@@ -643,9 +680,18 @@ class DataManifest:
             counts,
             ci_id,
         )
-        return self._modify_processing_stats(title, year, counts, adding=False)
+        return self._modify_processing_stats(
+            title, year, counts, adding=False, src_medium=src_medium, provider=provider
+        )
 
-    def replace_by_title_year(self, title: str, year: str, counts: dict[str, int]) -> bool:
+    def replace_by_title_year(
+        self,
+        title: str,
+        year: str,
+        counts: dict[str, int],
+        src_medium: str | None = None,
+        provider: str | None = None,
+    ) -> bool:
         """Replace the current counts for a given title-year pair with new ones.
 
         Warning:
@@ -662,7 +708,9 @@ class DataManifest:
             bool: True if the stats' modification was successful, False otherwise.
         """
         logger.warning("The counts for %s-%s will be replaced by %s", title, year, counts)
-        return self._modify_processing_stats(title, str(year), counts, adding=False)
+        return self._modify_processing_stats(
+            title, str(year), counts, adding=False, src_medium=src_medium, provider=provider
+        )
 
     def append_to_notes(self, contents: str, to_start: bool = True) -> None:
         """Append a string content to the manifest notes, initialize them if needed.
@@ -676,11 +724,11 @@ class DataManifest:
             self.notes = contents
         else:
             new_notes = [contents, self.notes] if to_start else [self.notes, contents]
-            print(new_notes)
+            print(f"Updates the notes - new_notes: {new_notes}")
             # there is no way of going to a new line, so separate with a hyphen
             self.notes = " — ".join(new_notes)
 
-    def new_media(self, title: str) -> dict[str, Any]:
+    def new_media(self, title: str, provider: str | None = None) -> dict[str, Any]:
         """Add a new media dict to the media list, given its title.
 
         By default, this means the update information will be the following:
@@ -693,11 +741,13 @@ class DataManifest:
             title (str): Media title for which to add a new media.
 
         Returns:
-            dict[str, Any]: _description_
+            dict[str, Any]: The new media dict to add to the media list.
         """
         # adding a new media means by default addition update type and title update level.
         logger.info("Creating new media dict for %s.", title)
-        provider = get_provider_for_alias(title)
+        # don't fetch the provider from the title if it's already provided
+        if not provider or provider not in PARTNER_TO_MEDIA:
+            provider = get_provider_for_alias(title)
         media = {
             "media_title": title,
             "data_provider": provider,
@@ -840,14 +890,24 @@ class DataManifest:
         return old_media_list, modif_years
 
     def add_media_source_metadata(
-        self, title: str, old_media_title_info: dict[str, dict]
+        self, title: str, old_media_title_info: dict[str, dict], provider: str | None = None
     ) -> dict[str, Any]:
-        # ensure that the title is the right one
+        """Add the source metadata to an exsiting media title info dict.
+
+        Args:
+            title (str): Impresso alias of the media title.
+            old_media_title_info (dict[str, dict]): Existing info to update.
+
+        Returns:
+            dict[str, Any]: Media title info dict with additional source metadata.
+        """
         assert (
             title == old_media_title_info["media_title"]
         ), f"Title mismatch: {title} != {old_media_title_info['media_title']}"
 
-        provider = get_provider_for_alias(title)
+        # don't fetch the provider if already present
+        if not provider or provider not in PARTNER_TO_MEDIA:
+            provider = get_provider_for_alias(title)
         if "data_provider" not in old_media_title_info:
             old_media_title_info["data_provider"] = provider
         if "source_medium" not in old_media_title_info:
@@ -882,7 +942,7 @@ class DataManifest:
             # if title not yet present in media list, initialize new media dict
             if title not in old_media_list:
                 # new title added to the list: addition, full title
-                old_media_list[title] = self.new_media(title)
+                old_media_list[title] = self.new_media(title, yearly_stats.provider)
                 addition = True
 
                 # set the statistics
@@ -892,7 +952,7 @@ class DataManifest:
             else:
                 # add provider, source type and medium if not already present
                 old_media_list[title] = self.add_media_source_metadata(
-                    title, old_media_list[title]
+                    title, old_media_list[title], yearly_stats.provider
                 )
 
                 prev_version_years = set(old_media_list[title]["stats_as_dict"].keys())
@@ -953,7 +1013,9 @@ class DataManifest:
         """
         logger.debug("Aggregating title-level stats for %s.", title)
 
-        title_cumm_stats = MediaStatistics(self.stage, "title", title)
+        title_cumm_stats = MediaStatistics(
+            self.stage, "title", title, get_src_info_for_alias(title)
+        )
         pretty_counts = []
 
         for _, np_year_stat in media_dict["stats_as_dict"].items():

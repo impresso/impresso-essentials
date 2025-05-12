@@ -24,7 +24,12 @@ from tqdm import tqdm
 import dask.bag as db
 from dask.distributed import Client
 from impresso_essentials.io.s3 import fixed_s3fs_glob, IMPRESSO_STORAGEOPT
-from impresso_essentials.utils import init_logger, ALL_MEDIA
+from impresso_essentials.utils import (
+    init_logger,
+    ALL_MEDIA,
+    get_provider_for_alias,
+    get_src_info_for_alias,
+)
 from impresso_essentials.versioning.helpers import validate_stage, DataStage
 from impresso_essentials.versioning import aggregators
 from impresso_essentials.versioning.data_manifest import DataManifest
@@ -71,6 +76,7 @@ def extract_np_key(s3_key: str, bucket: str) -> str:
     Returns:
         str: Name of the corresponding newspaper, extracted form the s3 path.
     """
+    # TODO change to extract alias key and add provider
     # in format: 's3://31-passim-rebuilt-staging/passim/indeplux/indeplux-1889.jsonl.bz2'
     if not bucket.endswith("/"):
         bucket = f"{bucket}/"
@@ -206,9 +212,7 @@ def get_files_to_consider(config: dict[str, Any]) -> Optional[dict[str, list[str
         # return s3_files
     else:
         # here list newspapers instead and s3_files becomes a dict np -> liest of files
-        logger.info(
-            "Fetching the files to consider for titles %s...", config["newspapers"]
-        )
+        logger.info("Fetching the files to consider for titles %s...", config["newspapers"])
         s3_files = {}
         for np in config["newspapers"]:
             s3_files[np] = fixed_s3fs_glob(
@@ -318,9 +322,7 @@ def validate_config(config: dict[str, Any]) -> dict[str, Any]:
     Returns:
         dict[str, Any]: Updated config, with any mssing optional argument set to None.
     """
-    logger.info(
-        "Validating that the provided configuration has all required arugments."
-    )
+    logger.info("Validating that the provided configuration has all required arugments.")
     if not all([k in config for k in REQ_CONFIG_KEYS]):
         raise ValueError(f"Missing some required configurations: {REQ_CONFIG_KEYS}")
 
@@ -353,11 +355,16 @@ def add_stats_to_mft(
             print(msg)
             logger.info(msg)
         else:
+            # added here meanwhile we add the provider in process_by_title
+            provider = get_provider_for_alias(title)  # TODO remove
+            src_medium = get_src_info_for_alias(title, provider)
             year = stats["year"]
             del stats["np_id"]
             del stats["year"]
-            logger.debug("Adding %s to %s-%s", stats, title, year)
-            manifest.add_by_title_year(title, year, stats)
+            logger.debug("Adding %s to %s-%s (%s)", stats, title, year, provider)
+            manifest.add_by_title_year(
+                title, year, stats, src_medium=src_medium, provider=provider
+            )
 
     logger.info("%s - Finished adding stats, going to the next title...", np_title)
     return manifest
@@ -370,6 +377,7 @@ def process_by_title(
     client: Client | None,
 ) -> DataManifest:
     logger.info("\n-> Starting computing the manifest by title <-")
+    # TODO - add provider level in the s3_files dict
     for np_title, np_s3_files in s3_files.items():
 
         if np_title in ALL_MEDIA:
@@ -416,9 +424,7 @@ def process_altogether(
     logger.debug("The list of files selected is: %s", s3_fpaths)
     # load the selected files in dask bags
     processed_files = (
-        db.read_text(s3_fpaths, storage_options=IMPRESSO_STORAGEOPT)
-        .map(json.loads)
-        .persist()
+        db.read_text(s3_fpaths, storage_options=IMPRESSO_STORAGEOPT).map(json.loads).persist()
     )  # .map(lambda x: (x['ci_id'].split('-')[0], x)).persist()
 
     total_num = len(ALL_MEDIA)
@@ -435,18 +441,14 @@ def process_altogether(
             "%s - Starting to compute the statistics on the filtered files...",
             np_title,
         )
-        computed_stats = compute_stats_for_stage(
-            filtered, stage, client, title=np_title
-        )
+        computed_stats = compute_stats_for_stage(filtered, stage, client, title=np_title)
 
         manifest = add_stats_to_mft(manifest, np_title, computed_stats)
 
     return manifest
 
 
-def create_manifest(
-    config_dict: dict[str, Any], client: Optional[Client] = None
-) -> None:
+def create_manifest(config_dict: dict[str, Any], client: Optional[Client] = None) -> None:
     """Given its configuration, generate the manifest for a given s3 bucket partition.
 
     TODO: add options to exclude NP for all agg types
@@ -474,9 +476,7 @@ def create_manifest(
     # fetch the names of the files to consider separated per title
     s3_files = get_files_to_consider(config_dict)
 
-    logger.info(
-        "Collected a total of %s files, reading them...", len(s3_files.values())
-    )
+    logger.info("Collected a total of %s files, reading them...", len(s3_files.values()))
 
     logger.info("Files identified successfully, initialising the manifest.")
     # init the git repo object for the processing's repository.

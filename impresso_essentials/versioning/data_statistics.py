@@ -16,7 +16,7 @@ from impresso_essentials.versioning.helpers import (
     validate_granularity,
     validate_source,
 )
-from impresso_essentials.utils import SourceType, SourceMedium
+from impresso_essentials.utils import SourceMedium, PARTNER_TO_MEDIA
 
 if sys.version < "3.11":
     from typing_extensions import Self
@@ -55,13 +55,18 @@ class DataStatistics(ABC):
         granularity: str,
         element: str | None = None,
         source_medium: SourceMedium | str | None = None,
+        provider: str | None = None,
         counts: Union[dict[str, Union[int, dict[str, int]]], None] = None,
     ) -> None:
 
         self.stage = validate_stage(data_stage)
         self.granularity = validate_granularity(granularity)
         self.element = element
-        self.source_medium = validate_source(source_medium) if source_medium else None
+        # already add the provider to the DataStats if possible
+        self.provider = provider if provider and provider in PARTNER_TO_MEDIA else None
+        self.source_medium = (
+            validate_source(source_medium, return_value_str=True) if source_medium else None
+        )
         self.count_keys = self._define_count_keys()
 
         if counts is not None and self._validate_count_keys(counts):
@@ -252,6 +257,15 @@ class MediaStatistics(DataStatistics):
         #   keys: 'content_items_out', 'titles', 'issues'
         # For case DataStage.LINGPROC, all keys are already added.
         #   keys: 'content_items_out', 'titles', 'issues'
+
+        # ensure that we are intializing the counts for the right medium
+        # but only if it's defined (corpus-level stats could have both)
+        if self.source_medium:
+            if self.source_medium == "audio" and "pages" in count_keys:
+                count_keys.remove("pages")
+            elif "audios" in count_keys:
+                count_keys.remove("audios")
+
         return count_keys
 
     def _validate_count_keys(self, new_counts: dict[str, Union[int, dict[str, int]]]) -> bool:

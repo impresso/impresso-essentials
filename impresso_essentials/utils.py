@@ -38,6 +38,7 @@ class SourceType(StrEnum):
     RM = "radio_magazine"
     RS = "radio_schedule"
     MG = "monograph"
+    EC = "encyclopedia"
 
     @classmethod
     def has_value(cls: Self, value: str) -> bool:
@@ -699,24 +700,24 @@ def get_provider_for_alias(media_alias: str) -> str:
 
 
 def get_src_info_for_alias(
-    media_alias: str, prodiver: str | None = None, medium: bool | None = True
+    media_alias: str, provider: str | None = None, medium: bool | None = True
 ) -> str:
     """Get the provider for a given media alias.
 
     Args:
         media_alias (str): The media alias to get the provider for.
-        prodiver (str | None, optional): The provider for the media. If None, the
+        provider (str | None, optional): The provider for the media. If None, the
             provider will be determined from the media alias. Defaults to None.
 
     Returns:
         str: The source medium for the given media alias.
     """
-    if not prodiver:
-        prodiver = get_provider_for_alias(media_alias)
+    if not provider:
+        provider = get_provider_for_alias(media_alias)
 
     info_dict = PARTNERS_TO_SRC_MEDIUM_TO_MEDIA if medium else PARTNERS_TO_SRC_TYPE_TO_MEDIA
 
-    for medium, aliases in info_dict[prodiver].items():
+    for medium, aliases in info_dict[provider].items():
         # aliases can be a list of aliases or "all"
         if aliases == "all":
             return medium
