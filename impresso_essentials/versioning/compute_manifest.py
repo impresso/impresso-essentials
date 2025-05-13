@@ -261,7 +261,6 @@ def compute_stats_for_stage(
     client: Client | None = None,
     title: str | None = None,
     src_medium: str | None = None,
-    provider: str | None = None,
 ) -> list[dict] | None:
     """Compute statistics for a specific data stage.
 
@@ -283,56 +282,55 @@ def compute_stats_for_stage(
             )
         case DataStage.REBUILT:
             return aggregators.compute_stats_in_rebuilt_bag(
-                files_bag, include_np=True, client=client, title=title, src_medium=src_medium
+                files_bag, include_alias=True, client=client, title=title
             )
         case DataStage.ENTITIES:
             return aggregators.compute_stats_in_entities_bag(
-                files_bag, client=client, title=title, src_medium=src_medium
+                files_bag, client=client, title=title
             )
         case DataStage.NEWS_AGENCIES:
             return aggregators.compute_stats_in_entities_bag(
-                files_bag, client=client, title=title, src_medium=src_medium
+                files_bag, client=client, title=title
             )
         case DataStage.PASSIM:
             return aggregators.compute_stats_in_rebuilt_bag(
                 files_bag,
-                include_np=True,
+                include_alias=True,
                 passim=True,
                 client=client,
                 title=title,
-                src_medium=src_medium,
             )
         case DataStage.LANGIDENT:
             return aggregators.compute_stats_in_langident_bag(
-                files_bag, client=client, title=title, src_medium=src_medium
+                files_bag, client=client, title=title
             )
         case DataStage.TEXT_REUSE:
             return aggregators.compute_stats_in_text_reuse_passage_bag(
-                files_bag, client=client, title=title, src_medium=src_medium
+                files_bag, client=client, title=title
             )
         case DataStage.TOPICS:
             return aggregators.compute_stats_in_topics_bag(
-                files_bag, client=client, title=title, src_medium=src_medium
+                files_bag, client=client, title=title
             )
         case DataStage.EMB_IMAGES:
             return aggregators.compute_stats_in_img_emb_bag(
-                files_bag, client=client, title=title, src_medium=src_medium
+                files_bag, client=client, title=title
             )
         case DataStage.EMB_DOCS:
             return aggregators.compute_stats_in_doc_emb_bag(
-                files_bag, client=client, title=title, src_medium=src_medium
+                files_bag, client=client, title=title
             )
         case DataStage.LINGPROC:
             return aggregators.compute_stats_in_lingproc_bag(
-                files_bag, client=client, title=title, src_medium=src_medium
+                files_bag, client=client, title=title
             )
         case DataStage.SOLR_TEXT:
             return aggregators.compute_stats_in_solr_text_ing_bag(
-                files_bag, client=client, title=title, src_medium=src_medium
+                files_bag, client=client, title=title
             )
         case DataStage.OCRQA:
             return aggregators.compute_stats_in_ocrqa_bag(
-                files_bag, client=client, title=title, src_medium=src_medium
+                files_bag, client=client, title=title
             )
     raise NotImplementedError(
         "The function computing statistics for this DataStage is not yet implemented."
@@ -438,7 +436,6 @@ def process_by_title(
                     client,
                     title=alias,
                     src_medium=src_medium,
-                    provider=provider,
                 )
 
                 manifest = add_stats_to_mft(
@@ -498,7 +495,7 @@ def process_altogether(
 
             src_medium = get_src_info_for_alias(alias, provider)
             computed_stats = compute_stats_for_stage(
-                filtered, stage, client, title=alias, src_medium=src_medium, provider=provider
+                filtered, stage, client, title=alias, src_medium=src_medium
             )
 
             manifest = add_stats_to_mft(manifest, alias, computed_stats, src_medium, provider)

@@ -20,15 +20,16 @@ def log_src_medium_mismatch(obj_id, stage, prov_src_medium, found_src_medium):
 
 def counts_for_canonical_issue(
     issue: dict[str, Any],
-    include_np_yr: bool = False,
+    incl_alias_yr: bool = False,
     src_medium: str | None = None,
 ) -> dict[str, int]:
     """Given the canonical representation of an issue, get its counts.
 
     Args:
         issue (dict[str, Any]): Canonical JSON representation of an issue.
-        include_np_yr (bool, optional): Whether the newspaper title and year should
+        incl_alias_yr (bool, optional): Whether the newspaper title and year should
             be included in the returned dict for later aggregation. Defaults to False.
+        src_medium (str, optional): The source medium of this issue. Defaults to None.
 
     Returns:
         dict[str, int]: Dict listing the counts for this issue, ready to be aggregated.
@@ -38,49 +39,46 @@ def counts_for_canonical_issue(
             "media_alias": issue["id"].split("-")[0],
             "year": issue["id"].split("-")[1],
         }
-        if include_np_yr
+        if incl_alias_yr
         else {}
     )
+
+    update_dict = {
+        "issues": 1,
+        "content_items_out": len(issue["i"]),
+    }
 
     if src_medium and src_medium == "audio":
         if "sm" not in issue or issue["sm"] != src_medium:
             log_src_medium_mismatch(issue["id"], "canonical", src_medium, issue["sm"])
 
         # case of audio
-        counts.update(
-            {
-                "issues": 1,
-                "audios": len(set(issue["rr"])),
-                "content_items_out": len(issue["i"]),
-            }
-        )
+        update_dict["audios"] = len(set(issue["rr"]))
+        counts.update(update_dict)
     else:
         if "sm" in issue and issue["sm"] != src_medium:
             log_src_medium_mismatch(issue["id"], "canonical", src_medium, issue["sm"])
 
         # case of paper (print and typescripts)
-        counts.update(
-            {
-                "issues": 1,
-                "pages": len(set(issue["pp"])),
-                "content_items_out": len(issue["i"]),
-                "images": len([item for item in issue["i"] if item["m"]["tp"] == "image"]),
-            }
+        update_dict["pages"] = len(set(issue["pp"]))
+        update_dict["images"] = len(
+            [item for item in issue["i"] if item["m"]["tp"] == "image"]
         )
+        counts.update(update_dict)
+
     return counts
 
 
 def counts_for_rebuilt(
     rebuilt_ci: dict[str, Any],
-    include_np: bool = False,
+    include_alias: bool = False,
     passim: bool = False,
-    src_medium: str | None = None,
 ) -> dict[str, int | str]:
     """Define the counts for 1 given rebuilt content-item to match the count keys.
 
     Args:
         rebuilt_ci (dict[str, Any]): Rebuilt content-item from which to extract counts.
-        include_np (bool, optional): Whether to include the title in resulting dict,
+        include_alias (bool, optional): Whether to include the title in resulting dict,
             not necessary for on-the-fly computation. Defaults to False.
         passim (bool, optional): True if rebuilt is in passim format. Defaults to False.
 
@@ -88,7 +86,7 @@ def counts_for_rebuilt(
         dict[str, Union[int, str]]: Dict with rebuilt (passim) keys and counts for 1 CI.
     """
     split_id = rebuilt_ci["id"].split("-")
-    counts = {"media_alias": split_id[0]} if include_np else {}
+    counts = {"media_alias": split_id[0]} if include_alias else {}
     counts.update(
         {
             "year": split_id[1],
@@ -121,6 +119,7 @@ def compute_stats_in_canonical_bag(
             compute statistics on.
         title (str, optional): Media title for which the stats are being computed.
             Defaults to None.
+        src_medium (str, optional): The source medium of this issue. Defaults to None.
 
     Returns:
         list[dict[str, Any]]: List of counts that match canonical DataStatistics keys.
@@ -128,33 +127,39 @@ def compute_stats_in_canonical_bag(
 
     print(f"{title} - Fetched all issues, gathering desired information.")
     logger.info("%s - Fetched all issues, gathering desired information.", title)
+
+    # prep the df's meta and aggregations based on the source medium
+    df_meta = {
+        "media_alias": str,
+        "year": str,
+        "issues": int,
+        "content_items_out": int,
+    }
+    df_agg = {
+        "issues": sum,
+        "content_items_out": sum,
+    }
+
+    if src_medium and src_medium == "audio":
+        df_meta["audios"] = int
+        df_agg["audios"] = sum
+    else:
+        df_meta["pages"] = int
+        df_meta["images"] = int
+        df_agg["pages"] = sum
+        df_agg["images"] = sum
+
     count_df = (
-        s3_canonical_issues.map(lambda i: counts_for_canonical_issue(i, include_np_yr=True))
-        .to_dataframe(
-            meta={
-                "media_alias": str,
-                "year": str,
-                "issues": int,
-                "pages": int,
-                "images": int,
-                "content_items_out": int,
-            }
+        s3_canonical_issues.map(
+            lambda i: counts_for_canonical_issue(i, incl_alias_yr=True, src_medium=src_medium)
         )
+        .to_dataframe(meta=df_meta)
         .persist()
     )
 
     # cum the counts for all values collected
     aggregated_df = (
-        count_df.groupby(by=["media_alias", "year"])
-        .agg(
-            {
-                "issues": sum,
-                "pages": sum,
-                "content_items_out": sum,
-                "images": sum,
-            }
-        )
-        .reset_index()
+        count_df.groupby(by=["media_alias", "year"]).agg(df_agg).reset_index()
     ).persist()
 
     if client is not None:
@@ -203,11 +208,10 @@ tunique = dd.Aggregation("tunique", chunk, agg, finalize)
 def compute_stats_in_rebuilt_bag(
     rebuilt_articles: Bag,
     key: str = "",
-    include_np: bool = False,
+    include_alias: bool = False,
     passim: bool = False,
     client: Client | None = None,
     title: str | None = None,
-    src_medium: str | None = None,
 ) -> list[dict[str, int | str]]:
     """Compute stats on a dask bag of rebuilt output content-items.
 
@@ -215,7 +219,7 @@ def compute_stats_in_rebuilt_bag(
         rebuilt_articles (db.core.Bag): Bag with the contents of rebuilt files.
         key (str, optional): Optionally title-year pair for on-the-fly computation.
             Defaults to "".
-        include_np (bool, optional): Whether to include the title in the groupby,
+        include_alias (bool, optional): Whether to include the title in the groupby,
             not necessary for on-the-fly computation. Defaults to False.
         passim (bool, optional): True if rebuilt is in passim format. Defaults to False.
         client (Client | None, optional): Dask client. Defaults to None.
@@ -234,7 +238,7 @@ def compute_stats_in_rebuilt_bag(
     logger.info("%s - Fetched all files, gathering desired information.", title)
 
     # define the list of columns in the dataframe
-    df_meta = {"media_alias": str} if include_np else {}
+    df_meta = {"media_alias": str} if include_alias else {}
     df_meta.update(
         {
             "year": str,
@@ -251,13 +255,13 @@ def compute_stats_in_rebuilt_bag(
 
     rebuilt_count_df = (
         rebuilt_articles.map(
-            lambda rf: counts_for_rebuilt(rf, include_np=include_np, passim=passim)
+            lambda rf: counts_for_rebuilt(rf, include_alias=include_alias, passim=passim)
         )
         .to_dataframe(meta=df_meta)
         .persist()
     )
 
-    gp_key = ["media_alias", "year"] if include_np else "year"
+    gp_key = ["media_alias", "year"] if include_alias else "year"
     # agggregate them at the scale of the entire corpus
     # first groupby title, year and issue to also count the individual issues present
     if not passim:
@@ -270,7 +274,7 @@ def compute_stats_in_rebuilt_bag(
         )
 
     # when titles are included, multiple titles and years will be represented
-    if include_np:
+    if include_alias:
         aggregated_df = aggregated_df.reset_index().persist()
 
     msg = "Obtaining the yearly rebuilt statistics"
@@ -290,10 +294,7 @@ def compute_stats_in_rebuilt_bag(
 
 
 def compute_stats_in_entities_bag(
-    s3_entities: Bag,
-    client: Client | None = None,
-    title: str | None = None,
-    src_medium: str | None = None,
+    s3_entities: Bag, client: Client | None = None, title: str | None = None
 ) -> list[dict[str, Any]]:
     """Compute stats on a dask bag of entities output content-items.
 
@@ -391,7 +392,6 @@ def compute_stats_in_langident_bag(
     s3_langident: Bag,
     client: Client | None = None,
     title: str | None = None,
-    src_medium: str | None = None,
 ) -> list[dict[str, Any]]:
     """Compute stats on a dask bag of langident output content-items.
 
@@ -466,7 +466,6 @@ def compute_stats_in_text_reuse_passage_bag(
     s3_tr_passages: Bag,
     client: Client | None = None,
     title: str | None = None,
-    src_medium: str | None = None,
 ) -> list[dict[str, Any]]:
     """Compute stats on a dask bag of text-reuse passages.
 
@@ -535,7 +534,6 @@ def compute_stats_in_topics_bag(
     s3_topics: Bag,
     client: Client | None = None,
     title: str | None = None,
-    src_medium: str | None = None,
 ) -> list[dict[str, Any]]:
     """Compute stats on a dask bag of topic modeling output content-items.
 
@@ -652,7 +650,6 @@ def compute_stats_in_img_emb_bag(
     s3_emb_images: Bag,
     client: Client | None = None,
     title: str | None = None,
-    src_medium: str | None = None,
 ) -> list[dict[str, int | str]]:
     """Compute stats on a dask bag of image embedding output content-items.
 
@@ -722,7 +719,6 @@ def compute_stats_in_lingproc_bag(
     s3_lingprocs: Bag,
     client: Client | None = None,
     title: str | None = None,
-    src_medium: str | None = None,
 ) -> list[dict[str, int | str]]:
     """Compute stats on a dask bag of linguistic preprocessing output content-items.
 
@@ -789,7 +785,6 @@ def compute_stats_in_solr_text_ing_bag(
     s3_solr_ing_cis: Bag,
     client: Client | None = None,
     title: str | None = None,
-    src_medium: str | None = None,
 ) -> list[dict[str, int | str]]:
     """Compute stats on a dask bag of Solr text post-ingestion reports.
 
@@ -859,7 +854,6 @@ def compute_stats_in_ocrqa_bag(
     s3_ocrqas: Bag,
     client: Client | None = None,
     title: str | None = None,
-    src_medium: str | None = None,
 ) -> list[dict[str, int | str]]:
     """Compute stats on a dask bag of OCRQA outputs.
 
@@ -933,7 +927,6 @@ def compute_stats_in_doc_emb_bag(
     s3_doc_embeddings: Bag,
     client: Client | None = None,
     title: str | None = None,
-    src_medium: str | None = None,
 ) -> list[dict[str, int | str]]:
     """Compute stats on a dask bag of document embeddings.
 
