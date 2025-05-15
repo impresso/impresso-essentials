@@ -796,7 +796,7 @@ def timestamp(ts_format: str = "%Y-%m-%dT%H:%M:%SZ", with_space: bool = False) -
     """
     if with_space:
         ts_format = "%Y-%m-%d %H:%M:%S"
-    return time.strftime(ts_format)
+    return time.strftime(ts_format, time.gmtime())
 
 
 class Timer:
