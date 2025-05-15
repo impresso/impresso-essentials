@@ -1028,7 +1028,14 @@ class DataManifest:
                 )
             else:
                 # non-modified stats will be in pretty-print dict format -> can be added directly
-                title_cumm_stats.add_counts(np_year_stat["nps_stats"])
+                if "media_stats" in np_year_stat:
+                    title_cumm_stats.add_counts(np_year_stat["media_stats"])
+                else:
+                    # TODO remove once all manifests only have "media stats"
+                    title_cumm_stats.add_counts(np_year_stat["nps_stats"])
+                    # replace existing "nps_stats" by "media_stats"
+                    np_year_stat["media_stats"] = np_year_stat["nps_stats"]
+                    del np_year_stat["nps_stats"]
                 pretty_counts.append(np_year_stat)
 
         # insert the title-level statistics at the "top" of the statistics
