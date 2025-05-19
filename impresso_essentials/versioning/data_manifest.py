@@ -20,6 +20,7 @@ from impresso_essentials.utils import (
     get_src_info_for_alias,
     SOURCE_MEDIUMS_TO_PARTNERS_TO_MEDIA,
     PARTNER_TO_MEDIA,
+    timestamp,
 )
 from impresso_essentials.versioning.data_statistics import (
     MediaStatistics,
@@ -905,19 +906,24 @@ class DataManifest:
             title == old_media_title_info["media_title"]
         ), f"Title mismatch: {title} != {old_media_title_info['media_title']}"
 
+        # this new dict allows to manufacture the key ordering in the final manifest
+        new_media_title_info = {"media_title": title}
+
         # don't fetch the provider if already present
         if not provider or provider not in PARTNER_TO_MEDIA:
             provider = get_provider_for_alias(title)
         if "data_provider" not in old_media_title_info:
-            old_media_title_info["data_provider"] = provider
+            new_media_title_info["data_provider"] = provider
         if "source_medium" not in old_media_title_info:
-            old_media_title_info["source_medium"] = get_src_info_for_alias(title, provider)
+            new_media_title_info["source_medium"] = get_src_info_for_alias(title, provider)
         if "source_type" not in old_media_title_info:
-            old_media_title_info["source_type"] = get_src_info_for_alias(
+            new_media_title_info["source_type"] = get_src_info_for_alias(
                 title, provider, False
             )
 
-        return old_media_title_info
+        new_media_title_info.update(old_media_title_info)
+
+        return new_media_title_info
 
     def generate_media_dict(self, old_media_list: dict[str, dict]) -> tuple[dict, bool]:
         """Given the previous manifest's and current statistics, generate new media dict.
@@ -939,10 +945,11 @@ class DataManifest:
         addition = False
         for title, yearly_stats in self._processing_stats.items():
 
+            provider = list(yearly_stats.values())[0].provider
             # if title not yet present in media list, initialize new media dict
             if title not in old_media_list:
                 # new title added to the list: addition, full title
-                old_media_list[title] = self.new_media(title, yearly_stats.provider)
+                old_media_list[title] = self.new_media(title, provider)
                 addition = True
 
                 # set the statistics
@@ -952,7 +959,7 @@ class DataManifest:
             else:
                 # add provider, source type and medium if not already present
                 old_media_list[title] = self.add_media_source_metadata(
-                    title, old_media_list[title], yearly_stats.provider
+                    title, old_media_list[title], provider
                 )
 
                 prev_version_years = set(old_media_list[title]["stats_as_dict"].keys())
@@ -1127,7 +1134,7 @@ class DataManifest:
         else:
             logger.info("Starting to compute the manifest...")
 
-            self._generation_date = strftime("%Y-%m-%d %H:%M:%S")
+            self._generation_date = timestamp()
 
             #### IMPLEMENT LOGIC AND FILL MANIFEST DATA
 

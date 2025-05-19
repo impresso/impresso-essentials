@@ -204,6 +204,10 @@ def get_files_to_consider(config: dict[str, Any]) -> Optional[dict[str, dict[str
         raise ValueError("Config file's `file_extensions` should not be empty or None.")
 
     ext = config["file_extensions"]
+    if config["data_stage"] == "canonical":
+        # for canonical data, we only select issues, override the value provided
+        ext = "issues.jsonl.bz2"
+    # change "." in ext with `ext.startswith('.')`?
     extension_filter = f"*{ext}" if "." in ext else f"*.{ext}"
 
     # if newspapers is empty, include all newspapers
@@ -217,10 +221,10 @@ def get_files_to_consider(config: dict[str, Any]) -> Optional[dict[str, dict[str
             alias, provider = extract_provider_alias_key(s3_key, config["output_bucket"])
             # add the provider as a first level key
             if provider in s3_files:
-                if alias in s3_files:
+                if alias in s3_files[provider]:
                     s3_files[provider][alias].append(s3_key)
                 else:
-                    s3_files[alias] = [s3_key]
+                    s3_files[provider][alias] = [s3_key]
             else:
                 s3_files[provider] = {alias: [s3_key]}
         # return s3_files

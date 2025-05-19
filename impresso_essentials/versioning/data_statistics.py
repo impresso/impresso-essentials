@@ -246,7 +246,7 @@ class MediaStatistics(DataStatistics):
         """
         start_index = int(self.granularity != "corpus")
         # all counts should have 'content_items_out'
-        count_keys = [self.possible_count_keys[3]]
+        count_keys = [self.possible_count_keys[4]]
         # add 'issues' and 'titles' (only if corpus granularity)
         count_keys.extend(self.possible_count_keys[start_index:2])
 
