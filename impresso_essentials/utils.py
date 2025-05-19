@@ -603,6 +603,7 @@ PARTNER_TO_MEDIA = {
         "SOC_TH",
         "SOC_VS",
     ],
+    "INA": ["CFCE", "RDN"],
 }
 # flatten the known journals into a sorted list
 ALL_MEDIA = sorted([j for part_j in PARTNER_TO_MEDIA.values() for j in part_j])
