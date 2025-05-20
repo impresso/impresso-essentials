@@ -529,6 +529,7 @@ def read_s3_issues(alias: str, year: str, input_bucket: str) -> list[tuple[Issue
         )
     except FileNotFoundError as e:
         logger.error(e)
+        print(e)
         return []
 
     return issues
@@ -593,23 +594,25 @@ def list_files(
     Args:
         bucket_name (str): S3 bucket name.
         file_type (str, optional): Type of files to list, possible values are "issues",
-            "pages" and "both". Defaults to "issues".
+            "pages" "audios", "supports" and "both". Defaults to "issues".
         aliases_filter (list[str] | None, optional): List of aliases to consider.
             If None, all will be considered. Defaults to None.
 
     Raises:
-        NotImplementedError: The given `file_type` is not one of ['issues', 'pages', 'both'].
+        NotImplementedError: The given `file_type` is not one of ['issues', 'pages', 'audios', 'supports', 'both'].
 
     Returns:
         tuple[list[str] | None, list[str] | None]: [0] List of issue files or None and
             [1] List of page files or None based on `file_type`
     """
-    if file_type not in ["issues", "pages", "both"]:
-        logger.error("The provided type is not one of ['issues', 'pages', 'both']!")
+    if file_type not in ["issues", "pages", "audios", "both", "supports"]:
+        logger.error(
+            "The provided type is not one of ['issues', 'pages', 'audios', 'both', 'supports']!"
+        )
         raise NotImplementedError
 
     # initialize the output lists
-    issue_files, page_files = None, None
+    issue_files, page_files, audio_files = None, None, None
     # list the newspapers in the bucket
     media_titles = list_media_titles(bucket_name)
 
@@ -626,7 +629,7 @@ def list_files(
             for file in fixed_s3fs_glob(os.path.join(bucket_name, f"{alias}/issues/*"))
         ]
         print(f"{bucket_name} contains {len(issue_files)} .bz2 issue files {suffix}")
-    if file_type in ["pages", "both"]:
+    if file_type in ["pages", "supports", "both"]:
         page_files = [
             file
             for alias in media_titles
@@ -634,8 +637,22 @@ def list_files(
             for file in fixed_s3fs_glob(f"{os.path.join(bucket_name, f'{alias}/pages/*')}")
         ]
         print(f"{bucket_name} contains {len(page_files)} .bz2 page files {suffix}")
+    if file_type in ["audios", "supports", "both"]:
+        audio_files = [
+            file
+            for alias in media_titles
+            if aliases_filter is not None and alias in aliases_filter
+            for file in fixed_s3fs_glob(f"{os.path.join(bucket_name, f'{alias}/audios/*')}")
+        ]
+        print(f"{bucket_name} contains {len(audio_files)} .bz2 audio files {suffix}")
 
-    return issue_files, page_files
+    support_files = []
+    if page_files is not None:
+        support_files.extend(page_files)
+    if audio_files is not None:
+        support_files.extend(audio_files)
+
+    return issue_files, support_files if len(support_files) != 0 else None
 
 
 def fetch_files(
@@ -650,8 +667,8 @@ def fetch_files(
     bucket for the specified newspapers and type of files.
     If compute=False, the output will remain in a distributed dask.bag.
 
-    Based on file_type, the issue files, page files or both will be returned.
-    In the returned tuple, issues are always in the first element and pages in the
+    Based on file_type, the issue files, page/audio ("support") files or both will be returned.
+    In the returned tuple, issues are always in the first element and supports in the
     second, hence if file_type is not 'both', the tuple entry corresponding to the
     undesired type of files will be None.
 
@@ -660,25 +677,27 @@ def fetch_files(
         compute (bool, optional): Whether to compute result and output as list.
             Defaults to True.
         file_type: (str, optional): Type of files to list, possible values are "issues",
-            "pages" and "both". Defaults to "issues".
+            "pages", "audios", "supports" and "both". Defaults to "issues".
         newspapers_filter: (list[str]|None,optional): List of newspapers to consider.
             If None, all will be considered. Defaults to None.
 
     Raises:
-        NotImplementedError: The given `file_type` is not one of ['issues', 'pages', 'both'].
+        NotImplementedError: The given `file_type` is not one of ['issues', 'pages', 'audios', 'support', 'both'].
 
     Returns:
         tuple[db.core.Bag|None, db.core.Bag|None] | tuple[list[str]|None, list[str]|None]:
             [0] Issue files' contents or None and
-            [1] Page files' contents or None based on `file_type`
+            [1] Page and Audio Record files' contents or None based on `file_type`
     """
-    if file_type not in ["issues", "pages", "both"]:
-        logger.error("The provided type is not one of ['issues', 'pages', 'both']!")
+    if file_type not in ["issues", "pages", "audios", "supports", "both"]:
+        logger.error(
+            "The provided type is not one of ['issues', 'pages', 'audios', 'supports', 'both']!"
+        )
         raise NotImplementedError
 
-    issue_files, page_files = list_files(bucket_name, file_type, newspapers_filter)
+    issue_files, support_files = list_files(bucket_name, file_type, newspapers_filter)
     # initialize the outputs
-    issue_bag, page_bag = None, None
+    issue_bag, support_files = None, None
 
     msg = "Fetching "
     if issue_files is not None:
@@ -686,19 +705,21 @@ def fetch_files(
         issue_bag = db.read_text(issue_files, storage_options=IMPRESSO_STORAGEOPT).map(
             json.loads
         )
-    if page_files is not None:
+    if support_files is not None:
         # make sure all files are .bz2 files and exactly have the naming format they should
-        prev_len = len(page_files)
-        page_files = [p for p in page_files if ".jsonl.bz2" in p and len(p.split("-")) > 5]
-        msg = f"{msg} page ids from {len(page_files)} .bz2 files ({prev_len} files before filtering), "
-        page_bag = db.read_text(page_files, storage_options=IMPRESSO_STORAGEOPT).map(
+        prev_len = len(support_files)
+        support_files = [
+            s for s in support_files if ".jsonl.bz2" in s and len(s.split("-")) > 5
+        ]
+        msg = f"{msg} page and audio ids from {len(support_files)} .bz2 files ({prev_len} files before filtering), "
+        support_bag = db.read_text(support_files, storage_options=IMPRESSO_STORAGEOPT).map(
             json.loads
         )
 
     logger.info(msg)
 
     if compute:
-        page_bag = page_bag.compute() if page_files is not None else page_bag
+        support_bag = support_bag.compute() if support_files is not None else support_bag
         issue_bag = issue_bag.compute() if issue_files is not None else issue_bag
 
-    return issue_bag, page_bag
+    return issue_bag, support_bag

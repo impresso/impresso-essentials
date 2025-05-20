@@ -607,7 +607,7 @@ PARTNER_TO_MEDIA = {
 }
 # flatten the known journals into a sorted list
 ALL_MEDIA = sorted([j for part_j in PARTNER_TO_MEDIA.values() for j in part_j])
-PARTNERS_WITHOUT_OLR = ["NZZ", "SWA", "BCUL", "SWISSINFO"]
+PARTNERS_WITHOUT_OLR = ["NZZ", "SWA", "BCUL", "SWISSINFO", "INA"]
 
 # values can either be a list of aliases or "all"
 SOURCE_MEDIUMS_TO_PARTNERS_TO_MEDIA = {
