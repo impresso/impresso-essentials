@@ -8,7 +8,6 @@ import copy
 import json
 import logging
 import os
-from time import strftime
 from typing import Any, Union, Optional
 
 from git import Repo
@@ -18,7 +17,6 @@ from impresso_essentials.utils import (
     validate_against_schema,
     get_provider_for_alias,
     get_src_info_for_alias,
-    SOURCE_MEDIUMS_TO_PARTNERS_TO_MEDIA,
     PARTNER_TO_MEDIA,
     timestamp,
 )
@@ -30,15 +28,19 @@ from impresso_essentials.versioning.helpers import (
     DataStage,
     read_manifest_from_s3,
     validate_stage,
-    clone_git_repo,
-    write_and_push_to_git,
-    write_dump_to_fs,
-    get_head_commit_url,
     increment_version,
     validate_version,
     init_media_info,
     media_list_from_mft_json,
     read_manifest_from_s3_path,
+    add_media_source_metadata,
+    sort_media_list_years_and_titles,
+)
+from impresso_essentials.versioning.git_utils import (
+    clone_git_repo,
+    write_and_push_to_git,
+    write_dump_to_fs,
+    get_head_commit_url,
 )
 
 logger = logging.getLogger(__name__)
@@ -447,22 +449,10 @@ class DataManifest:
     def get_count_keys(self) -> list[str]:
         """Get the list of count keys for this manifest's media dict.
 
-        TODO when integrating radio data: init RadioStatistics instead.
-
         Returns:
             list[str]: Count keys corresponding to this manifest's DataStage.
         """
         return MediaStatistics(self.stage, "year").count_keys
-
-    def init_yearly_count_dict(self) -> dict[str, int]:
-        """Initialize new newspaper statistics counts for this manifest.
-
-        TODO remove as it's not used
-
-        Returns:
-            dict[str, int]: Initialized counts for this manifest.
-        """
-        return MediaStatistics(self.stage, "year").init_counts()
 
     def _log_failed_action(self, title: str, year: str, action: str) -> None:
         """Log and add to the notes that an action on the counts/statistics failed.
@@ -890,41 +880,6 @@ class DataManifest:
 
         return old_media_list, modif_years
 
-    def add_media_source_metadata(
-        self, title: str, old_media_title_info: dict[str, dict], provider: str | None = None
-    ) -> dict[str, Any]:
-        """Add the source metadata to an exsiting media title info dict.
-
-        Args:
-            title (str): Impresso alias of the media title.
-            old_media_title_info (dict[str, dict]): Existing info to update.
-
-        Returns:
-            dict[str, Any]: Media title info dict with additional source metadata.
-        """
-        assert (
-            title == old_media_title_info["media_title"]
-        ), f"Title mismatch: {title} != {old_media_title_info['media_title']}"
-
-        # this new dict allows to manufacture the key ordering in the final manifest
-        new_media_title_info = {"media_title": title}
-
-        # don't fetch the provider if already present
-        if not provider or provider not in PARTNER_TO_MEDIA:
-            provider = get_provider_for_alias(title)
-        if "data_provider" not in old_media_title_info:
-            new_media_title_info["data_provider"] = provider
-        if "source_medium" not in old_media_title_info:
-            new_media_title_info["source_medium"] = get_src_info_for_alias(title, provider)
-        if "source_type" not in old_media_title_info:
-            new_media_title_info["source_type"] = get_src_info_for_alias(
-                title, provider, False
-            )
-
-        new_media_title_info.update(old_media_title_info)
-
-        return new_media_title_info
-
     def generate_media_dict(self, old_media_list: dict[str, dict]) -> tuple[dict, bool]:
         """Given the previous manifest's and current statistics, generate new media dict.
 
@@ -958,7 +913,7 @@ class DataManifest:
                 )
             else:
                 # add provider, source type and medium if not already present
-                old_media_list[title] = self.add_media_source_metadata(
+                old_media_list[title] = add_media_source_metadata(
                     title, old_media_list[title], provider
                 )
 
@@ -998,14 +953,17 @@ class DataManifest:
                         # only one addition is enough
                         addition = True
 
-        return old_media_list, addition
+        # ensure the ordering of the elements in the media list stays constant
+        sorted_media_list = sort_media_list_years_and_titles(old_media_list)
+
+        return sorted_media_list, addition
 
     def aggregate_stats_for_title(
         self, title: str, media_dict: dict[str, Any]
     ) -> tuple[dict[str, Any], MediaStatistics]:
         """Aggregate all stats of given title and export them to a "pretty print" dict.
 
-        TODO once the radio data is handled, add RadioStatistics
+        TODO move to helpers?
 
         The `DataStatistics` objects don't display in the dict format by default,
         but need to be converted to dicts to show as desired on the final manifest.
