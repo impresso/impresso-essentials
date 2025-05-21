@@ -9,9 +9,7 @@ import json
 import logging
 import os
 from typing import Any, Union, Optional
-
 from git import Repo
-
 from impresso_essentials.io.s3 import get_storage_options, upload_to_s3
 from impresso_essentials.utils import (
     validate_against_schema,
@@ -47,7 +45,6 @@ logger = logging.getLogger(__name__)
 
 GIT_REPO_SSH_URL = "git@github.com:impresso/impresso-data-release.git"
 REPO_BRANCH_URL = "https://github.com/impresso/impresso-data-release/tree/{branch}"
-
 IMPRESSO_STORAGEOPT = get_storage_options()
 
 
@@ -390,8 +387,6 @@ class DataManifest:
             bool: Whether the upload to s3 was successful.
         """
         msg = "Validating and exporting manifest to s3"
-
-        # validate the manifest against the schema
         validate_against_schema(self.manifest_data)
 
         if push_to_git:
@@ -664,13 +659,8 @@ class DataManifest:
             bool: True if the stats' modification was successful, False otherwise.
         """
         title, year = ci_id.split("-")[0:2]
-        logger.warning(
-            "The counts for %s-%s will be replaced by %s (corresponding to id: %s)",
-            title,
-            year,
-            counts,
-            ci_id,
-        )
+        msg = f"The counts for {title}-{year} will be replaced by {counts} (corresponding to id: {ci_id})"
+        logger.warning(msg)
         return self._modify_processing_stats(
             title, year, counts, adding=False, src_medium=src_medium, provider=provider
         )
@@ -847,9 +837,7 @@ class DataManifest:
             Union[dict, list[str]]: Previous manifest's media list potentially updated to match
                 new counts, and the list of years which have been modified
         """
-        # modif_media_info = False
-        # list of modified years
-        modif_years = []
+        modified_years = []
         msg = f"---- INSIDE update_media_stats for {title} ----"
         logger.debug(msg)
         for year, stats in yearly_stats.items():
@@ -858,8 +846,7 @@ class DataManifest:
             if year not in old_media_list[title]["stats_as_dict"]:
                 logger.info("update_media_stats - Adding new key %s-%s.", year, title)
                 print(f"update_media_stats - Adding new key {year}-{title}.")
-                # modif_media_info = True
-                modif_years.append(year)
+                modified_years.append(year)
                 logger.debug("Setting stats for %s-%s", title, year)
                 old_media_list[title]["stats_as_dict"][year] = stats
 
@@ -867,18 +854,17 @@ class DataManifest:
             elif not self.only_counting or not stats.same_counts(
                 old_media_list[title]["stats_as_dict"][year]
             ):
-                # modif_media_info = True
-                modif_years.append(year)
+                modified_years.append(year)
                 if not self.only_counting:
                     msg = f"update_media_stats - modified stats -> Setting stats for {title}-{year}"
                     logger.debug(msg)
                 old_media_list[title]["stats_as_dict"][year] = stats
 
-        msg = f"---- FINISHED update_media_stats for {title} – had modifications: {len(modif_years) != 0} ----"
+        msg = f"---- FINISHED update_media_stats for {title} – had modifications: {len(modified_years) != 0} ----"
         logger.info(msg)
         print(msg)
 
-        return old_media_list, modif_years
+        return old_media_list, modified_years
 
     def generate_media_dict(self, old_media_list: dict[str, dict]) -> tuple[dict, bool]:
         """Given the previous manifest's and current statistics, generate new media dict.
@@ -920,27 +906,24 @@ class DataManifest:
                 prev_version_years = set(old_media_list[title]["stats_as_dict"].keys())
 
                 # update the statistics and identify if the media info needs to change
-                old_media_list, modif_years = self.update_media_stats(
+                old_media_list, modified_years = self.update_media_stats(
                     title, yearly_stats, old_media_list
                 )
 
-                if len(modif_years) != 0:
-
+                if len(modified_years) != 0:
                     # if only counting, only consider the years which were actually modified/added
                     processed_years = (
-                        set(modif_years) if self.only_counting else set(yearly_stats.keys())
+                        set(modified_years) if self.only_counting else set(yearly_stats.keys())
                     )
 
                     media_update_info = self.define_update_info_for_title(
                         processed_years,
                         prev_version_years,
                     )
-
-                    logger.debug(
-                        "define_update_info_for_title for %s, new update info: %s",
-                        title,
-                        media_update_info,
+                    msg = (
+                        f"define_update_info_for_title for {title}, new update info: {media_update_info}",
                     )
+                    logger.debug(msg)
 
                     old_media_list[title].update(media_update_info)
                     print(f"Updated media information for {title}")
@@ -962,8 +945,6 @@ class DataManifest:
         self, title: str, media_dict: dict[str, Any]
     ) -> tuple[dict[str, Any], MediaStatistics]:
         """Aggregate all stats of given title and export them to a "pretty print" dict.
-
-        TODO move to helpers?
 
         The `DataStatistics` objects don't display in the dict format by default,
         but need to be converted to dicts to show as desired on the final manifest.
@@ -1088,7 +1069,6 @@ class DataManifest:
             # `self._processing_stats` is empty the manifest can't be computed, directly stop.
             msg = "The manifest can't be computed without having provided statistics!"
             logger.warning(msg)
-
         else:
             logger.info("Starting to compute the manifest...")
 
@@ -1128,7 +1108,6 @@ class DataManifest:
             logger.info("Computing the overall statistics...")
             overall_stats = self.overall_stats(full_title_stats)
 
-            # compute current version
             self.version = self._get_current_version(addition)
 
             # the canonical has no input stage
@@ -1174,8 +1153,5 @@ class DataManifest:
                 success = self.validate_and_export_manifest(push, commit_msg)
 
                 if success:
-                    logger.info(
-                        "%s Manifest successfully uploaded to S3 and GitHub! %s",
-                        "-" * 15,
-                        "-" * 15,
-                    )
+                    msg = f"{'-' * 15} Manifest successfully uploaded to S3 and GitHub! {'-' * 15}"
+                    logger.info(msg)
