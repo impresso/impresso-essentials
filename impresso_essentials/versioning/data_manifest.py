@@ -1139,19 +1139,22 @@ class DataManifest:
             }
 
             logger.info("%s Manifest successfully generated! %s", "-" * 15, "-" * 15)
-
+            print("%s Manifest successfully generated! %s", "-" * 15, "-" * 15)
             if export_to_git_and_s3:
 
                 # if push_to_git is not defined and exporting directly,
                 # will both upload to s3 and push to git.
                 push = self.push_to_git if self.push_to_git is not None else True
                 if not push:
-                    logger.info(
+                    msg = (
                         "Argument export_to_git_and_s3 was set to True but push_to_git"
                         " was set to False. Exporting to S3 but not pushing to git."
                     )
+                    logger.info(msg)
+                    print(msg)
                 success = self.validate_and_export_manifest(push, commit_msg)
 
                 if success:
                     msg = f"{'-' * 15} Manifest successfully uploaded to S3 and GitHub! {'-' * 15}"
                     logger.info(msg)
+                    print(msg)
