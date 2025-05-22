@@ -1138,8 +1138,9 @@ class DataManifest:
                 "notes": self.notes,
             }
 
-            logger.info("%s Manifest successfully generated! %s", "-" * 15, "-" * 15)
-            print("%s Manifest successfully generated! %s", "-" * 15, "-" * 15)
+            msg = f"{'-' * 15} Manifest successfully generated! {'-' * 15}"
+            logger.info(msg)
+            print(msg)
             if export_to_git_and_s3:
 
                 # if push_to_git is not defined and exporting directly,
