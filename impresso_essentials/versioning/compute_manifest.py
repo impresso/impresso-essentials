@@ -213,6 +213,7 @@ def get_files_to_consider(config: dict[str, Any]) -> Optional[dict[str, dict[str
     # if media_aliases is empty, include all media_aliases
     if config["media_aliases"] is None or len(config["media_aliases"]) == 0:
         logger.info("Fetching the files to consider for all titles...")
+        print("Fetching the files to consider for all titles...")
         # TODO update list_newspaper to include possibility of partition, and unify both cases
         # return all filenames in the given bucket partition with the correct extension
         files = fixed_s3fs_glob(os.path.join(config["output_bucket"], extension_filter))
@@ -230,7 +231,9 @@ def get_files_to_consider(config: dict[str, Any]) -> Optional[dict[str, dict[str
         # return s3_files
     else:
         # here list media_aliases instead and s3_files becomes a dict np -> liest of files
-        logger.info("Fetching the files to consider for titles %s...", config["media_aliases"])
+        msg = f"Fetching the files to consider for titles {config['media_aliases']}..."
+        logger.info(msg)
+        print(msg)
         s3_files = {}
         for alias in config["media_aliases"]:
             provider = get_provider_for_alias(alias)
