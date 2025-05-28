@@ -40,7 +40,7 @@ logger = logging.getLogger(__name__)
 # list of optional configurations
 OPT_CONFIG_KEYS = [
     "input_bucket",
-    "newspapers",
+    "media_aliases",
     "previous_mft_s3_path",
     "is_patch",
     "patched_fields",
@@ -63,7 +63,7 @@ REQ_CONFIG_KEYS = [
 
 
 def extract_provider_alias_key(s3_key: str, bucket: str) -> tuple[str, str]:
-    """Extract the newspaper an s3:key corresponds to given the bucket and partition
+    """Extract the media alias an s3:key corresponds to given the bucket and partition
 
     TODO adapt when provider is added to the s3 organisation.
 
@@ -74,10 +74,10 @@ def extract_provider_alias_key(s3_key: str, bucket: str) -> tuple[str, str]:
 
     Args:
         s3_key (str): Full S3 path of a file (as returned by fixed_s3fs_glob).
-        bucket (str): S3 bucket, including partition, in which the newspaper dirs are.
+        bucket (str): S3 bucket, including partition, in which the media dirs are.
 
     Returns:
-        str: Name of the corresponding newspaper, extracted form the s3 path.
+        str: Alias of the corresponding media, extracted form the s3 path.
     """
     # TODO change to extract alias key and add provider
     # in format: 's3://31-passim-rebuilt-staging/passim/indeplux/indeplux-1889.jsonl.bz2'
@@ -210,10 +210,10 @@ def get_files_to_consider(config: dict[str, Any]) -> Optional[dict[str, dict[str
     # change "." in ext with `ext.startswith('.')`?
     extension_filter = f"*{ext}" if "." in ext else f"*.{ext}"
 
-    # if newspapers is empty, include all newspapers
-    if config["newspapers"] is None or len(config["newspapers"]) == 0:
+    # if media_aliases is empty, include all media_aliases
+    if config["media_aliases"] is None or len(config["media_aliases"]) == 0:
         logger.info("Fetching the files to consider for all titles...")
-        # TODO update list_newspapers to include possibility of partition, and unify both cases
+        # TODO update list_newspaper to include possibility of partition, and unify both cases
         # return all filenames in the given bucket partition with the correct extension
         files = fixed_s3fs_glob(os.path.join(config["output_bucket"], extension_filter))
         s3_files = {}
@@ -229,10 +229,10 @@ def get_files_to_consider(config: dict[str, Any]) -> Optional[dict[str, dict[str
                 s3_files[provider] = {alias: [s3_key]}
         # return s3_files
     else:
-        # here list newspapers instead and s3_files becomes a dict np -> liest of files
-        logger.info("Fetching the files to consider for titles %s...", config["newspapers"])
+        # here list media_aliases instead and s3_files becomes a dict np -> liest of files
+        logger.info("Fetching the files to consider for titles %s...", config["media_aliases"])
         s3_files = {}
-        for alias in config["newspapers"]:
+        for alias in config["media_aliases"]:
             provider = get_provider_for_alias(alias)
             if provider in s3_files:
                 s3_files[provider][alias] = fixed_s3fs_glob(
@@ -578,7 +578,7 @@ def create_manifest(config_dict: dict[str, Any], client: Optional[Client] = None
         # the manifest needs to be computed on all the data at once
         manifest = process_altogether(manifest, s3_files, stage, client)
     else:
-        # processing newspapers one at a time
+        # processing media_aliases one at a time
         manifest = process_by_title(manifest, s3_files, stage, client)
 
     logger.info("Finalizing the manifest, and computing the result...")
@@ -587,8 +587,8 @@ def create_manifest(config_dict: dict[str, Any], client: Optional[Client] = None
         manifest.append_to_notes(config_dict["notes"])
     else:
         note = f"Processing data to generate {stage} for "
-        if len(config_dict["newspapers"]) != 0:
-            note += f"titles: {config_dict['newspapers']}."
+        if len(config_dict["media_aliases"]) != 0:
+            note += f"titles: {config_dict['media_aliases']}."
         else:
             note += "all newspaper titles."
 

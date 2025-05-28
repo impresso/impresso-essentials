@@ -3,7 +3,7 @@
     "output_bucket": "31-passim-rebuilt-staging/passim",
     "input_bucket": "22-rebuilt-final",
     "git_repository": "/home/piconti/impresso-pycommons",
-    "newspapers": [],
+    "media_aliases": [],
     "temp_directory": "/home/piconti/git_temp_folder",
     "previous_mft_s3_path": "",
     "is_patch": false,

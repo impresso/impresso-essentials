@@ -3,7 +3,7 @@
     "output_bucket": "42-processed-data-final/embeddings/docs/doc-embeddings_v1-1-0/",
     "input_bucket": "22-rebuilt-final",
     "git_repository": "FILL ME",
-    "newspapers": [],
+    "media_aliases": [],
     "temp_directory": "FILL ME",
     "previous_mft_s3_path": "",
     "is_patch": false,
