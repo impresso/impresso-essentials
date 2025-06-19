@@ -190,19 +190,19 @@ def normalize_text(text: str) -> str:
     return re.sub(r"[ \t]+", "", text)
 
 
-def search_text(article_text: str, search_text: str) -> list[tuple[int, int]]:
-    """Look for all occurrences or the `search_text` within the given article text.
+def search_text(article_text: str, text_to_search: str) -> list[tuple[int, int]]:
+    """Look for all occurrences or the `text_to_search` within the given article text.
 
     Args:
-        article_text (str): Article in which to find occurrences or `search_text`.
-        search_text (str): Text to search within the `article_text`.
+        article_text (str): Article in which to find occurrences of `text_to_search`.
+        text_to_search (str): Text to search within the `article_text`.
 
     Returns:
         list[tuple[int, int]]: Start and end indices of occurrences within the article.
     """
     # Normalize texts by removing spaces and tabs
     normalized_article = normalize_text(article_text)
-    normalized_search = normalize_text(search_text)
+    normalized_search = normalize_text(text_to_search)
 
     # Initialize a list to hold all start and end indices
     indices = []

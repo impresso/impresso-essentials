@@ -11,8 +11,22 @@ from dask.distributed import progress, Client
 logger = logging.getLogger(__name__)
 
 
-def log_src_medium_mismatch(obj_id, stage, prov_src_medium, found_src_medium):
-    msg = f"{obj_id} - {stage} stage - Warning, mismatch between provided src_medium={prov_src_medium} and found src_medium={found_src_medium}!!"
+def log_src_medium_mismatch(obj_id: str, stage: str, prov_src_medium: str, found_src_medium: str) -> None:
+    """Log that the source medium found in the data to agg doesn't match the one previously set.
+
+    Args:
+        obj_id (str): Impresso ID of the object for which the mismatch was observed.
+        stage (str): Data Stage of the data which was being aggregated.
+        prov_src_medium (str): Previously given source medium.
+        found_src_medium (str): Source medium found in the data to be aggregated.
+
+    Raises:
+        AttributeError: There was a mismatch in the expected and found source mediums.
+    """
+    msg = (
+        f"{obj_id} - {stage} stage - Warning, mismatch between provided "
+        f"src_medium={prov_src_medium} and found src_medium={found_src_medium}!!"
+    )
     logger.error(msg)
     print(msg)
     raise AttributeError(msg)
@@ -50,6 +64,7 @@ def counts_for_canonical_issue(
 
     if src_medium and src_medium == "audio":
         if "sm" not in issue or issue["sm"] != src_medium:
+            # the source medium should always be defined for radio data
             log_src_medium_mismatch(issue["id"], "canonical", src_medium, issue["sm"])
 
         # case of audio
@@ -112,7 +127,7 @@ def compute_stats_in_canonical_bag(
     title: str | None = None,
     src_medium: str | None = None,
 ) -> list[dict[str, Any]]:
-    """Computes number of issues and pages per newspaper from a Dask bag of canonical data.
+    """Computes number of issues and supports per alias from a Dask bag of canonical data.
 
     Args:
         s3_canonical_issues (db.core.Bag): Bag with the contents of canonical files to
@@ -168,12 +183,12 @@ def compute_stats_in_canonical_bag(
 
     print(f"{title} - Finished grouping and aggregating stats by title and year.")
     logger.info("%s - Finished grouping and aggregating stats by title and year.", title)
+
     # return as a list of dicts
     return aggregated_df.to_bag(format="dict").compute()
 
 
 ### DEFINITION of tunique ###
-
 
 # define locally the nunique() aggregation function for dask
 def chunk(s):

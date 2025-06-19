@@ -30,7 +30,7 @@ logger = logging.getLogger(__name__)
 
 
 class SourceType(StrEnum):
-    """Enum all types of media source in Impresso."""
+    """Enum all types of media sources in Impresso."""
 
     NP = "newspaper"
     # includes radio bulletins, radio audio broadcasts, and radio tapuscripts
@@ -607,7 +607,7 @@ PARTNER_TO_MEDIA = {
 }
 # flatten the known journals into a sorted list
 ALL_MEDIA = sorted([j for part_j in PARTNER_TO_MEDIA.values() for j in part_j])
-PARTNERS_WITHOUT_OLR = ["NZZ", "SWA", "BCUL", "SWISSINFO", "INA"]
+PARTNERS_WITHOUT_OLR = ["NZZ", "SWA", "FedGaz", "BCUL", "SWISSINFO", "INA"]
 
 # values can either be a list of aliases or "all"
 SOURCE_MEDIUMS_TO_PARTNERS_TO_MEDIA = {
@@ -622,9 +622,7 @@ SOURCE_MEDIUMS_TO_PARTNERS_TO_MEDIA = {
         "BNF-EN": "all",
         "BCUL": "all",
         "BL": "all",
-        "KB": {
-            # SourceMedium.PT: [], # all KB NP titles should be listed
-        },
+        #"KB": {# SourceMedium.PT: [], # all KB NP titles should be listed},
     },
     SourceMedium.TPS: {
         "KB": ["ANP"],
@@ -678,6 +676,7 @@ PARTNERS_TO_SRC_TYPE_TO_MEDIA = {
 
 # a simple data structure to represent input directories
 # a `Document.zip` file is expected to be found in `IssueDir.path`
+# TODO add src type and medium to all issueDirs?
 # IssueDir = namedtuple("IssueDir", ["alias", "date", "edition", "path", "src_type", "src_medium"])
 IssueDir = namedtuple("IssueDir", ["alias", "date", "edition", "path"])
 
@@ -986,8 +985,8 @@ def id_to_issuedir(canonical_id: str, issue_path: str) -> IssueDir:
     Returns:
         IssueDir: IssueDir instance for the object
     """
-    newspaper, year, month, day, edition = canonical_id.split("-")
+    alias, year, month, day, edition = canonical_id.split("-")
     year = int(year)
     month = int(month)
     day = int(day)
-    return IssueDir(newspaper, date(year, month, day), edition, issue_path)
+    return IssueDir(alias, date(year, month, day), edition, issue_path)

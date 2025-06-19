@@ -5,7 +5,6 @@ import json
 import logging
 import os
 from typing import Callable, Generator
-from collections import namedtuple
 
 import boto3
 from boto3.resources.base import ServiceResource
@@ -15,7 +14,7 @@ from dotenv import load_dotenv
 from smart_open import open as s_open
 import dask.bag as db
 
-from impresso_essentials.utils import bytes_to, id_to_issuedir
+from impresso_essentials.utils import bytes_to, id_to_issuedir, IssueDir
 
 logger = logging.getLogger(__name__)
 
@@ -51,9 +50,6 @@ def get_storage_options() -> dict[str, dict | str]:
 
 
 IMPRESSO_STORAGEOPT = get_storage_options()
-
-IssueDir = namedtuple("IssueDirectory", ["journal", "date", "edition", "path"])
-
 
 def get_s3_client(
     host_url: str | None = "https://os.zhdk.cloud.switch.ch/",
@@ -214,7 +210,7 @@ def readtext_jsonlines(
     """Given the S3 key of a jsonl.bz2 archive, return its lines textual information.
 
     Only the provided fields (or default ones) will be kept in the returned lines.
-    By default, fields_to_keep = ["id", "pp", "ts", "lg", "tp", "t", "ft"].
+    By default, fields_to_keep = ["id", "st", "sm", "pp", "rr", "ts", "lg", "tp", "title", "ft"]
 
     This can serve as the starting point for pure textual processing.
     Usage example:
@@ -233,7 +229,7 @@ def readtext_jsonlines(
     """
     if fields_to_keep is None:
         # if no fields were provided
-        fields_to_keep = ["id", "pp", "ts", "lg", "tp", "t", "ft"]
+        fields_to_keep = ["id", "st", "sm", "pp", "rr", "ts", "lg", "tp", "title", "ft"]
 
     s3r = get_s3_resource()
     try:
@@ -271,11 +267,13 @@ def upload_to_s3(local_path: str, path_within_bucket: str, bucket_name: str) -> 
         # ensure the path within the bucket is only the key
         path_within_bucket = path_within_bucket.replace("s3://", "")
         bucket.upload_file(local_path, path_within_bucket)
-        logger.info("Uploaded %s to s3://%s.", path_within_bucket, bucket_name)
+        logger.debug("Uploaded %s to s3://%s.", path_within_bucket, bucket_name)
         return True
     except Exception as e:
+        msg = f"The upload of {local_path} failed with error {e}"
         logger.error(e)
-        logger.error("The upload of %s failed with error %s", local_path, e)
+        logger.error(msg)
+        print(msg)
         return False
 
 
@@ -342,7 +340,7 @@ def fixed_s3fs_glob(path: str, suffix: str | None = None, boto3_bucket=None) -> 
     return filenames
 
 
-def s3_glob_with_size(path: str, boto3_bucket=None):
+def s3_glob_with_size(path: str, boto3_bucket=None) -> list[tuple]:
     """
     Custom glob function to list S3 objects matching a pattern. This function
     works around the 1000-object listing limit in S3 by using boto3 directly.
@@ -419,16 +417,16 @@ def alternative_read_text(
 
 
 def list_s3_directories(bucket_name: str, prefix: str = "") -> list[str]:
-    """Retrieve 'directory' names (media titles) in an S3 bucket given a path prefix.
+    """Retrieve 'directory' names (media aliases) in an S3 bucket given a path prefix.
+
+    # TODO adapt to add provider
 
     Args:
         bucket_name (str): The name of the S3 bucket.
-        prefix (str): The prefix path within the bucket to search. Default
-                      is the root ('').
+        prefix (str): The prefix path within the bucket to search. Default is the root ('').
 
     Returns:
-        list: A list of 'directory' names found in the specified bucket
-              and prefix.
+        list: A list of 'directory' names found in the specified bucket and prefix.
     """
     logger.info("Listing 'folders'' of '%s' under prefix '%s'", bucket_name, prefix)
     s3 = get_s3_client()
@@ -440,6 +438,7 @@ def list_s3_directories(bucket_name: str, prefix: str = "") -> list[str]:
             prefix["Prefix"][:-1].split("/")[-1] for prefix in result["CommonPrefixes"]
         ]
     logger.info("Returning %s directories.", len(directories))
+
     return directories
 
 
@@ -461,7 +460,9 @@ def get_s3_object_size(bucket_name: str, key: str) -> int:
         size = response["ContentLength"]
         return int(size)
     except botocore.exceptions.ClientError as err:
-        logger.error("Error: %s for %s in %s", err, key, bucket_name)
+        msg = f"Error: {err} for {key} in {bucket_name}"
+        logger.error(msg)
+        print(msg)
         return None
 
 
@@ -475,6 +476,8 @@ def s3_iter_bucket(
 
     >>> k = s3_iter_bucket("myBucket", prefix='GDL', suffix=".bz2")
     >>> k = s3_iter_bucket("myBucket", prefix='GDL', accept_key=lambda x: "page" in x)
+
+    # TODO adapt to add provider
 
     Note:
         If `suffix` is not "", the used accepting condition will become:
@@ -511,6 +514,8 @@ def s3_iter_bucket(
 def read_s3_issues(alias: str, year: str, input_bucket: str) -> list[tuple[IssueDir, dict]]:
     """Read the contents of canonical issues from a given S3 bucket.
 
+    # TODO adapt to add provider
+
     Args:
         alias (str): Alias of the media title to read the issues from.
         year (str): Target year to tread issues from.
@@ -541,6 +546,8 @@ def list_media_titles(
     page_size: int = 10000,
 ) -> list[str]:
     """List media titles contained in an s3 bucket with impresso data.
+
+    # TODO adapt to add provider
 
     Note:
         25,000 seems to be the maximum `PageSize` value supported by
@@ -603,7 +610,7 @@ def list_files(
 
     Returns:
         tuple[list[str] | None, list[str] | None]: [0] List of issue files or None and
-            [1] List of page files or None based on `file_type`
+            [1] List of page/audio files or None based on `file_type`
     """
     if file_type not in ["issues", "pages", "audios", "both", "supports"]:
         logger.error(
