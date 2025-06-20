@@ -85,7 +85,6 @@
  | <a href="#G"><strong>G</strong></a>
  | <a href="#H"><strong>H</strong></a>
  | <a href="#I"><strong>I</strong></a>
- | <a href="#J"><strong>J</strong></a>
  | <a href="#L"><strong>L</strong></a>
  | <a href="#M"><strong>M</strong></a>
  | <a href="#N"><strong>N</strong></a>
@@ -96,7 +95,6 @@
  | <a href="#T"><strong>T</strong></a>
  | <a href="#U"><strong>U</strong></a>
  | <a href="#V"><strong>V</strong></a>
- | <a href="#W"><strong>W</strong></a>
  
 </div>
 <h2 id="A">A</h2>
@@ -110,6 +108,8 @@
 </li>
       <li><a href="versioning.html#impresso_essentials.versioning.data_statistics.DataStatistics.add_counts">add_counts() (impresso_essentials.versioning.data_statistics.DataStatistics method)</a>
 </li>
+      <li><a href="versioning.html#impresso_essentials.versioning.helpers.add_media_source_metadata">add_media_source_metadata() (in module impresso_essentials.versioning.helpers)</a>
+</li>
       <li><a href="versioning.html#impresso_essentials.versioning.compute_manifest.add_stats_to_mft">add_stats_to_mft() (in module impresso_essentials.versioning.compute_manifest)</a>
 </li>
   </ul></td>
@@ -117,6 +117,8 @@
       <li><a href="versioning.html#impresso_essentials.versioning.aggregators.agg">agg() (in module impresso_essentials.versioning.aggregators)</a>
 </li>
       <li><a href="versioning.html#impresso_essentials.versioning.data_manifest.DataManifest.aggregate_stats_for_title">aggregate_stats_for_title() (impresso_essentials.versioning.data_manifest.DataManifest method)</a>
+</li>
+      <li><a href="utils.html#impresso_essentials.utils.IssueDir.alias">alias (impresso_essentials.utils.IssueDir attribute)</a>
 </li>
       <li><a href="io.html#impresso_essentials.io.s3.alternative_read_text">alternative_read_text() (in module impresso_essentials.io.s3)</a>
 </li>
@@ -142,7 +144,7 @@
 <h2 id="C">C</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="versioning.html#impresso_essentials.versioning.helpers.DataStage.CANONICAL">CANONICAL (impresso_essentials.versioning.helpers.DataStage attribute)</a>
+      <li><a href="utils.html#impresso_essentials.utils.DataStage.CANONICAL">CANONICAL (impresso_essentials.utils.DataStage attribute)</a>
 </li>
       <li><a href="io.html#impresso_essentials.io.fs_utils.canonical_path">canonical_path() (in module impresso_essentials.io.fs_utils)</a>
 </li>
@@ -156,8 +158,6 @@
         <li><a href="versioning.html#impresso_essentials.versioning.aggregators.chunk">(in module impresso_essentials.versioning.aggregators)</a>
 </li>
       </ul></li>
-      <li><a href="versioning.html#impresso_essentials.versioning.helpers.clone_git_repo">clone_git_repo() (in module impresso_essentials.versioning.helpers)</a>
-</li>
       <li><a href="versioning.html#impresso_essentials.versioning.data_manifest.DataManifest.compute">compute() (impresso_essentials.versioning.data_manifest.DataManifest method)</a>
 </li>
       <li><a href="versioning.html#impresso_essentials.versioning.compute_manifest.compute_stats_for_stage">compute_stats_for_stage() (in module impresso_essentials.versioning.compute_manifest)</a>
@@ -172,10 +172,10 @@
 </li>
       <li><a href="versioning.html#impresso_essentials.versioning.aggregators.compute_stats_in_langident_bag">compute_stats_in_langident_bag() (in module impresso_essentials.versioning.aggregators)</a>
 </li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="versioning.html#impresso_essentials.versioning.aggregators.compute_stats_in_lingproc_bag">compute_stats_in_lingproc_bag() (in module impresso_essentials.versioning.aggregators)</a>
 </li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="versioning.html#impresso_essentials.versioning.aggregators.compute_stats_in_ocrqa_bag">compute_stats_in_ocrqa_bag() (in module impresso_essentials.versioning.aggregators)</a>
 </li>
       <li><a href="versioning.html#impresso_essentials.versioning.aggregators.compute_stats_in_rebuilt_bag">compute_stats_in_rebuilt_bag() (in module impresso_essentials.versioning.aggregators)</a>
@@ -189,13 +189,13 @@
       <li><a href="versioning.html#impresso_essentials.versioning.data_statistics.DataStatistics.count_keys">count_keys (impresso_essentials.versioning.data_statistics.DataStatistics attribute)</a>
 
       <ul>
-        <li><a href="versioning.html#impresso_essentials.versioning.data_statistics.NewspaperStatistics.count_keys">(impresso_essentials.versioning.data_statistics.NewspaperStatistics attribute)</a>
+        <li><a href="versioning.html#impresso_essentials.versioning.data_statistics.MediaStatistics.count_keys">(impresso_essentials.versioning.data_statistics.MediaStatistics attribute)</a>
 </li>
       </ul></li>
       <li><a href="versioning.html#impresso_essentials.versioning.data_statistics.DataStatistics.counts">counts (impresso_essentials.versioning.data_statistics.DataStatistics attribute)</a>
 
       <ul>
-        <li><a href="versioning.html#impresso_essentials.versioning.data_statistics.NewspaperStatistics.counts">(impresso_essentials.versioning.data_statistics.NewspaperStatistics attribute)</a>
+        <li><a href="versioning.html#impresso_essentials.versioning.data_statistics.MediaStatistics.counts">(impresso_essentials.versioning.data_statistics.MediaStatistics attribute)</a>
 </li>
       </ul></li>
       <li><a href="versioning.html#impresso_essentials.versioning.aggregators.counts_for_canonical_issue">counts_for_canonical_issue() (in module impresso_essentials.versioning.aggregators)</a>
@@ -216,7 +216,7 @@
   <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="versioning.html#impresso_essentials.versioning.data_manifest.DataManifest">DataManifest (class in impresso_essentials.versioning.data_manifest)</a>
 </li>
-      <li><a href="versioning.html#impresso_essentials.versioning.helpers.DataStage">DataStage (class in impresso_essentials.versioning.helpers)</a>
+      <li><a href="utils.html#impresso_essentials.utils.DataStage">DataStage (class in impresso_essentials.utils)</a>
 </li>
       <li><a href="versioning.html#impresso_essentials.versioning.data_statistics.DataStatistics">DataStatistics (class in impresso_essentials.versioning.data_statistics)</a>
 </li>
@@ -234,31 +234,33 @@
 <h2 id="E">E</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="utils.html#impresso_essentials.utils.SourceType.EC">EC (impresso_essentials.utils.SourceType attribute)</a>
+</li>
       <li><a href="utils.html#impresso_essentials.utils.IssueDir.edition">edition (impresso_essentials.utils.IssueDir attribute)</a>
 </li>
       <li><a href="versioning.html#impresso_essentials.versioning.data_statistics.DataStatistics.element">element (impresso_essentials.versioning.data_statistics.DataStatistics attribute)</a>
 
       <ul>
-        <li><a href="versioning.html#impresso_essentials.versioning.data_statistics.NewspaperStatistics.element">(impresso_essentials.versioning.data_statistics.NewspaperStatistics attribute)</a>
+        <li><a href="versioning.html#impresso_essentials.versioning.data_statistics.MediaStatistics.element">(impresso_essentials.versioning.data_statistics.MediaStatistics attribute)</a>
 </li>
       </ul></li>
-      <li><a href="versioning.html#impresso_essentials.versioning.helpers.DataStage.EMB_DOCS">EMB_DOCS (impresso_essentials.versioning.helpers.DataStage attribute)</a>
+      <li><a href="utils.html#impresso_essentials.utils.DataStage.EMB_DOCS">EMB_DOCS (impresso_essentials.utils.DataStage attribute)</a>
 </li>
-      <li><a href="versioning.html#impresso_essentials.versioning.helpers.DataStage.EMB_ENTITIES">EMB_ENTITIES (impresso_essentials.versioning.helpers.DataStage attribute)</a>
-</li>
-      <li><a href="versioning.html#impresso_essentials.versioning.helpers.DataStage.EMB_IMAGES">EMB_IMAGES (impresso_essentials.versioning.helpers.DataStage attribute)</a>
+      <li><a href="utils.html#impresso_essentials.utils.DataStage.EMB_ENTITIES">EMB_ENTITIES (impresso_essentials.utils.DataStage attribute)</a>
 </li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="versioning.html#impresso_essentials.versioning.helpers.DataStage.EMB_PARAGRAPHS">EMB_PARAGRAPHS (impresso_essentials.versioning.helpers.DataStage attribute)</a>
+      <li><a href="utils.html#impresso_essentials.utils.DataStage.EMB_IMAGES">EMB_IMAGES (impresso_essentials.utils.DataStage attribute)</a>
 </li>
-      <li><a href="versioning.html#impresso_essentials.versioning.helpers.DataStage.EMB_SENTS">EMB_SENTS (impresso_essentials.versioning.helpers.DataStage attribute)</a>
+      <li><a href="utils.html#impresso_essentials.utils.DataStage.EMB_PARAGRAPHS">EMB_PARAGRAPHS (impresso_essentials.utils.DataStage attribute)</a>
 </li>
-      <li><a href="versioning.html#impresso_essentials.versioning.helpers.DataStage.EMB_WORDS">EMB_WORDS (impresso_essentials.versioning.helpers.DataStage attribute)</a>
+      <li><a href="utils.html#impresso_essentials.utils.DataStage.EMB_SENTS">EMB_SENTS (impresso_essentials.utils.DataStage attribute)</a>
 </li>
-      <li><a href="versioning.html#impresso_essentials.versioning.helpers.DataStage.ENTITIES">ENTITIES (impresso_essentials.versioning.helpers.DataStage attribute)</a>
+      <li><a href="utils.html#impresso_essentials.utils.DataStage.EMB_WORDS">EMB_WORDS (impresso_essentials.utils.DataStage attribute)</a>
 </li>
-      <li><a href="versioning.html#impresso_essentials.versioning.compute_manifest.extract_np_key">extract_np_key() (in module impresso_essentials.versioning.compute_manifest)</a>
+      <li><a href="utils.html#impresso_essentials.utils.DataStage.ENTITIES">ENTITIES (impresso_essentials.utils.DataStage attribute)</a>
+</li>
+      <li><a href="versioning.html#impresso_essentials.versioning.compute_manifest.extract_provider_alias_key">extract_provider_alias_key() (in module impresso_essentials.versioning.compute_manifest)</a>
 </li>
       <li><a href="versioning.html#impresso_essentials.versioning.helpers.extract_version">extract_version() (in module impresso_essentials.versioning.helpers)</a>
 </li>
@@ -300,8 +302,6 @@
 </li>
       <li><a href="versioning.html#impresso_essentials.versioning.compute_manifest.get_files_to_consider">get_files_to_consider() (in module impresso_essentials.versioning.compute_manifest)</a>
 </li>
-      <li><a href="versioning.html#impresso_essentials.versioning.helpers.get_head_commit_url">get_head_commit_url() (in module impresso_essentials.versioning.helpers)</a>
-</li>
       <li><a href="bbox_visualizer.html#impresso_essentials.bbox_visualizer.get_bbox.get_issue_bounding_boxes">get_issue_bounding_boxes() (in module impresso_essentials.bbox_visualizer.get_bbox)</a>
 </li>
       <li><a href="io.html#impresso_essentials.io.fs_utils.get_issueshortpath">get_issueshortpath() (in module impresso_essentials.io.fs_utils)</a>
@@ -310,15 +310,17 @@
 </li>
       <li><a href="versioning.html#impresso_essentials.versioning.helpers.get_media_item_years">get_media_item_years() (in module impresso_essentials.versioning.helpers)</a>
 </li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="versioning.html#impresso_essentials.versioning.helpers.get_media_titles">get_media_titles() (in module impresso_essentials.versioning.helpers)</a>
 </li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="io.html#impresso_essentials.io.s3.get_or_create_bucket">get_or_create_bucket() (in module impresso_essentials.io.s3)</a>
 </li>
       <li><a href="bbox_visualizer.html#impresso_essentials.bbox_visualizer.get_bbox.get_page_bounding_boxes">get_page_bounding_boxes() (in module impresso_essentials.bbox_visualizer.get_bbox)</a>
 </li>
       <li><a href="utils.html#impresso_essentials.utils.get_pkg_resource">get_pkg_resource() (in module impresso_essentials.utils)</a>
+</li>
+      <li><a href="utils.html#impresso_essentials.utils.get_provider_for_alias">get_provider_for_alias() (in module impresso_essentials.utils)</a>
 </li>
       <li><a href="io.html#impresso_essentials.io.s3.get_s3_client">get_s3_client() (in module impresso_essentials.io.s3)</a>
 </li>
@@ -326,16 +328,16 @@
 </li>
       <li><a href="io.html#impresso_essentials.io.s3.get_s3_resource">get_s3_resource() (in module impresso_essentials.io.s3)</a>
 </li>
-      <li><a href="io.html#impresso_essentials.io.s3.get_storage_options">get_storage_options() (in module impresso_essentials.io.s3)</a>
+      <li><a href="utils.html#impresso_essentials.utils.get_src_info_for_alias">get_src_info_for_alias() (in module impresso_essentials.utils)</a>
 </li>
-      <li><a href="versioning.html#impresso_essentials.versioning.helpers.git_commit_push">git_commit_push() (in module impresso_essentials.versioning.helpers)</a>
+      <li><a href="io.html#impresso_essentials.io.s3.get_storage_options">get_storage_options() (in module impresso_essentials.io.s3)</a>
 </li>
       <li><a href="io.html#impresso_essentials.io.fs_utils.glob_with_size">glob_with_size() (in module impresso_essentials.io.fs_utils)</a>
 </li>
       <li><a href="versioning.html#impresso_essentials.versioning.data_statistics.DataStatistics.granularity">granularity (impresso_essentials.versioning.data_statistics.DataStatistics attribute)</a>
 
       <ul>
-        <li><a href="versioning.html#impresso_essentials.versioning.data_statistics.NewspaperStatistics.granularity">(impresso_essentials.versioning.data_statistics.NewspaperStatistics attribute)</a>
+        <li><a href="versioning.html#impresso_essentials.versioning.data_statistics.MediaStatistics.granularity">(impresso_essentials.versioning.data_statistics.MediaStatistics attribute)</a>
 </li>
       </ul></li>
   </ul></td>
@@ -346,12 +348,12 @@
   <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="versioning.html#impresso_essentials.versioning.data_manifest.DataManifest.has_title_year_key">has_title_year_key() (impresso_essentials.versioning.data_manifest.DataManifest method)</a>
 </li>
-      <li><a href="utils.html#impresso_essentials.utils.SourceMedium.has_value">has_value() (impresso_essentials.utils.SourceMedium class method)</a>
+      <li><a href="utils.html#impresso_essentials.utils.DataStage.has_value">has_value() (impresso_essentials.utils.DataStage class method)</a>
 
       <ul>
-        <li><a href="utils.html#impresso_essentials.utils.SourceType.has_value">(impresso_essentials.utils.SourceType class method)</a>
+        <li><a href="utils.html#impresso_essentials.utils.SourceMedium.has_value">(impresso_essentials.utils.SourceMedium class method)</a>
 </li>
-        <li><a href="versioning.html#impresso_essentials.versioning.helpers.DataStage.has_value">(impresso_essentials.versioning.helpers.DataStage class method)</a>
+        <li><a href="utils.html#impresso_essentials.utils.SourceType.has_value">(impresso_essentials.utils.SourceType class method)</a>
 </li>
       </ul></li>
   </ul></td>
@@ -456,25 +458,11 @@
 </li>
       <li><a href="versioning.html#impresso_essentials.versioning.helpers.init_media_info">init_media_info() (in module impresso_essentials.versioning.helpers)</a>
 </li>
-      <li><a href="versioning.html#impresso_essentials.versioning.data_manifest.DataManifest.init_yearly_count_dict">init_yearly_count_dict() (impresso_essentials.versioning.data_manifest.DataManifest method)</a>
-</li>
-      <li><a href="versioning.html#impresso_essentials.versioning.helpers.is_git_repo">is_git_repo() (in module impresso_essentials.versioning.helpers)</a>
+      <li><a href="utils.html#impresso_essentials.text_utils.insert_whitespace">insert_whitespace() (in module impresso_essentials.text_utils)</a>
 </li>
       <li><a href="utils.html#impresso_essentials.text_utils.is_stopword_or_all_stopwords">is_stopword_or_all_stopwords() (in module impresso_essentials.text_utils)</a>
 </li>
       <li><a href="utils.html#impresso_essentials.utils.IssueDir">IssueDir (class in impresso_essentials.utils)</a>
-
-      <ul>
-        <li><a href="io.html#impresso_essentials.io.s3.IssueDir">(in module impresso_essentials.io.s3)</a>
-</li>
-      </ul></li>
-  </ul></td>
-</tr></table>
-
-<h2 id="J">J</h2>
-<table style="width: 100%" class="indextable genindextable"><tr>
-  <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="utils.html#impresso_essentials.utils.IssueDir.journal">journal (impresso_essentials.utils.IssueDir attribute)</a>
 </li>
   </ul></td>
 </tr></table>
@@ -482,9 +470,9 @@
 <h2 id="L">L</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="versioning.html#impresso_essentials.versioning.helpers.DataStage.LANGIDENT">LANGIDENT (impresso_essentials.versioning.helpers.DataStage attribute)</a>
+      <li><a href="utils.html#impresso_essentials.utils.DataStage.LANGIDENT">LANGIDENT (impresso_essentials.utils.DataStage attribute)</a>
 </li>
-      <li><a href="versioning.html#impresso_essentials.versioning.helpers.DataStage.LINGPROC">LINGPROC (impresso_essentials.versioning.helpers.DataStage attribute)</a>
+      <li><a href="utils.html#impresso_essentials.utils.DataStage.LINGPROC">LINGPROC (impresso_essentials.utils.DataStage attribute)</a>
 </li>
       <li><a href="io.html#impresso_essentials.io.s3.list_files">list_files() (in module impresso_essentials.io.s3)</a>
 </li>
@@ -492,9 +480,11 @@
   <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="io.html#impresso_essentials.io.fs_utils.list_local_directories">list_local_directories() (in module impresso_essentials.io.fs_utils)</a>
 </li>
-      <li><a href="io.html#impresso_essentials.io.s3.list_newspapers">list_newspapers() (in module impresso_essentials.io.s3)</a>
+      <li><a href="io.html#impresso_essentials.io.s3.list_media_titles">list_media_titles() (in module impresso_essentials.io.s3)</a>
 </li>
       <li><a href="io.html#impresso_essentials.io.s3.list_s3_directories">list_s3_directories() (in module impresso_essentials.io.s3)</a>
+</li>
+      <li><a href="versioning.html#impresso_essentials.versioning.aggregators.log_src_medium_mismatch">log_src_medium_mismatch() (in module impresso_essentials.versioning.aggregators)</a>
 </li>
   </ul></td>
 </tr></table>
@@ -511,6 +501,8 @@
       <li><a href="versioning.html#impresso_essentials.versioning.helpers.manifest_summary">manifest_summary() (in module impresso_essentials.versioning.helpers)</a>
 </li>
       <li><a href="versioning.html#impresso_essentials.versioning.helpers.media_list_from_mft_json">media_list_from_mft_json() (in module impresso_essentials.versioning.helpers)</a>
+</li>
+      <li><a href="versioning.html#impresso_essentials.versioning.data_statistics.MediaStatistics">MediaStatistics (class in impresso_essentials.versioning.data_statistics)</a>
 </li>
       <li><a href="utils.html#impresso_essentials.utils.SourceType.MG">MG (impresso_essentials.utils.SourceType attribute)</a>
 </li>
@@ -545,7 +537,7 @@
       </ul></li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="versioning.html#impresso_essentials.versioning.helpers.DataStage.MYSQL_CIS">MYSQL_CIS (impresso_essentials.versioning.helpers.DataStage attribute)</a>
+      <li><a href="utils.html#impresso_essentials.utils.DataStage.MYSQL_CIS">MYSQL_CIS (impresso_essentials.utils.DataStage attribute)</a>
 </li>
   </ul></td>
 </tr></table>
@@ -555,12 +547,10 @@
   <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="versioning.html#impresso_essentials.versioning.data_manifest.DataManifest.new_media">new_media() (impresso_essentials.versioning.data_manifest.DataManifest method)</a>
 </li>
-      <li><a href="versioning.html#impresso_essentials.versioning.helpers.DataStage.NEWS_AGENCIES">NEWS_AGENCIES (impresso_essentials.versioning.helpers.DataStage attribute)</a>
+      <li><a href="utils.html#impresso_essentials.utils.DataStage.NEWS_AGENCIES">NEWS_AGENCIES (impresso_essentials.utils.DataStage attribute)</a>
 </li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="versioning.html#impresso_essentials.versioning.data_statistics.NewspaperStatistics">NewspaperStatistics (class in impresso_essentials.versioning.data_statistics)</a>
-</li>
       <li><a href="utils.html#impresso_essentials.text_utils.normalize_text">normalize_text() (in module impresso_essentials.text_utils)</a>
 </li>
       <li><a href="utils.html#impresso_essentials.utils.SourceType.NP">NP (impresso_essentials.utils.SourceType attribute)</a>
@@ -571,7 +561,7 @@
 <h2 id="O">O</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="versioning.html#impresso_essentials.versioning.helpers.DataStage.OCRQA">OCRQA (impresso_essentials.versioning.helpers.DataStage attribute)</a>
+      <li><a href="utils.html#impresso_essentials.utils.DataStage.OCRQA">OCRQA (impresso_essentials.utils.DataStage attribute)</a>
 </li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
@@ -591,18 +581,18 @@
 </li>
       <li><a href="utils.html#impresso_essentials.utils.partitioner">partitioner() (in module impresso_essentials.utils)</a>
 </li>
-      <li><a href="versioning.html#impresso_essentials.versioning.helpers.DataStage.PASSIM">PASSIM (impresso_essentials.versioning.helpers.DataStage attribute)</a>
+      <li><a href="utils.html#impresso_essentials.utils.DataStage.PASSIM">PASSIM (impresso_essentials.utils.DataStage attribute)</a>
 </li>
       <li><a href="utils.html#impresso_essentials.utils.IssueDir.path">path (impresso_essentials.utils.IssueDir attribute)</a>
 </li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="versioning.html#impresso_essentials.versioning.data_statistics.NewspaperStatistics.possible_count_keys">possible_count_keys (impresso_essentials.versioning.data_statistics.NewspaperStatistics attribute)</a>
+      <li><a href="versioning.html#impresso_essentials.versioning.data_statistics.MediaStatistics.possible_count_keys">possible_count_keys (impresso_essentials.versioning.data_statistics.MediaStatistics attribute)</a>
 </li>
       <li><a href="versioning.html#impresso_essentials.versioning.data_statistics.DataStatistics.pretty_print">pretty_print() (impresso_essentials.versioning.data_statistics.DataStatistics method)</a>
 
       <ul>
-        <li><a href="versioning.html#impresso_essentials.versioning.data_statistics.NewspaperStatistics.pretty_print">(impresso_essentials.versioning.data_statistics.NewspaperStatistics method)</a>
+        <li><a href="versioning.html#impresso_essentials.versioning.data_statistics.MediaStatistics.pretty_print">(impresso_essentials.versioning.data_statistics.MediaStatistics method)</a>
 </li>
       </ul></li>
       <li><a href="versioning.html#impresso_essentials.versioning.compute_manifest.process_altogether">process_altogether() (in module impresso_essentials.versioning.compute_manifest)</a>
@@ -631,7 +621,7 @@
 </li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="versioning.html#impresso_essentials.versioning.helpers.DataStage.REBUILT">REBUILT (impresso_essentials.versioning.helpers.DataStage attribute)</a>
+      <li><a href="utils.html#impresso_essentials.utils.DataStage.REBUILT">REBUILT (impresso_essentials.utils.DataStage attribute)</a>
 </li>
       <li><a href="versioning.html#impresso_essentials.versioning.compute_manifest.remove_corrupted_files">remove_corrupted_files() (in module impresso_essentials.versioning.compute_manifest)</a>
 </li>
@@ -658,16 +648,18 @@
       <li><a href="versioning.html#impresso_essentials.versioning.data_statistics.DataStatistics.same_counts">same_counts() (impresso_essentials.versioning.data_statistics.DataStatistics method)</a>
 
       <ul>
-        <li><a href="versioning.html#impresso_essentials.versioning.data_statistics.NewspaperStatistics.same_counts">(impresso_essentials.versioning.data_statistics.NewspaperStatistics method)</a>
+        <li><a href="versioning.html#impresso_essentials.versioning.data_statistics.MediaStatistics.same_counts">(impresso_essentials.versioning.data_statistics.MediaStatistics method)</a>
 </li>
       </ul></li>
       <li><a href="utils.html#impresso_essentials.text_utils.search_text">search_text() (in module impresso_essentials.text_utils)</a>
 </li>
       <li><a href="utils.html#impresso_essentials.text_utils.segment_and_trim_sentences">segment_and_trim_sentences() (in module impresso_essentials.text_utils)</a>
 </li>
+      <li><a href="utils.html#impresso_essentials.utils.DataStage.SOLR_TEXT">SOLR_TEXT (impresso_essentials.utils.DataStage attribute)</a>
+</li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="versioning.html#impresso_essentials.versioning.helpers.DataStage.SOLR_TEXT">SOLR_TEXT (impresso_essentials.versioning.helpers.DataStage attribute)</a>
+      <li><a href="versioning.html#impresso_essentials.versioning.helpers.sort_media_list_years_and_titles">sort_media_list_years_and_titles() (in module impresso_essentials.versioning.helpers)</a>
 </li>
       <li><a href="utils.html#impresso_essentials.utils.SourceMedium">SourceMedium (class in impresso_essentials.utils)</a>
 </li>
@@ -676,10 +668,10 @@
       <li><a href="versioning.html#impresso_essentials.versioning.data_statistics.DataStatistics.stage">stage (impresso_essentials.versioning.data_statistics.DataStatistics attribute)</a>
 
       <ul>
-        <li><a href="versioning.html#impresso_essentials.versioning.data_statistics.NewspaperStatistics.stage">(impresso_essentials.versioning.data_statistics.NewspaperStatistics attribute)</a>
+        <li><a href="versioning.html#impresso_essentials.versioning.data_statistics.MediaStatistics.stage">(impresso_essentials.versioning.data_statistics.MediaStatistics attribute)</a>
 </li>
       </ul></li>
-      <li><a href="versioning.html#impresso_essentials.versioning.data_statistics.NewspaperStatistics.stage_extra_keys">stage_extra_keys (impresso_essentials.versioning.data_statistics.NewspaperStatistics attribute)</a>
+      <li><a href="versioning.html#impresso_essentials.versioning.data_statistics.MediaStatistics.stage_extra_keys">stage_extra_keys (impresso_essentials.versioning.data_statistics.MediaStatistics attribute)</a>
 </li>
       <li><a href="utils.html#impresso_essentials.utils.Timer.stop">stop() (impresso_essentials.utils.Timer method)</a>
 </li>
@@ -689,7 +681,7 @@
 <h2 id="T">T</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="versioning.html#impresso_essentials.versioning.helpers.DataStage.TEXT_REUSE">TEXT_REUSE (impresso_essentials.versioning.helpers.DataStage attribute)</a>
+      <li><a href="utils.html#impresso_essentials.utils.DataStage.TEXT_REUSE">TEXT_REUSE (impresso_essentials.utils.DataStage attribute)</a>
 </li>
       <li><a href="utils.html#impresso_essentials.utils.Timer.tick">tick() (impresso_essentials.utils.Timer method)</a>
 </li>
@@ -703,7 +695,7 @@
 </li>
       <li><a href="utils.html#impresso_essentials.text_utils.tokenise">tokenise() (in module impresso_essentials.text_utils)</a>
 </li>
-      <li><a href="versioning.html#impresso_essentials.versioning.helpers.DataStage.TOPICS">TOPICS (impresso_essentials.versioning.helpers.DataStage attribute)</a>
+      <li><a href="utils.html#impresso_essentials.utils.DataStage.TOPICS">TOPICS (impresso_essentials.utils.DataStage attribute)</a>
 </li>
       <li><a href="utils.html#impresso_essentials.utils.SourceMedium.TPS">TPS (impresso_essentials.utils.SourceMedium attribute)</a>
 </li>
@@ -735,27 +727,17 @@
 </li>
       <li><a href="versioning.html#impresso_essentials.versioning.compute_manifest.validate_config">validate_config() (in module impresso_essentials.versioning.compute_manifest)</a>
 </li>
+      <li><a href="utils.html#impresso_essentials.utils.validate_granularity">validate_granularity() (in module impresso_essentials.utils)</a>
+</li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="versioning.html#impresso_essentials.versioning.helpers.validate_granularity">validate_granularity() (in module impresso_essentials.versioning.helpers)</a>
+      <li><a href="utils.html#impresso_essentials.utils.validate_source">validate_source() (in module impresso_essentials.utils)</a>
 </li>
-      <li><a href="versioning.html#impresso_essentials.versioning.helpers.validate_stage">validate_stage() (in module impresso_essentials.versioning.helpers)</a>
+      <li><a href="utils.html#impresso_essentials.utils.validate_stage">validate_stage() (in module impresso_essentials.utils)</a>
 </li>
       <li><a href="versioning.html#impresso_essentials.versioning.helpers.validate_version">validate_version() (in module impresso_essentials.versioning.helpers)</a>
 </li>
       <li><a href="versioning.html#impresso_essentials.versioning.helpers.version_as_list">version_as_list() (in module impresso_essentials.versioning.helpers)</a>
-</li>
-  </ul></td>
-</tr></table>
-
-<h2 id="W">W</h2>
-<table style="width: 100%" class="indextable genindextable"><tr>
-  <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="versioning.html#impresso_essentials.versioning.helpers.write_and_push_to_git">write_and_push_to_git() (in module impresso_essentials.versioning.helpers)</a>
-</li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="versioning.html#impresso_essentials.versioning.helpers.write_dump_to_fs">write_dump_to_fs() (in module impresso_essentials.versioning.helpers)</a>
 </li>
   </ul></td>
 </tr></table>

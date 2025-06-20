@@ -356,7 +356,7 @@ def sort_media_list_years_and_titles(media_list: dict[str, dict]) -> dict[str, d
     """Sort the media titles and corresponding years by alphabetical order.
 
     The media_list is in a format such that:
-        media_list[title]["stats_as_dict"][year] = stats
+    - media_list[title]["stats_as_dict"][year] = stats
     where title and year are strings
     Since it's a dict, we can't directly sort it.
     However we can populate a new dict with the exact same format where the keys are sorted.
