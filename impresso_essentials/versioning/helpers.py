@@ -1,6 +1,5 @@
 """Helper functions to read, generate and write data versioning manifests."""
 
-import sys
 import copy
 import json
 import logging
@@ -12,11 +11,11 @@ from tqdm import tqdm
 
 from impresso_essentials.utils import (
     bytes_to,
-    SourceType,
-    SourceMedium,
     PARTNER_TO_MEDIA,
     get_provider_for_alias,
     get_src_info_for_alias,
+    DataStage,
+    validate_stage
 )
 from impresso_essentials.io.s3 import (
     fixed_s3fs_glob,
@@ -26,154 +25,12 @@ from impresso_essentials.io.s3 import (
     get_s3_object_size,
 )
 
-if sys.version < "3.11":
-    # python 3.10
-    from typing_extensions import Self
-    from strenum import StrEnum
-else:
-    from typing import Self
-    from enum import StrEnum
-
 logger = logging.getLogger(__name__)
 
 
 IMPRESSO_STORAGEOPT = get_storage_options()
 POSSIBLE_GRANULARITIES = ["corpus", "title", "year"]
 VERSION_INCREMENTS = ["major", "minor", "patch"]
-
-
-class DataStage(StrEnum):
-    """Enum all stages requiring a versioning manifest.
-
-    Each member corresponds to a data stage and the associated string is used to name
-    each generated manifest accordingly.
-
-    TODO: finalize the exact list of names and strings based on needs.
-    TODO: add options for data indexing in Solr
-    """
-
-    CANONICAL = "canonical"
-    REBUILT = "rebuilt"
-    # EVENIZED = "evenized-rebuilt"  # TODO remove?
-    PASSIM = "passim"
-    EMB_WORDS = "emb-words"
-    EMB_SENTS = "emb-sents"
-    EMB_DOCS = "emb-docs"
-    EMB_ENTITIES = "emb-entities"
-    EMB_PARAGRAPHS = "emb-paragraphs"
-    EMB_IMAGES = "emb-images"
-    # EMBED_ARTICLES = "embeddings-article"
-    ENTITIES = "entities"
-    NEWS_AGENCIES = "newsagencies"
-    LANGIDENT = "langident"
-    LINGPROC = "lingproc"
-    OCRQA = "ocrqa"
-    TEXT_REUSE = "textreuse"
-    TOPICS = "topics"
-    SOLR_TEXT = "solr-text-ingestion"
-    # SOLR_ENTITIES = "solr-entities-post"
-    # SOLR_EMBS = "solr-emb-post"
-    MYSQL_CIS = "mysql-ingestion"
-
-    @classmethod
-    def has_value(cls: Self, value: str) -> bool:
-        """Check if enum contains given value
-
-        Args:
-            cls (Self): This DataStage class
-            value (str): Value to check
-
-        Returns:
-            bool: True if the value provided is in this enum's values, False otherwise.
-        """
-        return value in cls._value2member_map_
-
-
-##################################
-###### VALIDATION FUNCTIONS ######
-
-
-def validate_stage(
-    data_stage: str, return_value_str: bool = False
-) -> Union[DataStage, str, None]:
-    """Validate the provided data stage if it's in the DataStage Enum (key or value).
-
-    Args:
-        data_stage (str): Data stage key or value to validate.
-        return_value_str (bool, optional): Whether to return the data stage's value if
-            it was valid. Defaults to False.
-
-    Raises:
-        e: The provided str is neither a data stage key nor value.
-
-    Returns:
-        DataStage | str | None: The corresponding DataStage or value string if valid.
-    """
-    try:
-        if DataStage.has_value(data_stage):
-            stage = DataStage(data_stage)
-        else:
-            stage = DataStage[data_stage]
-        return stage.value if return_value_str else stage
-    except ValueError as e:
-        err_msg = f"{e} \nProvided data stage '{data_stage}' is not a valid data stage."
-        logger.critical(err_msg)
-        raise e
-
-
-def validate_granularity(value: str) -> Optional[str]:
-    """Validate that the granularity value provided is valid.
-
-    Statistics are computed on three granularity levels:
-    corpus, title and year.
-
-    Args:
-        value (str): Granularity value to validate
-
-    Raises:
-        ValueError: The provided granularity isn't one of corpus, title and year.
-
-    Returns:
-        Optional[str]: The provided value, in lower case, or None if not valid.
-    """
-    lower = value.lower()
-    if lower in POSSIBLE_GRANULARITIES:
-        return lower
-    # only incorrect granularity values will not be returned
-    logger.critical("Provided granularity '%s' isn't valid.", lower)
-    raise ValueError
-
-
-def validate_source(
-    source: str, return_value_str: bool = False, medium: bool = True
-) -> Union[SourceType, SourceMedium, str, None]:
-    """Validate the provided source type if it's in the SourceType Enum (key or value).
-
-    Args:
-        source (str): Source type or medium key or value to validate.
-        return_value_str (bool, optional): Whether to return the source type or medium's value if
-            it was valid. Defaults to False.
-        medium (bool, optional): Whether to validate a source medium (True) or key (False). Defaults to True.
-
-    Raises:
-        e: The provided str is neither a source type key nor value.
-
-    Returns:
-        SourceType | str | None | SourceMedium: The corresponding SourceType or value string if valid.
-    """
-    src_class = SourceMedium if medium else SourceType
-    try:
-        if src_class.has_value(source):
-            src = src_class(source)
-        else:
-            src = src_class[source]
-        return src.value if return_value_str else src
-    except ValueError as e:
-        word = "medium" if medium else "type"
-        err_msg = f"{e} \nProvided source {word} '{source}' is not a valid source {word}."
-        logger.critical(err_msg)
-        raise e
-
 
 ###############################
 ###### VERSION FUNCTIONS ######

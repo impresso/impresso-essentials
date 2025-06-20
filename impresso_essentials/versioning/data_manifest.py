@@ -17,15 +17,12 @@ from impresso_essentials.utils import (
     get_src_info_for_alias,
     PARTNER_TO_MEDIA,
     timestamp,
-)
-from impresso_essentials.versioning.data_statistics import (
-    MediaStatistics,
-    DataStatistics,
-)
-from impresso_essentials.versioning.helpers import (
     DataStage,
+    validate_stage
+)
+from impresso_essentials.versioning.data_statistics import MediaStatistics
+from impresso_essentials.versioning.helpers import (
     read_manifest_from_s3,
-    validate_stage,
     increment_version,
     validate_version,
     init_media_info,
@@ -339,7 +336,6 @@ class DataManifest:
     ) -> str:
         """Get the output path within the "impresso-data-release" repository.
 
-
         Args:
             folder_prefix (str, optional): Folder prefix to use within the repository.
                 Defaults to "data-processing-versioning".
@@ -392,7 +388,6 @@ class DataManifest:
         if push_to_git:
             # clone the data release repository locally if not for debug - always staging branch
             out_repo = clone_git_repo(self.temp_dir, branch="staging")
-
             logger.info("%s and GitHub!", msg)
         else:
             out_repo = None
@@ -404,6 +399,7 @@ class DataManifest:
 
         # if out_repo is None, in debug mode
         if push_to_git:
+            msg = f"Push manifest to git manually file at: \ns3://{self.output_bucket_name}"
             try:
                 # write file and push to git
                 local_path_in_repo = self._get_out_path_within_repo()
@@ -416,18 +412,13 @@ class DataManifest:
                 )
 
                 if not pushed:
-                    logger.critical(
-                        "Push manifest to git manually using the file added on S3: \ns3://%s/%s.",
-                        self.output_bucket_name,
-                        out_file_path,
-                    )
+                    new_msg = f"{msg}/{out_file_path}."
+                    logger.critical(new_msg)
+                    print(new_msg)
             except Exception as e:
-                logger.error(
-                    "Push manifest to git manually using the file added on S3: \ns3://%s/%s. Exception: %s",
-                    self.output_bucket_name,
-                    out_file_path,
-                    e,
-                )
+                new_msg = f"{msg}/{out_file_path}. Exception: {e}"
+                logger.error(new_msg)
+                print(new_msg)
                 # if there was a problem cloning the repository of pushing to git,
                 # write the manifest somewhere in the fs
                 out_file_path = write_dump_to_fs(manifest_dump, self.temp_dir, mft_filename)
@@ -965,8 +956,8 @@ class DataManifest:
         pretty_counts = []
 
         for _, np_year_stat in media_dict["stats_as_dict"].items():
-            if isinstance(np_year_stat, DataStatistics):
-                # newly added titles will be DataStatistics objects -> needs pretty print
+            if isinstance(np_year_stat, MediaStatistics):
+                # newly added titles will be MediaStatistics objects -> needs pretty print
                 title_cumm_stats.add_counts(np_year_stat.counts)
                 # include the modification date at the year level
                 pretty_counts.append(
@@ -992,7 +983,7 @@ class DataManifest:
 
     def title_level_stats(
         self, media_list: dict[str, dict]
-    ) -> tuple[list[DataStatistics], dict[str, dict]]:
+    ) -> tuple[list[MediaStatistics], dict[str, dict]]:
         """Compute the title-level statistics from the new media list.
 
         Also removes the `stats_as_dict` field from the media list, and returns
@@ -1002,7 +993,7 @@ class DataManifest:
             media_list (dict[str, dict]): Updated media list for this manifest.
 
         Returns:
-            tuple[list[DataStatistics], dict[str, dict]]: New title-level stats and
+            tuple[list[MediaStatistics], dict[str, dict]]: New title-level stats and
                 media list.
         """
         full_title_stats = []
@@ -1018,11 +1009,11 @@ class DataManifest:
 
         return full_title_stats, media_list
 
-    def overall_stats(self, title_stats: list[DataStatistics]) -> list[dict]:
+    def overall_stats(self, title_stats: list[MediaStatistics]) -> list[dict]:
         """Generate the overall stats and append the ones from the input manifest.
 
         Args:
-            title_stats (list[DataStatistics]): List of all title-level statistics
+            title_stats (list[MediaStatistics]): List of all title-level statistics
                 used to compute the overall stats.
 
         Returns:

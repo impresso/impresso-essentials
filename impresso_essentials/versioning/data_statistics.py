@@ -10,13 +10,14 @@ import logging
 from abc import ABC, abstractmethod
 from typing import Any, Union, Optional
 
-from impresso_essentials.versioning.helpers import (
+from impresso_essentials.utils import (
+    SourceMedium,
+    PARTNER_TO_MEDIA,
     DataStage,
     validate_stage,
     validate_granularity,
     validate_source,
 )
-from impresso_essentials.utils import SourceMedium, PARTNER_TO_MEDIA
 
 if sys.version < "3.11":
     from typing_extensions import Self
@@ -288,7 +289,6 @@ class MediaStatistics(DataStatistics):
             logger.error(warn_msg)
             return False
 
-        # TODO add a check that the keys for other mediums are not defined?? needs to have the medium defined always
         if self.source_medium:
             if self.source_medium == "audio" and "pages" in new_counts:
                 warn_msg = (
