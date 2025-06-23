@@ -653,8 +653,30 @@ PARTNER_TO_MEDIA = {
     ],
     "INA": ["CFCE", "RDN"],
 }
+
+PARTNER_TO_COUNTRY = {
+    "SNL": "CH",
+    "LeTemps": "CH",
+    "NZZ": "CH",
+    "SWA": "CH",
+    "FedGaz": "CH",
+    "BNL": "LU",
+    "BNF": "FR",
+    "BNF-EN": "FR",
+    "BCUL": "CH",
+    "BL": "UK",
+    "KB": "NL",
+    "SWISSINFO": "CH",
+    "RTS": "CH",
+    "INA": "FR",
+}
 # flatten the known journals into a sorted list
 ALL_MEDIA = sorted([j for part_j in PARTNER_TO_MEDIA.values() for j in part_j])
+MEDIA_TO_COUNTRY = {
+    alias: PARTNER_TO_COUNTRY[p] 
+    for p, p_aliases in PARTNER_TO_MEDIA.items() 
+    for alias in p_aliases
+}
 PARTNERS_WITHOUT_OLR = ["NZZ", "SWA", "FedGaz", "BCUL", "SWISSINFO", "INA"]
 
 # values can either be a list of aliases or "all"
