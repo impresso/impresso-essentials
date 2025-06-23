@@ -1,5 +1,4 @@
-"""Reusable util functions to perform some text processing.
-"""
+"""Reusable util functions to perform some text processing."""
 
 import re
 import logging
@@ -12,13 +11,14 @@ logger = logging.getLogger(__name__)
 
 WHITESPACE_RULES = {
     "fr": {
-        "pct_no_ws_before": [".", ",", ")", "]", "}", "°", "...", ".-", "%"],
-        "pct_no_ws_after": ["(", "[", "{"],
-        "pct_no_ws_before_after": ["'", "-"],
+        "pct_no_ws_before": [" ", ".", ",", ")", "]", "}", "°", "...", ".-", "%"],
+        "pct_no_ws_after": [" ", "(", "[", "{"],
+        "pct_no_ws_before_after": [" ", "'", "-"],
         "pct_number": [".", ","],
     },
     "de": {
         "pct_no_ws_before": [
+            " ",
             ".",
             ",",
             ")",
@@ -33,12 +33,13 @@ WHITESPACE_RULES = {
             ".-",
             "%",
         ],
-        "pct_no_ws_after": ["(", "[", "{"],
-        "pct_no_ws_before_after": ["'", "-"],
+        "pct_no_ws_after": [" ", "(", "[", "{"],
+        "pct_no_ws_before_after": [" ", "'", "-"],
         "pct_number": [".", ","],
     },
     "other": {
         "pct_no_ws_before": [
+            " ",
             ".",
             ",",
             ")",
@@ -53,16 +54,14 @@ WHITESPACE_RULES = {
             ".-",
             "%",
         ],
-        "pct_no_ws_after": ["(", "[", "{"],
-        "pct_no_ws_before_after": ["'", "-"],
+        "pct_no_ws_after": [" ", "(", "[", "{"],
+        "pct_no_ws_before_after": [" ", "'", "-"],
         "pct_number": [".", ","],
     },
 }
 
 
-def segment_and_trim_sentences(
-    article: str, language: str, max_length: int
-) -> list[str]:
+def segment_and_trim_sentences(article: str, language: str, max_length: int) -> list[str]:
     """Segment the given article into trimmed sentences based on a max_length.
 
     Args:
@@ -191,19 +190,19 @@ def normalize_text(text: str) -> str:
     return re.sub(r"[ \t]+", "", text)
 
 
-def search_text(article_text: str, search_text: str) -> list[tuple[int, int]]:
-    """Look for all occurrences or the `search_text` within the given article text.
+def search_text(article_text: str, text_to_search: str) -> list[tuple[int, int]]:
+    """Look for all occurrences or the `text_to_search` within the given article text.
 
     Args:
-        article_text (str): Article in which to find occurrences or `search_text`.
-        search_text (str): Text to search within the `article_text`.
+        article_text (str): Article in which to find occurrences of `text_to_search`.
+        text_to_search (str): Text to search within the `article_text`.
 
     Returns:
         list[tuple[int, int]]: Start and end indices of occurrences within the article.
     """
     # Normalize texts by removing spaces and tabs
     normalized_article = normalize_text(article_text)
-    normalized_search = normalize_text(search_text)
+    normalized_search = normalize_text(text_to_search)
 
     # Initialize a list to hold all start and end indices
     indices = []
@@ -242,3 +241,60 @@ def search_text(article_text: str, search_text: str) -> list[tuple[int, int]]:
         start_index += 1
 
     return indices
+
+
+def insert_whitespace(
+    token: str,
+    next_t: str | None,
+    prev_t: str | None,
+    lang: str | None,
+) -> bool:
+    """Determine whether a whitespace should be inserted after a token.
+
+    Args:
+        token (str): Current token.
+        next_t (str): Following token.
+        prev_t (str): Previous token.
+        lang (str): Language of text.
+
+    Returns:
+        bool: Whether a whitespace should be inserted after the `token`.
+    """
+    # if current token text is None, previous token's whitespace rule applies
+    if token is None or len(token) == 0:
+        return False
+
+    wsrules = WHITESPACE_RULES[lang if lang in WHITESPACE_RULES else "other"]
+
+    insert_ws = True
+
+    if (
+        token in wsrules["pct_no_ws_before_after"]
+        or next_t in wsrules["pct_no_ws_before_after"]
+    ):
+        insert_ws = False
+
+    # the first char of the next token is punctuation.
+    elif (
+        next_t is not None
+        and len(next_t) != 0
+        and (next_t in wsrules["pct_no_ws_before"] or next_t[0] in wsrules["pct_no_ws_before"])
+    ):
+        insert_ws = False
+
+    # the last char of current token is punctuation.
+    elif token in wsrules["pct_no_ws_after"] or token[-1] in wsrules["pct_no_ws_after"]:
+        insert_ws = False
+
+    elif token in wsrules["pct_number"] and prev_t is not None and next_t is not None:
+        if prev_t.isdigit() and next_t.isdigit():
+            return False
+        else:
+            return True
+
+    debug_msg = (
+        f"Insert whitespace: curr={token}, follow={next_t}, " f"prev={prev_t} ({insert_ws})"
+    )
+    logger.debug(debug_msg)
+
+    return insert_ws

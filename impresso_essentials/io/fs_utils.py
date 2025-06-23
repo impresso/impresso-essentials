@@ -26,7 +26,10 @@ def parse_json(filename: str) -> dict[str, Any]:
         with open(filename, "r", encoding="utf-8") as f:
             return json.load(f)
     else:
-        logger.info("File %s does not exist.", filename)
+        msg = f"File {filename} does not exist."
+        if logger.level == logging.DEBUG:
+            print(msg)
+        logger.info(msg)
 
 
 def glob_with_size(directory: str, file_suffix: str) -> list[str]:
@@ -87,7 +90,7 @@ def canonical_path(
     sep = "/" if as_dir else "-"
     base = sep.join(
         [
-            issuedir.journal,
+            issuedir.alias,
             str(issuedir.date.year),
             str(issuedir.date.month).zfill(2),
             str(issuedir.date.day).zfill(2),
@@ -107,15 +110,13 @@ def canonical_path(
     return base
 
 
-def check_filenaming(
-    file_basename: str, object_type: str = "issue"
-) -> re.Match[str] | None:
+def check_filenaming(file_basename: str, object_type: str = "issue") -> re.Match[str] | None:
     """Check whether a file's basename complies with the naming convention.
 
     Args:
         file_basename (str): Basename of file to check (excluding extension).
         object_type (str, optional): Type of objects in the given file.
-            One of "issue", "page", "rebuilt". Defaults to 'issues'.
+            One of "issue", "page", "audio", "rebuilt". Defaults to 'issue'.
 
     Returns:
         Match[str] | None: The resulting match if correct, None otherwise.
@@ -125,11 +126,13 @@ def check_filenaming(
         file_basename = file_basename.split(".")[0]
     match object_type:
         case "issue":
-            pattern = re.compile(r"^[A-Z]+-\d{4}-issues$")
+            pattern = re.compile(r"^[A-Za-z][A-Za-z0-9_]*-\d{4}-issues$")
         case "page":
-            pattern = re.compile(r"^[A-Z]+-\d{4}-\d{2}-\d{2}-[a-z]-pages$")
+            pattern = re.compile(r"^[A-Za-z][A-Za-z0-9_]*-\\d{4}-\\d{2}-\\d{2}-[a-z]{1,2}-pages$")
+        case "audio":
+            pattern = re.compile(r"^[A-Za-z][A-Za-z0-9_]*-\\d{4}-\\d{2}-\\d{2}-[a-z]{1,2}-audios$")
         case "rebuilt":
-            pattern = re.compile(r"^[A-Z]+-\d{4}$")
+            pattern = re.compile(r"^[A-Za-z][A-Za-z0-9_]*-\d{4}$")
 
     return pattern.match(file_basename)
 
@@ -140,40 +143,47 @@ def check_id(canonical_id: str, object_type: str = "issue") -> re.Match[str] | N
     Args:
         canonical_id (str): Canonical ID to check.
         object_type (str, optional): Object it corresponds to.
-            One of "issue", "page", "content-item". Defaults to 'issues'.
+            One of "issue", "page", "audio", "content-item". Defaults to 'issue'.
 
     Returns:
         Match[str] | None: The resulting match if correct, None otherwise
     """
     match object_type:
         case "issue":
-            pattern = re.compile(r"^[A-Z]+-\d{4}-\d{2}-\d{2}-[a-z]$")
+            pattern = re.compile(r"^[A-Za-z][A-Za-z0-9_]*-\\d{4}-\\d{2}-\\d{2}-[a-z]{1,2}$")
         case "page":
-            pattern = re.compile(r"^[A-Z]+-\d{4}-\d{2}-\d{2}-[a-z]-p\d{4}$")
+            pattern = re.compile(r"^[A-Za-z][A-Za-z0-9_]*-\\d{4}-\\d{2}-\\d{2}-[a-z]{1,2}-p[0-9]{4}$")
+        case "audio":
+            pattern = re.compile(r"^[A-Za-z][A-Za-z0-9_]*-\\d{4}-\\d{2}-\\d{2}-[a-z]{1,2}-r[0-9]{4}$")
         case "content-item":
-            pattern = re.compile(r"^[A-Z]+-\d{4}-\d{2}-\d{2}-[a-z]-i\d{4}$")
+            pattern = re.compile(r"^[A-Za-z][A-Za-z0-9_]*-\\d{4}-\\d{2}-\\d{2}-[a-z]{1,2}-i[0-9]{4}$")
     return pattern.match(canonical_id)
 
 
 def get_issueshortpath(issuedir: IssueDir) -> str:
-    """Return short version of an IssueDir's path, starting from the journal.
+    """Return short version of an IssueDir's path, starting from the media alias.
 
     Args:
         issuedir (IssueDir): IssueDir instance from which to get the short path.
 
     Returns:
-        str: Canonical path to the issue starting at the journal name.
+        str: Canonical path to the issue starting at the media alias.
     """
     path = issuedir.path
-    return path[path.index(issuedir.journal) :]
+    return path[path.index(issuedir.alias) :]
 
 
 def parse_canonical_filename(filename: str) -> tuple[str, tuple, str, str, int, str]:
-    """Parse a canonical page or CI ID or filename into its components.
+    """Parse a canonical page/audio or CI ID or filename into its components.
 
     >>> filename = "GDL-1950-01-02-a-i0002"
     >>> parse_canonical_filename(filename)
     >>> ('GDL', ('1950', '01', '02'), 'a', 'i', 2, '')
+
+    The second-to-last element is the "filetype", and can have 3 values if defined:
+    - i : the element is a content-item
+    - p : the element is a page
+    - r : the element is an audio record
 
     Args:
         filename (str): ID or filename to parse.
@@ -183,16 +193,16 @@ def parse_canonical_filename(filename: str) -> tuple[str, tuple, str, str, int, 
     """
     regex = re.compile(
         (
-            r"^(?P<np>[A-Za-z0-9_]+)-(?P<year>\d{4})"
+            r"^(?P<alias>[A-Za-z][A-Za-z0-9_]*)-(?P<year>\d{4})"
             r"-(?P<month>\d{2})-(?P<day>\d{2})"
-            r"-(?P<ed>[a-z])-(?P<type>[p|i])(?P<pgnb>\d{4})(?P<ext>.*)?$"
+            r"-(?P<ed>[a-z]{1,2})-(?P<type>[r|p|i])(?P<pgnb>\d{4})(?P<ext>.*)?$"
         )
     )
     result = re.match(regex, filename)
-    newspaper_id = result.group("np")
+    alias = result.group("alias")
     date = (result.group("year"), result.group("month"), result.group("day"))
     page_number = int(result.group("pgnb"))
     edition = result.group("ed")
     filetype = result.group("type")
     extension = result.group("ext")
-    return (newspaper_id, date, edition, filetype, page_number, extension)
+    return (alias, date, edition, filetype, page_number, extension)

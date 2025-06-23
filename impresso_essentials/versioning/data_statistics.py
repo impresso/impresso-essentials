@@ -1,7 +1,7 @@
 """This module contains the definition of a data statistics class.
 
-A DataStatstics object should be instantiated during each processing step of 
-the data preprocessing and augmentation of the Impresso project, and used to 
+A DataStatstics object should be instantiated during each processing step of
+the data preprocessing and augmentation of the Impresso project, and used to
 progressively count the number of elements modified or added by the processing.
 """
 
@@ -10,10 +10,13 @@ import logging
 from abc import ABC, abstractmethod
 from typing import Any, Union, Optional
 
-from impresso_essentials.versioning.helpers import (
+from impresso_essentials.utils import (
+    SourceMedium,
+    PARTNER_TO_MEDIA,
     DataStage,
     validate_stage,
     validate_granularity,
+    validate_source,
 )
 
 if sys.version < "3.11":
@@ -51,13 +54,20 @@ class DataStatistics(ABC):
         self,
         data_stage: Union[DataStage, str],
         granularity: str,
-        element: Optional[str] = None,
+        element: str | None = None,
+        source_medium: SourceMedium | str | None = None,
+        provider: str | None = None,
         counts: Union[dict[str, Union[int, dict[str, int]]], None] = None,
     ) -> None:
 
         self.stage = validate_stage(data_stage)
         self.granularity = validate_granularity(granularity)
         self.element = element
+        # already add the provider to the DataStats if possible
+        self.provider = provider if provider and provider in PARTNER_TO_MEDIA else None
+        self.source_medium = (
+            validate_source(source_medium, return_value_str=True) if source_medium else None
+        )
         self.count_keys = self._define_count_keys()
 
         if counts is not None and self._validate_count_keys(counts):
@@ -71,9 +81,7 @@ class DataStatistics(ABC):
         """Define the count keys for these specific statistics."""
 
     @abstractmethod
-    def _validate_count_keys(
-        self, new_counts: dict[str, Union[int, dict[str, int]]]
-    ) -> bool:
+    def _validate_count_keys(self, new_counts: dict[str, Union[int, dict[str, int]]]) -> bool:
         """Validate the keys of new counts provided against defined count keys."""
 
     def init_counts(self) -> dict[str, Union[int, dict[str, int]]]:
@@ -110,9 +118,7 @@ class DataStatistics(ABC):
                         # some fields can be frequency dicts
                         for v_k, v_f in v.items():
                             self.counts[k][v_k] = (
-                                v_f
-                                if v_k not in self.counts[k]
-                                else self.counts[k][v_k] + v_f
+                                v_f if v_k not in self.counts[k] else self.counts[k][v_k] + v_f
                             )
                     else:
                         self.counts[k] += v
@@ -161,12 +167,8 @@ class DataStatistics(ABC):
                 )
 
         if include_counts:
-            stats_dict["stats"] = {
-                k: (
-                    v
-                    if "fd" not in k
-                    else {v_k: v_f for v_k, v_f in v.items() if v_f > 0}
-                )
+            stats_dict["media_stats"] = {
+                k: (v if "fd" not in k else {v_k: v_f for v_k, v_f in v.items() if v_f > 0})
                 for k, v in self.counts.items()
                 if "_fd" in k or v > 0
             }
@@ -178,7 +180,7 @@ class DataStatistics(ABC):
         """Given another dict of stats, check whether the values are the same."""
 
 
-class NewspaperStatistics(DataStatistics):
+class MediaStatistics(DataStatistics):
     """Count statistics computed on a specific portion and granularity of the data.
 
     Args:
@@ -202,10 +204,10 @@ class NewspaperStatistics(DataStatistics):
         "titles",
         "issues",
         "pages",
+        "audios",
         "content_items_out",
         "ft_tokens",
         "images",
-        "content_items_in",  # TODO remove
         "ne_mentions",
         "ne_entities",
         "embeddings_el",
@@ -218,7 +220,8 @@ class NewspaperStatistics(DataStatistics):
     ]
 
     stage_extra_keys = {
-        DataStage.CANONICAL: ["pages", "images"],
+        # audios and pages don't need to be defined for the same mediums
+        DataStage.CANONICAL: ["pages", "audios", "images"],
         DataStage.REBUILT: ["ft_tokens"],
         DataStage.ENTITIES: ["ne_entities", "ne_mentions"],
         DataStage.NEWS_AGENCIES: ["ne_entities", "ne_mentions"],
@@ -226,14 +229,12 @@ class NewspaperStatistics(DataStatistics):
         DataStage.LANGIDENT: ["images", "lang_fd"],
         DataStage.TEXT_REUSE: ["text_reuse_clusters", "text_reuse_passages"],
         DataStage.TOPICS: ["topics", "topics_fd"],
-        DataStage.MYSQL_CIS: ["pages"],
+        DataStage.MYSQL_CIS: ["pages", "audios"],
         DataStage.EMB_IMAGES: ["images"],
-        DataStage.EMB_DOCS: [], # no additional keys
-        DataStage.SOLR_TEXT: ["ft_tokens"], 
+        DataStage.EMB_DOCS: [],  # no additional keys
+        DataStage.SOLR_TEXT: ["ft_tokens"],
         DataStage.LINGPROC: [],  # no additional keys
         DataStage.OCRQA: ["avg_ocrqa"],  # no additional keys
-        # TODO Add for solr
-        # todo add for embeddings
     }
 
     def _define_count_keys(self) -> list[str]:
@@ -246,7 +247,7 @@ class NewspaperStatistics(DataStatistics):
         """
         start_index = int(self.granularity != "corpus")
         # all counts should have 'content_items_out'
-        count_keys = [self.possible_count_keys[3]]
+        count_keys = [self.possible_count_keys[4]]
         # add 'issues' and 'titles' (only if corpus granularity)
         count_keys.extend(self.possible_count_keys[start_index:2])
 
@@ -257,11 +258,18 @@ class NewspaperStatistics(DataStatistics):
         #   keys: 'content_items_out', 'titles', 'issues'
         # For case DataStage.LINGPROC, all keys are already added.
         #   keys: 'content_items_out', 'titles', 'issues'
+
+        # ensure that we are intializing the counts for the right medium
+        # but only if it's defined (corpus-level stats could have both)
+        if self.source_medium:
+            if self.source_medium == "audio" and "pages" in count_keys:
+                count_keys.remove("pages")
+            elif "audios" in count_keys:
+                count_keys.remove("audios")
+
         return count_keys
 
-    def _validate_count_keys(
-        self, new_counts: dict[str, Union[int, dict[str, int]]]
-    ) -> bool:
+    def _validate_count_keys(self, new_counts: dict[str, Union[int, dict[str, int]]]) -> bool:
         """Validate the keys of new counts provided against defined count keys.
 
         Valid new counts shouldn't have keys absent from the defined `attr:count_keys`
@@ -281,13 +289,25 @@ class NewspaperStatistics(DataStatistics):
             logger.error(warn_msg)
             return False
 
+        if self.source_medium:
+            if self.source_medium == "audio" and "pages" in new_counts:
+                warn_msg = (
+                    f"Source medium is '{self.source_medium}' but 'pages' counts are defined!"
+                )
+                logger.error(warn_msg)
+                return False
+            if self.source_medium != "audio" and "audios" in new_counts:
+                warn_msg = (
+                    f"Source medium is '{self.source_medium}' but 'audios' counts are defined!"
+                )
+                logger.error(warn_msg)
+                return False
+
         if not all(
             v >= 0 if "fd" not in k else all(fv > 0 for fv in v.values())
             for k, v in new_counts.items()
         ):
-            logger.error(
-                "Provided count values are not all integers and will not be used."
-            )
+            logger.error("Provided count values are not all integers and will not be used.")
             return False
 
         # the provided counts were conforming
@@ -301,8 +321,8 @@ class NewspaperStatistics(DataStatistics):
         Args:
             modif_date (Optional[str], optional): Last modification date of the
                 corresponding elements. Defaults to None.
-            include_counts (bool, optional): Whether to include the current newspaper
-                counts with key "nps_stats". Defaults to True.
+            include_counts (bool, optional): Whether to include the current media
+                counts with key "media_stats". Defaults to True.
 
         Returns:
             dict[str, Any]: A dict representation of these statistics.
@@ -310,12 +330,8 @@ class NewspaperStatistics(DataStatistics):
         stats_dict = super().pretty_print(modif_date=modif_date)
         # add the newspaper stats
         if include_counts:
-            stats_dict["nps_stats"] = {
-                k: (
-                    v
-                    if "_fd" not in k
-                    else {v_k: v_f for v_k, v_f in v.items() if v_f > 0}
-                )
+            stats_dict["media_stats"] = {
+                k: (v if "_fd" not in k else {v_k: v_f for v_k, v_f in v.items() if v_f > 0})
                 for k, v in self.counts.items()
                 if "_fd" in k or v > 0
             }
@@ -327,14 +343,18 @@ class NewspaperStatistics(DataStatistics):
 
         Args:
             other_stats (Union[dict[str, Any], Self]): Dict with pretty-printed
-                newspaper statistics or other NewspaperStatistics object.
+                media statistics or other MediaStatistics object.
 
         Returns:
-            bool: True if the values for the various fields of `nps_stats` where the
+            bool: True if the values for the various fields of `media_stats` where the
                 same, False otherwise.
         """
-        if isinstance(other_stats, NewspaperStatistics):
+        if isinstance(other_stats, MediaStatistics) or isinstance(other_stats, DataStatistics):
             other_stats = other_stats.pretty_print()
 
         self_stats = self.pretty_print()
-        return self_stats["nps_stats"] == other_stats["nps_stats"]
+        if "media_stats" not in other_stats:
+            # older manifests would have "nps_stats" instead of "media_stats"
+            return self_stats["media_stats"] == other_stats["nps_stats"]
+
+        return self_stats["media_stats"] == other_stats["media_stats"]

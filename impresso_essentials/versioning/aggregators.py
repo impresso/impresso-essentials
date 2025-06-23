@@ -1,5 +1,4 @@
-"""Helper functions to used to compute and aggragate the statistics of manifests.
-"""
+"""Helper functions to used to compute and aggragate the statistics of manifests."""
 
 import logging
 from ast import literal_eval
@@ -12,46 +11,89 @@ from dask.distributed import progress, Client
 logger = logging.getLogger(__name__)
 
 
+def log_src_medium_mismatch(obj_id: str, stage: str, prov_src_medium: str, found_src_medium: str) -> None:
+    """Log that the source medium found in the data to agg doesn't match the one previously set.
+
+    Args:
+        obj_id (str): Impresso ID of the object for which the mismatch was observed.
+        stage (str): Data Stage of the data which was being aggregated.
+        prov_src_medium (str): Previously given source medium.
+        found_src_medium (str): Source medium found in the data to be aggregated.
+
+    Raises:
+        AttributeError: There was a mismatch in the expected and found source mediums.
+    """
+    msg = (
+        f"{obj_id} - {stage} stage - Warning, mismatch between provided "
+        f"src_medium={prov_src_medium} and found src_medium={found_src_medium}!!"
+    )
+    logger.error(msg)
+    print(msg)
+    raise AttributeError(msg)
+
+
 def counts_for_canonical_issue(
-    issue: dict[str, Any], include_np_yr: bool = False
+    issue: dict[str, Any],
+    incl_alias_yr: bool = False,
+    src_medium: str | None = None,
 ) -> dict[str, int]:
     """Given the canonical representation of an issue, get its counts.
 
     Args:
         issue (dict[str, Any]): Canonical JSON representation of an issue.
-        include_np_yr (bool, optional): Whether the newspaper title and year should
+        incl_alias_yr (bool, optional): Whether the newspaper title and year should
             be included in the returned dict for later aggregation. Defaults to False.
+        src_medium (str, optional): The source medium of this issue. Defaults to None.
 
     Returns:
         dict[str, int]: Dict listing the counts for this issue, ready to be aggregated.
     """
     counts = (
         {
-            "np_id": issue["id"].split("-")[0],
+            "media_alias": issue["id"].split("-")[0],
             "year": issue["id"].split("-")[1],
         }
-        if include_np_yr
+        if incl_alias_yr
         else {}
     )
-    counts.update(
-        {
-            "issues": 1,
-            "pages": len(set(issue["pp"])),
-            "content_items_out": len(issue["i"]),
-            "images": len([item for item in issue["i"] if item["m"]["tp"] == "image"]),
-        }
-    )
+
+    update_dict = {
+        "issues": 1,
+        "content_items_out": len(issue["i"]),
+    }
+
+    if src_medium and src_medium == "audio":
+        if "sm" not in issue or issue["sm"] != src_medium:
+            # the source medium should always be defined for radio data
+            log_src_medium_mismatch(issue["id"], "canonical", src_medium, issue["sm"])
+
+        # case of audio
+        update_dict["audios"] = len(set(issue["rr"]))
+        counts.update(update_dict)
+    else:
+        if "sm" in issue and issue["sm"] != src_medium:
+            log_src_medium_mismatch(issue["id"], "canonical", src_medium, issue["sm"])
+
+        # case of paper (print and typescripts)
+        update_dict["pages"] = len(set(issue["pp"]))
+        update_dict["images"] = len(
+            [item for item in issue["i"] if item["m"]["tp"] == "image"]
+        )
+        counts.update(update_dict)
+
     return counts
 
 
 def counts_for_rebuilt(
-    rebuilt_ci: dict[str, Any], include_np: bool = False, passim: bool = False
+    rebuilt_ci: dict[str, Any],
+    include_alias: bool = False,
+    passim: bool = False,
 ) -> dict[str, int | str]:
     """Define the counts for 1 given rebuilt content-item to match the count keys.
 
     Args:
         rebuilt_ci (dict[str, Any]): Rebuilt content-item from which to extract counts.
-        include_np (bool, optional): Whether to include the title in resulting dict,
+        include_alias (bool, optional): Whether to include the title in resulting dict,
             not necessary for on-the-fly computation. Defaults to False.
         passim (bool, optional): True if rebuilt is in passim format. Defaults to False.
 
@@ -59,7 +101,7 @@ def counts_for_rebuilt(
         dict[str, Union[int, str]]: Dict with rebuilt (passim) keys and counts for 1 CI.
     """
     split_id = rebuilt_ci["id"].split("-")
-    counts = {"np_id": split_id[0]} if include_np else {}
+    counts = {"media_alias": split_id[0]} if include_alias else {}
     counts.update(
         {
             "year": split_id[1],
@@ -80,15 +122,19 @@ def counts_for_rebuilt(
 
 
 def compute_stats_in_canonical_bag(
-    s3_canonical_issues: Bag, client: Client | None = None, title: str | None = None
+    s3_canonical_issues: Bag,
+    client: Client | None = None,
+    title: str | None = None,
+    src_medium: str | None = None,
 ) -> list[dict[str, Any]]:
-    """Computes number of issues and pages per newspaper from a Dask bag of canonical data.
+    """Computes number of issues and supports per alias from a Dask bag of canonical data.
 
     Args:
         s3_canonical_issues (db.core.Bag): Bag with the contents of canonical files to
             compute statistics on.
         title (str, optional): Media title for which the stats are being computed.
             Defaults to None.
+        src_medium (str, optional): The source medium of this issue. Defaults to None.
 
     Returns:
         list[dict[str, Any]]: List of counts that match canonical DataStatistics keys.
@@ -96,35 +142,39 @@ def compute_stats_in_canonical_bag(
 
     print(f"{title} - Fetched all issues, gathering desired information.")
     logger.info("%s - Fetched all issues, gathering desired information.", title)
+
+    # prep the df's meta and aggregations based on the source medium
+    df_meta = {
+        "media_alias": str,
+        "year": str,
+        "issues": int,
+        "content_items_out": int,
+    }
+    df_agg = {
+        "issues": sum,
+        "content_items_out": sum,
+    }
+
+    if src_medium and src_medium == "audio":
+        df_meta["audios"] = int
+        df_agg["audios"] = sum
+    else:
+        df_meta["pages"] = int
+        df_meta["images"] = int
+        df_agg["pages"] = sum
+        df_agg["images"] = sum
+
     count_df = (
         s3_canonical_issues.map(
-            lambda i: counts_for_canonical_issue(i, include_np_yr=True)
+            lambda i: counts_for_canonical_issue(i, incl_alias_yr=True, src_medium=src_medium)
         )
-        .to_dataframe(
-            meta={
-                "np_id": str,
-                "year": str,
-                "issues": int,
-                "pages": int,
-                "images": int,
-                "content_items_out": int,
-            }
-        )
+        .to_dataframe(meta=df_meta)
         .persist()
     )
 
     # cum the counts for all values collected
     aggregated_df = (
-        count_df.groupby(by=["np_id", "year"])
-        .agg(
-            {
-                "issues": sum,
-                "pages": sum,
-                "content_items_out": sum,
-                "images": sum,
-            }
-        )
-        .reset_index()
+        count_df.groupby(by=["media_alias", "year"]).agg(df_agg).reset_index()
     ).persist()
 
     if client is not None:
@@ -132,15 +182,13 @@ def compute_stats_in_canonical_bag(
         progress(aggregated_df)
 
     print(f"{title} - Finished grouping and aggregating stats by title and year.")
-    logger.info(
-        "%s - Finished grouping and aggregating stats by title and year.", title
-    )
+    logger.info("%s - Finished grouping and aggregating stats by title and year.", title)
+
     # return as a list of dicts
     return aggregated_df.to_bag(format="dict").compute()
 
 
 ### DEFINITION of tunique ###
-
 
 # define locally the nunique() aggregation function for dask
 def chunk(s):
@@ -175,7 +223,7 @@ tunique = dd.Aggregation("tunique", chunk, agg, finalize)
 def compute_stats_in_rebuilt_bag(
     rebuilt_articles: Bag,
     key: str = "",
-    include_np: bool = False,
+    include_alias: bool = False,
     passim: bool = False,
     client: Client | None = None,
     title: str | None = None,
@@ -186,7 +234,7 @@ def compute_stats_in_rebuilt_bag(
         rebuilt_articles (db.core.Bag): Bag with the contents of rebuilt files.
         key (str, optional): Optionally title-year pair for on-the-fly computation.
             Defaults to "".
-        include_np (bool, optional): Whether to include the title in the groupby,
+        include_alias (bool, optional): Whether to include the title in the groupby,
             not necessary for on-the-fly computation. Defaults to False.
         passim (bool, optional): True if rebuilt is in passim format. Defaults to False.
         client (Client | None, optional): Dask client. Defaults to None.
@@ -199,11 +247,13 @@ def compute_stats_in_rebuilt_bag(
     """
     # when called in the rebuilt, all the rebuilt articles in the bag
     # are from the same newspaper and year
+    if title is None:
+        title = key.split("-")[0]
     print(f"{title} - Fetched all files, gathering desired information.")
     logger.info("%s - Fetched all files, gathering desired information.", title)
 
     # define the list of columns in the dataframe
-    df_meta = {"np_id": str} if include_np else {}
+    df_meta = {"media_alias": str} if include_alias else {}
     df_meta.update(
         {
             "year": str,
@@ -220,13 +270,13 @@ def compute_stats_in_rebuilt_bag(
 
     rebuilt_count_df = (
         rebuilt_articles.map(
-            lambda rf: counts_for_rebuilt(rf, include_np=include_np, passim=passim)
+            lambda rf: counts_for_rebuilt(rf, include_alias=include_alias, passim=passim)
         )
         .to_dataframe(meta=df_meta)
         .persist()
     )
 
-    gp_key = ["np_id", "year"] if include_np else "year"
+    gp_key = ["media_alias", "year"] if include_alias else "year"
     # agggregate them at the scale of the entire corpus
     # first groupby title, year and issue to also count the individual issues present
     if not passim:
@@ -239,7 +289,7 @@ def compute_stats_in_rebuilt_bag(
         )
 
     # when titles are included, multiple titles and years will be represented
-    if include_np:
+    if include_alias:
         aggregated_df = aggregated_df.reset_index().persist()
 
     msg = "Obtaining the yearly rebuilt statistics"
@@ -249,9 +299,7 @@ def compute_stats_in_rebuilt_bag(
         logger.info(msg)
 
     print(f"{title} - Finished grouping and aggregating stats by title and year.")
-    logger.info(
-        "%s - Finished grouping and aggregating stats by title and year.", title
-    )
+    logger.info("%s - Finished grouping and aggregating stats by title and year.", title)
 
     if client is not None:
         # only add the progress bar if the client is defined
@@ -280,12 +328,10 @@ def compute_stats_in_entities_bag(
     count_df = (
         s3_entities.map(
             lambda ci: {
-                "np_id": (
+                "media_alias": (
                     ci["id"].split("-")[0] if "id" in ci else ci["ci_id"].split("-")[0]
                 ),
-                "year": (
-                    ci["id"].split("-")[1] if "id" in ci else ci["ci_id"].split("-")[1]
-                ),
+                "year": (ci["id"].split("-")[1] if "id" in ci else ci["ci_id"].split("-")[1]),
                 "issues": (
                     "-".join(ci["id"].split("-")[:-1])
                     if "id" in ci
@@ -307,7 +353,7 @@ def compute_stats_in_entities_bag(
             }
         ).to_dataframe(
             meta={
-                "np_id": str,
+                "media_alias": str,
                 "year": str,
                 "issues": str,
                 "content_items_out": int,
@@ -326,7 +372,7 @@ def compute_stats_in_entities_bag(
 
     # cum the counts for all values collected
     aggregated_df = (
-        count_df.groupby(by=["np_id", "year"])
+        count_df.groupby(by=["media_alias", "year"])
         .agg(
             {
                 "issues": tunique,
@@ -339,9 +385,7 @@ def compute_stats_in_entities_bag(
     ).persist()
 
     print(f"{title} - Finished grouping and aggregating stats by title and year.")
-    logger.info(
-        "%s - Finished grouping and aggregating stats by title and year.", title
-    )
+    logger.info("%s - Finished grouping and aggregating stats by title and year.", title)
 
     if client is not None:
         # only add the progress bar if the client is defined
@@ -360,7 +404,9 @@ def compute_stats_in_entities_bag(
 
 
 def compute_stats_in_langident_bag(
-    s3_langident: Bag, client: Client | None = None, title: str | None = None
+    s3_langident: Bag,
+    client: Client | None = None,
+    title: str | None = None,
 ) -> list[dict[str, Any]]:
     """Compute stats on a dask bag of langident output content-items.
 
@@ -383,7 +429,7 @@ def compute_stats_in_langident_bag(
     count_df = (
         s3_langident.map(
             lambda ci: {
-                "np_id": ci["id"].split("-")[0],
+                "media_alias": ci["id"].split("-")[0],
                 "year": ci["id"].split("-")[1],
                 "issues": "-".join(ci["id"].split("-")[:-1]),
                 "content_items_out": 1,
@@ -393,7 +439,7 @@ def compute_stats_in_langident_bag(
         )
         .to_dataframe(
             meta={
-                "np_id": str,
+                "media_alias": str,
                 "year": str,
                 "issues": str,
                 "content_items_out": int,
@@ -406,7 +452,7 @@ def compute_stats_in_langident_bag(
 
     # cum the counts for all values collected
     aggregated_df = (
-        count_df.groupby(by=["np_id", "year"])
+        count_df.groupby(by=["media_alias", "year"])
         .agg(
             {
                 "issues": tunique,
@@ -422,9 +468,7 @@ def compute_stats_in_langident_bag(
     agg_bag = aggregated_df.to_bag(format="dict").map(freq)
 
     print(f"{title} - Finished grouping and aggregating stats by title and year.")
-    logger.info(
-        "%s - Finished grouping and aggregating stats by title and year.", title
-    )
+    logger.info("%s - Finished grouping and aggregating stats by title and year.", title)
 
     if client is not None:
         # only add the progress bar if the client is defined
@@ -434,7 +478,9 @@ def compute_stats_in_langident_bag(
 
 
 def compute_stats_in_text_reuse_passage_bag(
-    s3_tr_passages: Bag, client: Client | None = None, title: str | None = None
+    s3_tr_passages: Bag,
+    client: Client | None = None,
+    title: str | None = None,
 ) -> list[dict[str, Any]]:
     """Compute stats on a dask bag of text-reuse passages.
 
@@ -453,7 +499,7 @@ def compute_stats_in_text_reuse_passage_bag(
     count_df = (
         s3_tr_passages.map(
             lambda passage: {
-                "np_id": passage["ci_id"].split("-")[0],
+                "media_alias": passage["ci_id"].split("-")[0],
                 "year": passage["ci_id"].split("-")[1],
                 "issues": "-".join(passage["ci_id"].split("-")[:-1]),
                 "content_items_out": passage["ci_id"],
@@ -463,7 +509,7 @@ def compute_stats_in_text_reuse_passage_bag(
         )
         .to_dataframe(
             meta={
-                "np_id": str,
+                "media_alias": str,
                 "year": str,
                 "issues": str,
                 "content_items_out": str,
@@ -475,7 +521,7 @@ def compute_stats_in_text_reuse_passage_bag(
     )
 
     aggregated_df = (
-        count_df.groupby(by=["np_id", "year"])
+        count_df.groupby(by=["media_alias", "year"])
         .agg(
             {
                 "issues": tunique,
@@ -489,9 +535,7 @@ def compute_stats_in_text_reuse_passage_bag(
     ).persist()
 
     print(f"{title} - Finished grouping and aggregating stats by title and year.")
-    logger.info(
-        "%s - Finished grouping and aggregating stats by title and year.", title
-    )
+    logger.info("%s - Finished grouping and aggregating stats by title and year.", title)
 
     if client is not None:
         # only add the progress bar if the client is defined
@@ -502,7 +546,9 @@ def compute_stats_in_text_reuse_passage_bag(
 
 
 def compute_stats_in_topics_bag(
-    s3_topics: Bag, client: Client | None = None, title: str | None = None
+    s3_topics: Bag,
+    client: Client | None = None,
+    title: str | None = None,
 ) -> list[dict[str, Any]]:
     """Compute stats on a dask bag of topic modeling output content-items.
 
@@ -547,7 +593,7 @@ def compute_stats_in_topics_bag(
 
     count_df = s3_topics.map(
         lambda ci: {
-            "np_id": ci["ci_id"].split("-")[0],
+            "media_alias": ci["ci_id"].split("-")[0],
             "year": ci["ci_id"].split("-")[1],
             "issues": ci["ci_id"].split("-i")[0],
             "content_items_out": 1,
@@ -557,7 +603,7 @@ def compute_stats_in_topics_bag(
         }
     ).to_dataframe(
         meta={
-            "np_id": str,
+            "media_alias": str,
             "year": str,
             "issues": str,
             "content_items_out": int,
@@ -572,7 +618,7 @@ def compute_stats_in_topics_bag(
     # cum the counts for all values collected
     aggregated_df = (
         count_df.explode("topics")
-        .groupby(by=["np_id", "year"])
+        .groupby(by=["media_alias", "year"])
         .agg({"issues": tunique, "content_items_out": sum, "topics": [tunique, list]})
     )
 
@@ -581,7 +627,7 @@ def compute_stats_in_topics_bag(
         aggregated_df.reset_index()
         .rename(
             columns={
-                ("np_id", ""): "np_id",
+                ("media_alias", ""): "media_alias",
                 ("year", ""): "year",
                 ("issues", "tunique"): "issues",
                 ("content_items_out", "sum"): "content_items_out",
@@ -597,9 +643,7 @@ def compute_stats_in_topics_bag(
     )
 
     print(f"{title} - Finished grouping and aggregating stats by title and year.")
-    logger.info(
-        "%s - Finished grouping and aggregating stats by title and year.", title
-    )
+    logger.info("%s - Finished grouping and aggregating stats by title and year.", title)
 
     if client is not None:
         # only add the progress bar if the client is defined
@@ -643,7 +687,7 @@ def compute_stats_in_img_emb_bag(
     count_df = (
         s3_emb_images.map(
             lambda ci: {
-                "np_id": ci["ci_id"].split("-")[0],
+                "media_alias": ci["ci_id"].split("-")[0],
                 "year": ci["ci_id"].split("-")[1],
                 "issues": "-".join(ci["ci_id"].split("-")[:-1]),
                 "content_items_out": 1,
@@ -652,7 +696,7 @@ def compute_stats_in_img_emb_bag(
         )
         .to_dataframe(
             meta={
-                "np_id": str,
+                "media_alias": str,
                 "year": str,
                 "issues": str,
                 "content_items_out": int,
@@ -663,7 +707,7 @@ def compute_stats_in_img_emb_bag(
     )
 
     aggregated_df = (
-        count_df.groupby(by=["np_id", "year"])
+        count_df.groupby(by=["media_alias", "year"])
         .agg(
             {
                 "issues": tunique,
@@ -676,9 +720,7 @@ def compute_stats_in_img_emb_bag(
     ).persist()
 
     print(f"{title} - Finished grouping and aggregating stats by title and year.")
-    logger.info(
-        "%s - Finished grouping and aggregating stats by title and year.", title
-    )
+    logger.info("%s - Finished grouping and aggregating stats by title and year.", title)
 
     if client is not None:
         # only add the progress bar if the client is defined
@@ -714,15 +756,15 @@ def compute_stats_in_lingproc_bag(
     count_df = (
         s3_lingprocs.map(
             lambda ci: {
-                "np_id": ci.get("ci_id",ci.get("id")).split("-")[0],
-                "year": ci.get("ci_id",ci.get("id")).split("-")[1],
-                "issues": "-".join(ci.get("ci_id",ci.get("id")).split("-")[:-1]),
+                "media_alias": ci.get("ci_id", ci.get("id")).split("-")[0],
+                "year": ci.get("ci_id", ci.get("id")).split("-")[1],
+                "issues": "-".join(ci.get("ci_id", ci.get("id")).split("-")[:-1]),
                 "content_items_out": 1,
             }
         )
         .to_dataframe(
             meta={
-                "np_id": str,
+                "media_alias": str,
                 "year": str,
                 "issues": str,
                 "content_items_out": int,
@@ -732,7 +774,7 @@ def compute_stats_in_lingproc_bag(
     )
 
     aggregated_df = (
-        count_df.groupby(by=["np_id", "year"])
+        count_df.groupby(by=["media_alias", "year"])
         .agg(
             {
                 "issues": tunique,
@@ -744,9 +786,7 @@ def compute_stats_in_lingproc_bag(
     ).persist()
 
     print(f"{title} - Finished grouping and aggregating stats by title and year.")
-    logger.info(
-        "%s - Finished grouping and aggregating stats by title and year.", title
-    )
+    logger.info("%s - Finished grouping and aggregating stats by title and year.", title)
 
     if client is not None:
         # only add the progress bar if the client is defined
@@ -754,6 +794,7 @@ def compute_stats_in_lingproc_bag(
 
     # return as a list of dicts
     return aggregated_df.to_bag(format="dict").compute()
+
 
 def compute_stats_in_solr_text_ing_bag(
     s3_solr_ing_cis: Bag,
@@ -781,7 +822,7 @@ def compute_stats_in_solr_text_ing_bag(
     count_df = (
         s3_solr_ing_cis.map(
             lambda ci: {
-                "np_id": ci["id"].split("-")[0],
+                "media_alias": ci["id"].split("-")[0],
                 "year": ci["id"].split("-")[1],
                 "issues": "-".join(ci["id"].split("-")[:-1]),
                 "content_items_out": 1,
@@ -790,7 +831,7 @@ def compute_stats_in_solr_text_ing_bag(
         )
         .to_dataframe(
             meta={
-                "np_id": str,
+                "media_alias": str,
                 "year": str,
                 "issues": str,
                 "content_items_out": int,
@@ -801,7 +842,7 @@ def compute_stats_in_solr_text_ing_bag(
     )
 
     aggregated_df = (
-        count_df.groupby(by=["np_id", "year"])
+        count_df.groupby(by=["media_alias", "year"])
         .agg(
             {
                 "issues": tunique,
@@ -814,9 +855,7 @@ def compute_stats_in_solr_text_ing_bag(
     ).persist()
 
     print(f"{title} - Finished grouping and aggregating stats by title and year.")
-    logger.info(
-        "%s - Finished grouping and aggregating stats by title and year.", title
-    )
+    logger.info("%s - Finished grouping and aggregating stats by title and year.", title)
 
     if client is not None:
         # only add the progress bar if the client is defined
@@ -852,16 +891,16 @@ def compute_stats_in_ocrqa_bag(
     count_df = (
         s3_ocrqas.map(
             lambda ci: {
-                "np_id": ci["ci_id"].split("-")[0],
+                "media_alias": ci["ci_id"].split("-")[0],
                 "year": ci["ci_id"].split("-")[1],
                 "issues": "-".join(ci["ci_id"].split("-")[:-1]),
                 "content_items_out": 1,
-                "avg_ocrqa": ci['ocrqa'],
+                "avg_ocrqa": ci["ocrqa"],
             }
         )
         .to_dataframe(
             meta={
-                "np_id": str,
+                "media_alias": str,
                 "year": str,
                 "issues": str,
                 "content_items_out": int,
@@ -872,12 +911,12 @@ def compute_stats_in_ocrqa_bag(
     )
 
     aggregated_df = (
-        count_df.groupby(by=["np_id", "year"])
+        count_df.groupby(by=["media_alias", "year"])
         .agg(
             {
                 "issues": tunique,
                 "content_items_out": sum,
-                "avg_ocrqa": 'mean',
+                "avg_ocrqa": "mean",
             }
         )
         .reset_index()
@@ -885,9 +924,7 @@ def compute_stats_in_ocrqa_bag(
     ).persist()
 
     print(f"{title} - Finished grouping and aggregating stats by title and year.")
-    logger.info(
-        "%s - Finished grouping and aggregating stats by title and year.", title
-    )
+    logger.info("%s - Finished grouping and aggregating stats by title and year.", title)
 
     aggregated_df["avg_ocrqa"] = aggregated_df["avg_ocrqa"].apply(
         lambda x: round(x, 3), meta=("avg_ocrqa", "float")
@@ -927,7 +964,7 @@ def compute_stats_in_doc_emb_bag(
     count_df = (
         s3_doc_embeddings.map(
             lambda ci: {
-                "np_id": ci["ci_id"].split("-")[0],
+                "media_alias": ci["ci_id"].split("-")[0],
                 "year": ci["ci_id"].split("-")[1],
                 "issues": "-".join(ci["ci_id"].split("-")[:-1]),
                 "content_items_out": 1,
@@ -935,7 +972,7 @@ def compute_stats_in_doc_emb_bag(
         )
         .to_dataframe(
             meta={
-                "np_id": str,
+                "media_alias": str,
                 "year": str,
                 "issues": str,
                 "content_items_out": int,
@@ -945,7 +982,7 @@ def compute_stats_in_doc_emb_bag(
     )
 
     aggregated_df = (
-        count_df.groupby(by=["np_id", "year"])
+        count_df.groupby(by=["media_alias", "year"])
         .agg(
             {
                 "issues": tunique,
@@ -957,9 +994,7 @@ def compute_stats_in_doc_emb_bag(
     ).persist()
 
     print(f"{title} - Finished grouping and aggregating stats by title and year.")
-    logger.info(
-        "%s - Finished grouping and aggregating stats by title and year.", title
-    )
+    logger.info("%s - Finished grouping and aggregating stats by title and year.", title)
 
     if client is not None:
         # only add the progress bar if the client is defined

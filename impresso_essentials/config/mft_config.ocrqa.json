@@ -3,7 +3,7 @@
     "output_bucket": "42-processed-data-final/ocrqa/ocrqa-ocrqa-wp_v1.0.6_v1-0-0/",
     "input_bucket": "22-rebuilt-final",
     "git_repository": "FILL ME",
-    "newspapers": [],
+    "media_aliases": [],
     "temp_directory": "FILL ME",
     "previous_mft_s3_path": "",
     "is_patch": false,

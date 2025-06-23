@@ -5,7 +5,7 @@ Usage:
 
 Options:
 
---config-file=<cf>  Path to configuration json file containing all necessary arguments for the computation of the manifest.
+--config-file=<cf>  Path to config file containing all arguments for manifest computation.
 --log-file=<lf>  Path to log file to use.
 --scheduler=<sch>  Tell dask to use an existing scheduler (otherwise it'll create one)
 --nworkers=<nw>  number of workers for (local) Dask client.
@@ -24,8 +24,15 @@ from tqdm import tqdm
 import dask.bag as db
 from dask.distributed import Client
 from impresso_essentials.io.s3 import fixed_s3fs_glob, IMPRESSO_STORAGEOPT
-from impresso_essentials.utils import init_logger, ALL_MEDIA
-from impresso_essentials.versioning.helpers import validate_stage, DataStage
+from impresso_essentials.utils import (
+    init_logger,
+    ALL_MEDIA,
+    PARTNER_TO_MEDIA,
+    get_provider_for_alias,
+    get_src_info_for_alias,
+    validate_stage,
+    DataStage
+)
 from impresso_essentials.versioning import aggregators
 from impresso_essentials.versioning.data_manifest import DataManifest
 
@@ -34,7 +41,7 @@ logger = logging.getLogger(__name__)
 # list of optional configurations
 OPT_CONFIG_KEYS = [
     "input_bucket",
-    "newspapers",
+    "media_aliases",
     "previous_mft_s3_path",
     "is_patch",
     "patched_fields",
@@ -56,21 +63,24 @@ REQ_CONFIG_KEYS = [
 ]
 
 
-def extract_np_key(s3_key: str, bucket: str) -> str:
-    """Extract the newspaper an s3:key corresponds to given the bucket and partition
+def extract_provider_alias_key(s3_key: str, bucket: str) -> tuple[str, str]:
+    """Extract the media alias an s3:key corresponds to given the bucket and partition
+
+    TODO adapt when provider is added to the s3 organisation.
 
     eg. s3_key is in format:
-    - s3_key: 's3://31-passim-rebuilt-staging/passim/indeplux/indeplux-1889.jsonl.bz2'
+    - s3_key: 's3://31-passim-rebuilt-staging/passim/[provider]/indeplux/indeplux-1889.jsonl.bz2'
     - bucket: '31-passim-rebuilt-staging/passim'
     --> returns 'indeplux'
 
     Args:
         s3_key (str): Full S3 path of a file (as returned by fixed_s3fs_glob).
-        bucket (str): S3 bucket, including partition, in which the newspaper dirs are.
+        bucket (str): S3 bucket, including partition, in which the media dirs are.
 
     Returns:
-        str: Name of the corresponding newspaper, extracted form the s3 path.
+        tuple[str, str]: Media alias of the corresponding media, and corresponding provider.
     """
+    # TODO change to extract alias key and add provider
     # in format: 's3://31-passim-rebuilt-staging/passim/indeplux/indeplux-1889.jsonl.bz2'
     if not bucket.endswith("/"):
         bucket = f"{bucket}/"
@@ -79,11 +89,14 @@ def extract_np_key(s3_key: str, bucket: str) -> str:
         key_no_bucket = s3_key.replace(f"{bucket}", "")
     else:
         key_no_bucket = s3_key.replace(f"s3://{bucket}", "")
+
     # Not all buckets separate the data per title, but the title will always come first.
     if "/" in key_no_bucket:
-        return key_no_bucket.split("/")[0]
+        alias = key_no_bucket.split("/")[0]
+    else:
+        alias = key_no_bucket.split("-")[0]
 
-    return key_no_bucket.split("-")[0]
+    return alias, get_provider_for_alias(alias)
 
 
 def remove_corrupted_files(s3_files: dict[str, list[str]]) -> dict[str, list[str]]:
@@ -156,8 +169,8 @@ def remove_corrupted_files(s3_files: dict[str, list[str]]) -> dict[str, list[str
     total_num_files = sum(len(v) for v in s3_files.values())
     num_ok_files = sum(len(v) for v in correct_files.values())
     msg = (
-        f"Found {total_num_files} files on S3, {len(corrupted_files)} were corrupted. "
-        f"As a result, the remaining {num_ok_files} will be considered for the manifest computation."
+        f"Found {total_num_files} files on S3, {len(corrupted_files)} were corrupted. As a "
+        f"result, the remaining {num_ok_files} will be considered for the manifest computation."
     )
     logger.info(msg)
     print(msg)
@@ -170,16 +183,20 @@ def remove_corrupted_files(s3_files: dict[str, list[str]]) -> dict[str, list[str
     return correct_files
 
 
-def get_files_to_consider(config: dict[str, Any]) -> Optional[dict[str, list[str]]]:
+def get_files_to_consider(config: dict[str, Any]) -> Optional[dict[str, dict[str, list[str]]]]:
     """Get the list of S3 files to consider based on the provided configuration.
+
+    # TODO add "provider" to the config dict and use it to filter the files
+
+    The s3_files mapping is now provider -> alias -> list of files.
 
     Args:
         config (dict[str, Any]): Configuration parameters with the s3 bucket, titles,
             and file extensions
 
     Returns:
-        dict[str, list[str]] | None: Dict mapping each newspaper to the s3 files to
-            consider, or None if no files found.
+        dict[str, dict[str, list[str]]] | None: Dict mapping each provider to a dict mapping each
+            alias to the s3 files to consider, or None if no files found.
 
     Raises:
         ValueError: If `file_extensions` in the config is empty or None.
@@ -188,32 +205,49 @@ def get_files_to_consider(config: dict[str, Any]) -> Optional[dict[str, list[str
         raise ValueError("Config file's `file_extensions` should not be empty or None.")
 
     ext = config["file_extensions"]
+    if config["data_stage"] == "canonical":
+        # for canonical data, we only select issues, override the value provided
+        ext = "issues.jsonl.bz2"
+    # change "." in ext with `ext.startswith('.')`?
     extension_filter = f"*{ext}" if "." in ext else f"*.{ext}"
-
-    # if newspapers is empty, include all newspapers
-    if config["newspapers"] is None or len(config["newspapers"]) == 0:
+    
+    # TODO here handle case where provider list is given
+    if config["media_aliases"] is None or len(config["media_aliases"]) == 0:
+        # if media_aliases is empty, include all media_aliases
         logger.info("Fetching the files to consider for all titles...")
-        # TODO update list_newspapers to include possibility of partition, and unify both cases
+        print("Fetching the files to consider for all titles...")
         # return all filenames in the given bucket partition with the correct extension
         files = fixed_s3fs_glob(os.path.join(config["output_bucket"], extension_filter))
         s3_files = {}
         for s3_key in files:
-            np = extract_np_key(s3_key, config["output_bucket"])
-            if np in s3_files:
-                s3_files[np].append(s3_key)
+            alias, provider = extract_provider_alias_key(s3_key, config["output_bucket"])
+            # add the provider as a first level key
+            if provider in s3_files:
+                if alias in s3_files[provider]:
+                    s3_files[provider][alias].append(s3_key)
+                else:
+                    s3_files[provider][alias] = [s3_key]
             else:
-                s3_files[np] = [s3_key]
-        # return s3_files
+                s3_files[provider] = {alias: [s3_key]}
+
     else:
-        # here list newspapers instead and s3_files becomes a dict np -> liest of files
-        logger.info(
-            "Fetching the files to consider for titles %s...", config["newspapers"]
-        )
+        # here only add files for aliases in media_aliases instead
+        msg = f"Fetching the files to consider for titles {config['media_aliases']}..."
+        logger.info(msg)
+        print(msg)
         s3_files = {}
-        for np in config["newspapers"]:
-            s3_files[np] = fixed_s3fs_glob(
-                os.path.join(config["output_bucket"], np, extension_filter)
-            )
+        for alias in config["media_aliases"]:
+            provider = get_provider_for_alias(alias)
+            if provider in s3_files:
+                s3_files[provider][alias] = fixed_s3fs_glob(
+                    os.path.join(config["output_bucket"], alias, extension_filter)
+                )  # TODO add provider to path when s3 structure changes
+            else:
+                s3_files[provider] = {
+                    alias: fixed_s3fs_glob(
+                        os.path.join(config["output_bucket"], alias, extension_filter)
+                    )  # TODO add providerto path when s3 structure changes
+                }
 
     if config["check_s3_archives"]:
         # filter out empty or corrupted files
@@ -222,7 +256,8 @@ def get_files_to_consider(config: dict[str, Any]) -> Optional[dict[str, list[str
 
     msg = (
         "Not checking for any corrupted S3 archives before launching the manifest computation. "
-        "If you encounter any problems regarding the reading of the archives, please set `check_s3_archives` to True."
+        "If you encounter any problems regarding the reading of the archives, "
+        "please set `check_s3_archives` to True."
     )
     logger.info(msg)
     print(msg)
@@ -234,6 +269,7 @@ def compute_stats_for_stage(
     stage: DataStage,
     client: Client | None = None,
     title: str | None = None,
+    src_medium: str | None = None,
 ) -> list[dict] | None:
     """Compute statistics for a specific data stage.
 
@@ -243,6 +279,7 @@ def compute_stats_for_stage(
         client (Client | None, optional): Dask client to use.
         title (str, optional): Media title for which the stats are being computed.
             Defaults to None.
+        src_medium (str, optional): Source medium of the title to process, used for canonical data.
 
     Returns:
         list[dict] | None]: List of computed yearly statistics, or None if statistics
@@ -251,11 +288,11 @@ def compute_stats_for_stage(
     match stage:
         case DataStage.CANONICAL:
             return aggregators.compute_stats_in_canonical_bag(
-                files_bag, client=client, title=title
+                files_bag, client=client, title=title, src_medium=src_medium
             )
         case DataStage.REBUILT:
             return aggregators.compute_stats_in_rebuilt_bag(
-                files_bag, include_np=True, client=client, title=title
+                files_bag, include_alias=True, client=client, title=title
             )
         case DataStage.ENTITIES:
             return aggregators.compute_stats_in_entities_bag(
@@ -267,7 +304,11 @@ def compute_stats_for_stage(
             )
         case DataStage.PASSIM:
             return aggregators.compute_stats_in_rebuilt_bag(
-                files_bag, include_np=True, passim=True, client=client, title=title
+                files_bag,
+                include_alias=True,
+                passim=True,
+                client=client,
+                title=title,
             )
         case DataStage.LANGIDENT:
             return aggregators.compute_stats_in_langident_bag(
@@ -318,9 +359,7 @@ def validate_config(config: dict[str, Any]) -> dict[str, Any]:
     Returns:
         dict[str, Any]: Updated config, with any mssing optional argument set to None.
     """
-    logger.info(
-        "Validating that the provided configuration has all required arugments."
-    )
+    logger.info("Validating that the provided configuration has all required arugments.")
     if not all([k in config for k in REQ_CONFIG_KEYS]):
         raise ValueError(f"Missing some required configurations: {REQ_CONFIG_KEYS}")
 
@@ -333,33 +372,56 @@ def validate_config(config: dict[str, Any]) -> dict[str, Any]:
 
 
 def add_stats_to_mft(
-    manifest: DataManifest, np_title: str, computed_stats: list[dict]
+    manifest: DataManifest,
+    media_alias: str,
+    computed_stats: list[dict],
+    src_medium: str | None = None,
+    provider: str | None = None,
 ) -> DataManifest:
+    """Add the statistics computed for a given media alias to an instantiated manifest.
+
+    Performs validation to ensure that statistics are being added for the correct media title.
+
+    Args:
+        manifest (DataManifest): The manifest object to which the statistics will be added.
+        media_alias (str): The alias representing the media title these stats belong to.
+        computed_stats (list[dict]): A list of dictionaries, each containing computed
+            statistics corresponding to a given stage along with `media_alias` and `year` keys.
+        src_medium (str | None, optional): The source medium of the alias. Defaults to None.
+        provider (str | None, optional): The data provider identifier. Defaults to None.
+
+    Returns:
+        DataManifest: The updated DataManifest instance with the added statistics.
+    """
     logger.info(
         "%s - Populating the manifest with the resulting %s yearly statistics found...",
-        np_title,
+        media_alias,
         len(computed_stats),
     )
-    logger.debug("%s - computed_stats: %s", np_title, computed_stats)
+    logger.debug("%s - computed_stats: %s", media_alias, computed_stats)
 
     for stats in computed_stats:
-        title = stats["np_id"]
-        if title != np_title and np_title in ALL_MEDIA:
+        title = stats["media_alias"]
+        if title != media_alias and media_alias in ALL_MEDIA:
             # unless the value for np_title is the name of a file, ensure the correct stats are being added.
             msg = (
                 "Warning, some stats were computed on the wrong title! Not adding them."
-                f"np_title={np_title}, title={title}, year={stats['year']}."
+                f"media_alias={media_alias}, title={title}, year={stats['year']}."
             )
             print(msg)
             logger.info(msg)
         else:
+            # added here meanwhile we add the provider in process_by_title
             year = stats["year"]
-            del stats["np_id"]
+            del stats["media_alias"]
             del stats["year"]
-            logger.debug("Adding %s to %s-%s", stats, title, year)
-            manifest.add_by_title_year(title, year, stats)
+            logger.debug("Adding %s to %s-%s (%s)", stats, title, year, provider)
+            manifest.add_by_title_year(
+                title, year, stats, src_medium=src_medium, provider=provider
+            )
 
-    logger.info("%s - Finished adding stats, going to the next title...", np_title)
+    logger.info("%s - Finished adding stats, going to the next title...", media_alias)
+
     return manifest
 
 
@@ -369,35 +431,64 @@ def process_by_title(
     stage: DataStage,
     client: Client | None,
 ) -> DataManifest:
+    """Process compute statistics for stage by media title and add them to the manifest.
+
+    Invalid or mismatched aliases are logged and ignored.
+
+    Args:
+        manifest (DataManifest): The manifest object to be populated with computed statistics.
+        s3_files (dict[str, list[str]]): A nested dictionary mapping each provider to a dictionary
+            of media aliases and their corresponding lists of S3 file paths.
+        stage (DataStage): The processing stage that determines how statistics should be computed.
+        client (Client | None): Optional Dask client used to parallelize computation, if available.
+
+    Returns:
+        DataManifest: The updated DataManifest instance with added statistics for each valid alias.
+    """
+    print("\n-> Starting computing the manifest by title <-")
     logger.info("\n-> Starting computing the manifest by title <-")
-    for np_title, np_s3_files in s3_files.items():
 
-        if np_title in ALL_MEDIA:
-            logger.info("---------- %s ----------", np_title)
-            logger.info(
-                "The list of files selected for %s is: %s",
-                np_title,
-                np_s3_files,
-            )
-            # load the selected files in dask bags
-            processed_files = db.read_text(
-                np_s3_files, storage_options=IMPRESSO_STORAGEOPT
-            ).map(json.loads)
+    for provider, provider_alias_files in s3_files.items():
+        for alias, s3_files_for_alias in provider_alias_files.items():
 
-            logger.info(
-                "%s - Starting to compute the statistics on the fetched files...",
-                np_title,
-            )
-            computed_stats = compute_stats_for_stage(
-                processed_files, stage, client, title=np_title
-            )
+            if alias in PARTNER_TO_MEDIA[provider]:
+                logger.info("---------- %s (%s) ----------", alias, provider)
+                msg = f"The list of files selected for {alias} is: {s3_files_for_alias}"
+                logger.info(msg)
+                # load the selected files in dask bags
+                processed_files = db.read_text(
+                    s3_files_for_alias, storage_options=IMPRESSO_STORAGEOPT
+                ).map(json.loads)
 
-            manifest = add_stats_to_mft(manifest, np_title, computed_stats)
-        else:
-            logger.info(
-                "Found S3 files for %s which is not an known media title, it will be ignored.",
-                np_title,
-            )
+                msg = f"{alias} - Starting to compute the statistics on the fetched files..."
+                logger.info(msg)
+                print(msg)
+                src_medium = get_src_info_for_alias(alias, provider)
+                computed_stats = compute_stats_for_stage(
+                    processed_files,
+                    stage,
+                    client,
+                    title=alias,
+                    src_medium=src_medium,
+                )
+
+                manifest = add_stats_to_mft(
+                    manifest, alias, computed_stats, src_medium, provider
+                )
+            elif alias in ALL_MEDIA:
+                msg = (
+                    f"Found S3 files for {alias} which is in ALL_MEDIA but not of "
+                    f"the provider {provider} - error to be checked, it will be ignored."
+                )
+                logger.info(msg)
+                print(msg)
+            else:
+                msg = (
+                    f"Found S3 files for {alias} which is not a media title of the "
+                    f"provider {provider}, it will be ignored.",
+                )
+                logger.info(msg)
+                print(msg)
 
     return manifest
 
@@ -408,48 +499,65 @@ def process_altogether(
     stage: DataStage,
     client: Client | None,
 ) -> DataManifest:
-    logger.info(
-        "\n-> Starting to compute the manifest altogether, filterting iteratively by title <-"
-    )
+    """Process all fetched S3 files at once, filtering them by title to populate the manifest.
+
+    The equivalent of `process_by_title` but when working with large unified datasets.
+
+    Args:
+        manifest (DataManifest): The manifest object to be populated with computed statistics.
+        s3_files (dict[str, list[str]]): A dictionary mapping each provider to a list of S3 file paths.
+        stage (DataStage): The stage of data processing, which determines how statistics should be computed.
+        client (Client | None): Optional Dask client to parallelize computation when available.
+
+    Returns:
+        DataManifest: The updated manifest instance containing statistics for each processed media alias.
+    """
+    msg = "\n-> Starting to compute the manifest altogether, filterting iteratively by title <-"
+    logger.info(msg)
+    print(msg)
 
     s3_fpaths = [j for part_j in s3_files.values() for j in part_j]
     logger.debug("The list of files selected is: %s", s3_fpaths)
     # load the selected files in dask bags
     processed_files = (
-        db.read_text(s3_fpaths, storage_options=IMPRESSO_STORAGEOPT)
-        .map(json.loads)
-        .persist()
+        db.read_text(s3_fpaths, storage_options=IMPRESSO_STORAGEOPT).map(json.loads).persist()
     )  # .map(lambda x: (x['ci_id'].split('-')[0], x)).persist()
 
     total_num = len(ALL_MEDIA)
-    for idx, np_title in enumerate(ALL_MEDIA):
+    cum_idx = 0
+    for provider, prov_aliases in PARTNER_TO_MEDIA.items():
+        num_aliases = len(prov_aliases)
+        msg = f"{'-'*10} PROCESSING MEDIA TITLES FROM {provider} ({num_aliases} titles) {'-'*10}"
+        logger.info(msg)
 
-        logger.info("---------- %s - %s/%s ----------", np_title, idx + 1, total_num)
+        for idx, alias in enumerate(prov_aliases):
 
-        # filter to only keep the tr_passages for this title
-        filtered = processed_files.filter(
-            lambda x: x["ci_id"].startswith(f"{np_title}-")  # in x["ci_id"]
-        ).persist()
+            msg = (
+                f"{'-'*10} {alias} - {cum_idx + idx + 1}/{total_num} - "
+                f"(for {provider} {idx+1}/{num_aliases}) {'-'*10}"
+            )
+            logger.info(msg)
 
-        logger.info(
-            "%s - Starting to compute the statistics on the filtered files...",
-            np_title,
-        )
-        computed_stats = compute_stats_for_stage(
-            filtered, stage, client, title=np_title
-        )
+            # filter to only keep the tr_passages for this title
+            filtered = processed_files.filter(
+                lambda x: x["ci_id"].startswith(f"{alias}-")  # in x["ci_id"]
+            ).persist()
+            logger.info("%s - Computing the statistics on the filtered files...", alias)
 
-        manifest = add_stats_to_mft(manifest, np_title, computed_stats)
+            src_medium = get_src_info_for_alias(alias, provider)
+            computed_stats = compute_stats_for_stage(
+                filtered, stage, client, title=alias, src_medium=src_medium
+            )
+
+            manifest = add_stats_to_mft(manifest, alias, computed_stats, src_medium, provider)
+        cum_idx += num_aliases
 
     return manifest
 
 
-def create_manifest(
-    config_dict: dict[str, Any], client: Optional[Client] = None
-) -> None:
+def create_manifest(config_dict: dict[str, Any], client: Optional[Client] = None) -> None:
     """Given its configuration, generate the manifest for a given s3 bucket partition.
 
-    TODO: add options to exclude NP for all agg types
     TODO: separate further into functions
 
     Note:
@@ -474,8 +582,11 @@ def create_manifest(
     # fetch the names of the files to consider separated per title
     s3_files = get_files_to_consider(config_dict)
 
+    num_files = sum(len(aliases.values()) for aliases in s3_files.values())
     logger.info(
-        "Collected a total of %s files, reading them...", len(s3_files.values())
+        "Collected a total of %s files from %s media titles, reading them...",
+        num_files,
+        len(s3_files.values()),
     )
 
     logger.info("Files identified successfully, initialising the manifest.")
@@ -513,7 +624,7 @@ def create_manifest(
         # the manifest needs to be computed on all the data at once
         manifest = process_altogether(manifest, s3_files, stage, client)
     else:
-        # processing newspapers one at a time
+        # processing media_aliases one at a time
         manifest = process_by_title(manifest, s3_files, stage, client)
 
     logger.info("Finalizing the manifest, and computing the result...")
@@ -522,10 +633,10 @@ def create_manifest(
         manifest.append_to_notes(config_dict["notes"])
     else:
         note = f"Processing data to generate {stage} for "
-        if len(config_dict["newspapers"]) != 0:
-            note += f"titles: {config_dict['newspapers']}."
+        if len(config_dict["media_aliases"]) != 0:
+            note += f"titles: {config_dict['media_aliases']}."
         else:
-            note += "all newspaper titles."
+            note += "all media titles."
 
         manifest.append_to_notes(note)
 

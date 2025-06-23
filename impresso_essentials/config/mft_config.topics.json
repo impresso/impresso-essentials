@@ -3,7 +3,7 @@
     "output_bucket": "41-processed-data-staging/topics/topics-tm-mallet_infer_seed42_v2.0.1-multilingual_v2-0-1",
     "input_bucket": "22-rebuilt-final",
     "git_repository": "/home/piconti/impresso-essentials",
-    "newspapers": [],
+    "media_aliases": [],
     "temp_directory": "/scratch/piconti/impresso/git_temp_folder",
     "previous_mft_s3_path": "",
     "is_patch": false,

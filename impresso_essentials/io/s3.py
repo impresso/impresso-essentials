@@ -1,12 +1,10 @@
-"""Reusable functions to read/write data from/to our S3 drive.
-"""
+"""Reusable functions to read/write data from/to our S3 drive."""
 
 import bz2
 import json
 import logging
 import os
 from typing import Callable, Generator
-from collections import namedtuple
 
 import boto3
 from boto3.resources.base import ServiceResource
@@ -16,7 +14,7 @@ from dotenv import load_dotenv
 from smart_open import open as s_open
 import dask.bag as db
 
-from impresso_essentials.utils import bytes_to, id_to_issuedir
+from impresso_essentials.utils import bytes_to, id_to_issuedir, IssueDir
 
 logger = logging.getLogger(__name__)
 
@@ -52,9 +50,6 @@ def get_storage_options() -> dict[str, dict | str]:
 
 
 IMPRESSO_STORAGEOPT = get_storage_options()
-
-IssueDir = namedtuple("IssueDirectory", ["journal", "date", "edition", "path"])
-
 
 def get_s3_client(
     host_url: str | None = "https://os.zhdk.cloud.switch.ch/",
@@ -196,9 +191,7 @@ def read_jsonlines(key_name: str, bucket_name: str) -> Generator:
         body = s3r.Object(bucket_name, key_name).get()["Body"]
 
     except s3r.meta.client.exceptions.NoSuchKey as e:
-        msg = (
-            f"The provided key_name {bucket_name}/{key_name} isn't in this bucket: {e}"
-        )
+        msg = f"The provided key_name {bucket_name}/{key_name} isn't in this bucket: {e}"
         raise ValueError(msg) from e
 
     data = body.read()
@@ -217,7 +210,7 @@ def readtext_jsonlines(
     """Given the S3 key of a jsonl.bz2 archive, return its lines textual information.
 
     Only the provided fields (or default ones) will be kept in the returned lines.
-    By default, fields_to_keep = ["id", "pp", "ts", "lg", "tp", "t", "ft"].
+    By default, fields_to_keep = ["id", "st", "sm", "pp", "rr", "ts", "lg", "tp", "title", "ft"]
 
     This can serve as the starting point for pure textual processing.
     Usage example:
@@ -236,15 +229,13 @@ def readtext_jsonlines(
     """
     if fields_to_keep is None:
         # if no fields were provided
-        fields_to_keep = ["id", "pp", "ts", "lg", "tp", "t", "ft"]
+        fields_to_keep = ["id", "st", "sm", "pp", "rr", "ts", "lg", "tp", "title", "ft"]
 
     s3r = get_s3_resource()
     try:
         body = s3r.Object(bucket_name, key_name).get()["Body"]
     except s3r.meta.client.exceptions.NoSuchKey as e:
-        msg = (
-            f"The provided key_name {bucket_name}/{key_name} isn't in this bucket: {e}"
-        )
+        msg = f"The provided key_name {bucket_name}/{key_name} isn't in this bucket: {e}"
         raise ValueError(msg) from e
     data = body.read()
     text = bz2.decompress(data).decode("utf-8")
@@ -276,11 +267,13 @@ def upload_to_s3(local_path: str, path_within_bucket: str, bucket_name: str) -> 
         # ensure the path within the bucket is only the key
         path_within_bucket = path_within_bucket.replace("s3://", "")
         bucket.upload_file(local_path, path_within_bucket)
-        logger.info("Uploaded %s to s3://%s.", path_within_bucket, bucket_name)
+        logger.debug("Uploaded %s to s3://%s.", path_within_bucket, bucket_name)
         return True
     except Exception as e:
+        msg = f"The upload of {local_path} failed with error {e}"
         logger.error(e)
-        logger.error("The upload of %s failed with error %s", local_path, e)
+        logger.error(msg)
+        print(msg)
         return False
 
 
@@ -301,9 +294,7 @@ def get_bucket(bucket_name: str):
     return s3.Bucket(bucket_name)
 
 
-def fixed_s3fs_glob(
-    path: str, suffix: str | None = None, boto3_bucket=None
-) -> list[str]:
+def fixed_s3fs_glob(path: str, suffix: str | None = None, boto3_bucket=None) -> list[str]:
     """Custom glob function able to list more than 1000 elements on s3 (fix of s3fs).
 
     Note:
@@ -341,9 +332,7 @@ def fixed_s3fs_glob(
 
     filenames = [
         "s3://"
-        + os.path.join(
-            bucket_name, o.key
-        )  # prepend bucket-name as it is necessary for s3fs
+        + os.path.join(bucket_name, o.key)  # prepend bucket-name as it is necessary for s3fs
         for o in boto3_bucket.objects.filter(Prefix=base_path)
         if o.key.endswith(suffix_path)
     ]
@@ -351,7 +340,7 @@ def fixed_s3fs_glob(
     return filenames
 
 
-def s3_glob_with_size(path: str, boto3_bucket=None):
+def s3_glob_with_size(path: str, boto3_bucket=None) -> list[tuple]:
     """
     Custom glob function to list S3 objects matching a pattern. This function
     works around the 1000-object listing limit in S3 by using boto3 directly.
@@ -428,16 +417,16 @@ def alternative_read_text(
 
 
 def list_s3_directories(bucket_name: str, prefix: str = "") -> list[str]:
-    """Retrieve 'directory' names (media titles) in an S3 bucket given a path prefix.
+    """Retrieve 'directory' names (media aliases) in an S3 bucket given a path prefix.
+
+    # TODO adapt to add provider
 
     Args:
         bucket_name (str): The name of the S3 bucket.
-        prefix (str): The prefix path within the bucket to search. Default
-                      is the root ('').
+        prefix (str): The prefix path within the bucket to search. Default is the root ('').
 
     Returns:
-        list: A list of 'directory' names found in the specified bucket
-              and prefix.
+        list: A list of 'directory' names found in the specified bucket and prefix.
     """
     logger.info("Listing 'folders'' of '%s' under prefix '%s'", bucket_name, prefix)
     s3 = get_s3_client()
@@ -449,6 +438,7 @@ def list_s3_directories(bucket_name: str, prefix: str = "") -> list[str]:
             prefix["Prefix"][:-1].split("/")[-1] for prefix in result["CommonPrefixes"]
         ]
     logger.info("Returning %s directories.", len(directories))
+
     return directories
 
 
@@ -470,7 +460,9 @@ def get_s3_object_size(bucket_name: str, key: str) -> int:
         size = response["ContentLength"]
         return int(size)
     except botocore.exceptions.ClientError as err:
-        logger.error("Error: %s for %s in %s", err, key, bucket_name)
+        msg = f"Error: {err} for {key} in {bucket_name}"
+        logger.error(msg)
+        print(msg)
         return None
 
 
@@ -484,6 +476,8 @@ def s3_iter_bucket(
 
     >>> k = s3_iter_bucket("myBucket", prefix='GDL', suffix=".bz2")
     >>> k = s3_iter_bucket("myBucket", prefix='GDL', accept_key=lambda x: "page" in x)
+
+    # TODO adapt to add provider
 
     Note:
         If `suffix` is not "", the used accepting condition will become:
@@ -517,22 +511,20 @@ def s3_iter_bucket(
     return keys if keys else []
 
 
-def read_s3_issues(
-    newspaper: str, year: str, input_bucket: str
-) -> list[tuple[IssueDir, dict]]:
+def read_s3_issues(alias: str, year: str, input_bucket: str) -> list[tuple[IssueDir, dict]]:
     """Read the contents of canonical issues from a given S3 bucket.
 
+    # TODO adapt to add provider
+
     Args:
-        newspaper (str): Name of the newspaper to read the issues from.
+        alias (str): Alias of the media title to read the issues from.
         year (str): Target year to tread issues from.
         input_bucket (str): Bucket from where to fetch the issues.
 
     Returns:
         list[tuple[IssueDir, dict]]: List of IssueDirs and the issues' contents.
     """
-    issue_path_on_s3 = (
-        f"s3://{input_bucket}/{newspaper}/issues/{newspaper}-{year}-issues.jsonl.bz2"
-    )
+    issue_path_on_s3 = f"s3://{input_bucket}/{alias}/issues/{alias}-{year}-issues.jsonl.bz2"
     try:
         issues = (
             db.read_text(issue_path_on_s3, storage_options=IMPRESSO_STORAGEOPT)
@@ -542,17 +534,20 @@ def read_s3_issues(
         )
     except FileNotFoundError as e:
         logger.error(e)
+        print(e)
         return []
 
     return issues
 
 
-def list_newspapers(
+def list_media_titles(
     bucket_name: str,
     s3_client=get_s3_client(),
     page_size: int = 10000,
 ) -> list[str]:
-    """List newspapers contained in an s3 bucket with impresso data.
+    """List media titles contained in an s3 bucket with impresso data.
+
+    # TODO adapt to add provider
 
     Note:
         25,000 seems to be the maximum `PageSize` value supported by
@@ -566,16 +561,16 @@ def list_newspapers(
         page_size (int, optional): Pagination configuration. Defaults to 10000.
 
     Returns:
-        list[str]: List of newspaper (aliases) present in the given S3 bucket.
+        list[str]: List of media titles (aliases) present in the given S3 bucket.
     """
-    print(f"Fetching list of newspapers from {bucket_name}")
+    print(f"Fetching list of media titles from {bucket_name}")
 
     if "s3://" in bucket_name:
         bucket_name = bucket_name.replace("s3://", "").split("/")[0]
 
     paginator = s3_client.get_paginator("list_objects")
 
-    newspapers = set()
+    titles = set()
     for n, resp in enumerate(
         paginator.paginate(Bucket=bucket_name, PaginationConfig={"PageSize": page_size})
     ):
@@ -584,71 +579,87 @@ def list_newspapers(
             continue
 
         for f in resp["Contents"]:
-            newspapers.add(f["Key"].split("/")[0])
+            titles.add(f["Key"].split("/")[0])
         msg = (
             f"Paginated listing of keys in {bucket_name}: page {n + 1}, listed "
             f"{len(resp['Contents'])}"
         )
         logger.info(msg)
 
-    print(f"{bucket_name} contains {len(newspapers)} newspapers")
+    print(f"{bucket_name} contains {len(titles)} media titles")
 
-    return newspapers
+    return titles
 
 
 def list_files(
     bucket_name: str,
     file_type: str = "issues",
-    newspapers_filter: list[str] | None = None,
+    aliases_filter: list[str] | None = None,
 ) -> tuple[list[str] | None, list[str] | None]:
     """List the canonical files located in a given S3 bucket.
 
     Args:
         bucket_name (str): S3 bucket name.
         file_type (str, optional): Type of files to list, possible values are "issues",
-            "pages" and "both". Defaults to "issues".
-        newspapers_filter (list[str] | None, optional): List of newspapers to consider.
+            "pages" "audios", "supports" and "both". Defaults to "issues".
+        aliases_filter (list[str] | None, optional): List of aliases to consider.
             If None, all will be considered. Defaults to None.
 
     Raises:
-        NotImplementedError: The given `file_type` is not one of ['issues', 'pages', 'both'].
+        NotImplementedError: The given `file_type` is not one of ['issues', 'pages', 'audios', 'supports', 'both'].
 
     Returns:
         tuple[list[str] | None, list[str] | None]: [0] List of issue files or None and
-            [1] List of page files or None based on `file_type`
+            [1] List of page/audio files or None based on `file_type`
     """
-    if file_type not in ["issues", "pages", "both"]:
-        logger.error("The provided type is not one of ['issues', 'pages', 'both']!")
+    if file_type not in ["issues", "pages", "audios", "both", "supports"]:
+        logger.error(
+            "The provided type is not one of ['issues', 'pages', 'audios', 'both', 'supports']!"
+        )
         raise NotImplementedError
 
     # initialize the output lists
-    issue_files, page_files = None, None
+    issue_files, page_files, audio_files = None, None, None
     # list the newspapers in the bucket
-    newspapers = list_newspapers(bucket_name)
+    media_titles = list_media_titles(bucket_name)
 
-    if newspapers_filter is not None:
-        suffix = f"for the provided newspapers {newspapers_filter}"
+    if aliases_filter is not None:
+        suffix = f"for the provided media aliases {aliases_filter}"
     else:
         suffix = ""
 
     if file_type in ["issues", "both"]:
         issue_files = [
             file
-            for np in newspapers
-            if newspapers_filter is not None and np in newspapers_filter
-            for file in fixed_s3fs_glob(os.path.join(bucket_name, f"{np}/issues/*"))
+            for alias in media_titles
+            if aliases_filter is not None and alias in aliases_filter
+            for file in fixed_s3fs_glob(os.path.join(bucket_name, f"{alias}/issues/*"))
         ]
         print(f"{bucket_name} contains {len(issue_files)} .bz2 issue files {suffix}")
-    if file_type in ["pages", "both"]:
+    if file_type in ["pages", "supports", "both"]:
         page_files = [
             file
-            for np in newspapers
-            if newspapers_filter is not None and np in newspapers_filter
-            for file in fixed_s3fs_glob(f"{os.path.join(bucket_name, f'{np}/pages/*')}")
+            for alias in media_titles
+            if aliases_filter is not None and alias in aliases_filter
+            for file in fixed_s3fs_glob(f"{os.path.join(bucket_name, f'{alias}/pages/*')}")
         ]
         print(f"{bucket_name} contains {len(page_files)} .bz2 page files {suffix}")
+    if file_type in ["audios", "supports", "both"]:
+        audio_files = [
+            file
+            for alias in media_titles
+            if aliases_filter is not None and alias in aliases_filter
+            for file in fixed_s3fs_glob(f"{os.path.join(bucket_name, f'{alias}/audios/*')}")
+        ]
+        print(f"{bucket_name} contains {len(audio_files)} .bz2 audio files {suffix}")
 
-    return issue_files, page_files
+    support_files = []
+    if page_files is not None:
+        support_files.extend(page_files)
+    if audio_files is not None:
+        support_files.extend(audio_files)
+
+    return issue_files, support_files if len(support_files) != 0 else None
 
 
 def fetch_files(
@@ -656,18 +667,15 @@ def fetch_files(
     compute: bool = True,
     file_type: str = "issues",
     newspapers_filter: list[str] | None = None,
-) -> (
-    tuple[db.core.Bag | None, db.core.Bag | None]
-    | tuple[list[str] | None, list[str] | None]
-):
+) -> tuple[db.core.Bag | None, db.core.Bag | None] | tuple[list[str] | None, list[str] | None]:
     """Fetch issue and/or page canonical JSON files from an s3 bucket.
 
     If compute=True, the output will be a list of the contents of all files in the
     bucket for the specified newspapers and type of files.
     If compute=False, the output will remain in a distributed dask.bag.
 
-    Based on file_type, the issue files, page files or both will be returned.
-    In the returned tuple, issues are always in the first element and pages in the
+    Based on file_type, the issue files, page/audio ("support") files or both will be returned.
+    In the returned tuple, issues are always in the first element and supports in the
     second, hence if file_type is not 'both', the tuple entry corresponding to the
     undesired type of files will be None.
 
@@ -676,25 +684,27 @@ def fetch_files(
         compute (bool, optional): Whether to compute result and output as list.
             Defaults to True.
         file_type: (str, optional): Type of files to list, possible values are "issues",
-            "pages" and "both". Defaults to "issues".
+            "pages", "audios", "supports" and "both". Defaults to "issues".
         newspapers_filter: (list[str]|None,optional): List of newspapers to consider.
             If None, all will be considered. Defaults to None.
 
     Raises:
-        NotImplementedError: The given `file_type` is not one of ['issues', 'pages', 'both'].
+        NotImplementedError: The given `file_type` is not one of ['issues', 'pages', 'audios', 'support', 'both'].
 
     Returns:
         tuple[db.core.Bag|None, db.core.Bag|None] | tuple[list[str]|None, list[str]|None]:
             [0] Issue files' contents or None and
-            [1] Page files' contents or None based on `file_type`
+            [1] Page and Audio Record files' contents or None based on `file_type`
     """
-    if file_type not in ["issues", "pages", "both"]:
-        logger.error("The provided type is not one of ['issues', 'pages', 'both']!")
+    if file_type not in ["issues", "pages", "audios", "supports", "both"]:
+        logger.error(
+            "The provided type is not one of ['issues', 'pages', 'audios', 'supports', 'both']!"
+        )
         raise NotImplementedError
 
-    issue_files, page_files = list_files(bucket_name, file_type, newspapers_filter)
+    issue_files, support_files = list_files(bucket_name, file_type, newspapers_filter)
     # initialize the outputs
-    issue_bag, page_bag = None, None
+    issue_bag, support_files = None, None
 
     msg = "Fetching "
     if issue_files is not None:
@@ -702,21 +712,21 @@ def fetch_files(
         issue_bag = db.read_text(issue_files, storage_options=IMPRESSO_STORAGEOPT).map(
             json.loads
         )
-    if page_files is not None:
+    if support_files is not None:
         # make sure all files are .bz2 files and exactly have the naming format they should
-        prev_len = len(page_files)
-        page_files = [
-            p for p in page_files if ".jsonl.bz2" in p and len(p.split("-")) > 5
+        prev_len = len(support_files)
+        support_files = [
+            s for s in support_files if ".jsonl.bz2" in s and len(s.split("-")) > 5
         ]
-        msg = f"{msg} page ids from {len(page_files)} .bz2 files ({prev_len} files before filtering), "
-        page_bag = db.read_text(page_files, storage_options=IMPRESSO_STORAGEOPT).map(
+        msg = f"{msg} page and audio ids from {len(support_files)} .bz2 files ({prev_len} files before filtering), "
+        support_bag = db.read_text(support_files, storage_options=IMPRESSO_STORAGEOPT).map(
             json.loads
         )
 
     logger.info(msg)
 
     if compute:
-        page_bag = page_bag.compute() if page_files is not None else page_bag
+        support_bag = support_bag.compute() if support_files is not None else support_bag
         issue_bag = issue_bag.compute() if issue_files is not None else issue_bag
 
-    return issue_bag, page_bag
+    return issue_bag, support_bag

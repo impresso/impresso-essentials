@@ -3,7 +3,7 @@
     "output_bucket": "42-processed-data-final/embeddings/images/embeddings_dinov2_v1-0-0/",
     "input_bucket": "12-canonical-final",
     "git_repository": "/home/piconti/impresso-image-embedder",
-    "newspapers": [],
+    "media_aliases": [],
     "temp_directory": "/scratch/piconti/impresso/git_temp_folder",
     "previous_mft_s3_path": "s3://41-processed-data-staging/embeddings/images/embeddings_dinov2_title-year_v1-0-0/emb-images_v0-0-1.json",
     "is_patch": false,

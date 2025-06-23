@@ -3,7 +3,7 @@
     "output_bucket": "71-ingestion-staging/solr-ingestion/rebuilt/",
     "input_bucket": "22-rebuilt-final",
     "git_repository": "FILL ME",
-    "newspapers": [],
+    "media_aliases": [],
     "temp_directory": "FILL ME",
     "previous_mft_s3_path": "",
     "is_patch": false,

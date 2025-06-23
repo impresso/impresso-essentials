@@ -3,7 +3,7 @@
     "output_bucket": "42-processed-data-final/entities/entities-bert-historic-multilingual_v1-0-3",
     "input_bucket": "22-rebuilt-final",
     "git_repository": "/home/piconti/impresso-essentials",
-    "newspapers": [
+    "media_aliases": [
         "Guepe1887",
         "JDG",
         "lafronde",
