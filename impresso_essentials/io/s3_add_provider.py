@@ -46,8 +46,8 @@ def get_alias_from_path(source_path, og_partition):
 
     split = source_path.replace(og_partition, "").split('/') if og_partition else source_path.split('/')
 
-    # make sure to know if the partner is already in this path or not
-    if split[0] in ALL_MEDIA:
+    # make sure to know if the partner is already in this path or not (especially NZZ)
+    if split[0] in ALL_MEDIA and split[1] not in ALL_MEDIA:
         msg = f"returnning split[0], None: {split[0], None}"
         logger.debug(msg)
         return split[0], None
@@ -137,17 +137,18 @@ def add_provider_to_s3_partition(src_bucket: str, dest_bucket: str, exact_partit
                                 )
                         finally:
                             if remove_src_keys:
-                                msg = f"    File key {key} will be copied to {dest_key} in bucket {dest_bucket}"
-                                logger.debug(msg)
-                                print(msg)
-                                s3.delete_ojsect(
+                                if "pages" not in key:
+                                    msg = f"    File key {key} will be deleted from bucket {dest_bucket} - new location: {dest_key}"
+                                    logger.info(msg)
+                                    print(msg)
+                                s3.delete_object(
                                     Bucket=src_bucket,
                                     Key=key,
                                     BypassGovernanceRetention=False,
                                 )
                     else:
                         msg = f"    will NOT copy {key} to {dest_key} - same key."
-                        logger.info(msg)
+                        logger.debug(msg)
                 else:
                     msg = f"Debug Mode - would have copied {key} to {dest_key}."
                     logger.info(msg)
@@ -176,6 +177,14 @@ def main():
     exact_partition = parsed_input.path.lstrip("/")
     # if destination bucket is not provided, set it to the source
     dest_bucket = dest_bucket if dest_bucket else src_bucket
+    
+    msg = (
+        f"Will add the provider level to the contents of {full_s3_partition},"
+        f"{' not' if no_copy else ''} copying them in bucket {dest_bucket}, "
+        f"and {'' if remove_src_keys else 'not '}deleting the source keys after."
+    )
+    print(msg)
+    logger.info(msg)
 
     add_provider_to_s3_partition(
         src_bucket,
