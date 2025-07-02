@@ -10,7 +10,8 @@ import pathlib
 import time
 from typing import Any, Generator, Optional
 from datetime import timedelta, date
-from contextlib import ExitStack
+import signal
+from contextlib import ExitStack, contextmanager
 import jsonschema
 import importlib_resources
 import numpy as np
@@ -1140,3 +1141,14 @@ def id_to_issuedir(canonical_id: str, issue_path: str) -> IssueDir:
     month = int(month)
     day = int(day)
     return IssueDir(alias, date(year, month, day), edition, issue_path)
+
+
+@contextmanager
+def disable_interrupts():
+    """Context manager to temporarily disable keyboard interrupts."""
+    original_handler = signal.getsignal(signal.SIGINT)
+    signal.signal(signal.SIGINT, signal.SIG_IGN)
+    try:
+        yield
+    finally:
+        signal.signal(signal.SIGINT, original_handler)
