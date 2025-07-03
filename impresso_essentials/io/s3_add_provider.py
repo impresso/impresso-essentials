@@ -72,6 +72,9 @@ def construct_dest_key(src_key, provider, og_partition, current_alias=None, foun
     logger.debug(msg)
 
     if og_partition != '':
+        # remove the tailing '/' if it exists
+        if og_partition.endswith('/'):
+            og_partition = og_partition[:-1]
         # add the provider right after the en of the partition
         return src_key.replace(og_partition, os.path.join(og_partition, provider))
     
@@ -135,17 +138,17 @@ def add_provider_to_s3_partition(src_bucket: str, dest_bucket: str, exact_partit
                                     CopySource={"Bucket": src_bucket, "Key": key},
                                     MetadataDirective=metadata_directive,
                                 )
-                        finally:
-                            if remove_src_keys:
-                                if "pages" not in key:
-                                    msg = f"    File key {key} will be deleted from bucket {dest_bucket} - new location: {dest_key}"
-                                    logger.info(msg)
-                                    print(msg)
-                                s3.delete_object(
-                                    Bucket=src_bucket,
-                                    Key=key,
-                                    BypassGovernanceRetention=False,
-                                )
+                                
+                        if remove_src_keys:
+                            if "pages" not in key:
+                                msg = f"    File key {key} will be deleted from bucket {dest_bucket} - new location: {dest_key}"
+                                logger.info(msg)
+                                print(msg)
+                            s3.delete_object(
+                                Bucket=src_bucket,
+                                Key=key,
+                                BypassGovernanceRetention=False,
+                            )
                     else:
                         msg = f"    will NOT copy {key} to {dest_key} - same key."
                         logger.debug(msg)
