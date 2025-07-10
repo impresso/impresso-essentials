@@ -208,16 +208,18 @@ PARTNER_TO_MEDIA = {
         "waechtersauer",
         "waeschfra",
     ],
-    "BNF": ["excelsior", "lafronde", "marieclaire", "oeuvre"],
-    "BNF-EN": [
+    "BNF": [
+        "excelsior",
+        "lafronde",
+        "marieclaire",
+        "oeuvre",
         "jdpl",
         "legaulois",
         "lematin",
         "lepji",
         "lepetitparisien",
         "oecaen",
-        "oerennes",
-    ],
+        "oerennes",],
     # TODO add new titles
     "BCUL": [
         "ACI",
@@ -663,7 +665,6 @@ PARTNER_TO_COUNTRY = {
     "FedGaz": "CH",
     "BNL": "LU",
     "BNF": "FR",
-    "BNF-EN": "FR",
     "BCUL": "CH",
     "BL": "UK",
     "KB": "NL",
@@ -690,7 +691,6 @@ SOURCE_MEDIUMS_TO_PARTNERS_TO_MEDIA = {
         "FedGaz": "all",
         "BNL": "all",
         "BNF": "all",
-        "BNF-EN": "all",
         "BCUL": "all",
         "BL": "all",
         #"KB": {# SourceMedium.PT: [], # all KB NP titles should be listed},
@@ -714,7 +714,6 @@ PARTNERS_TO_SRC_MEDIUM_TO_MEDIA = {
     "FedGaz": {SourceMedium.PT: "all"},
     "BNL": {SourceMedium.PT: "all"},
     "BNF": {SourceMedium.PT: "all"},
-    "BNF-EN": {SourceMedium.PT: "all"},
     "BCUL": {SourceMedium.PT: "all"},
     "BL": {SourceMedium.PT: "all"},
     "KB": {
@@ -733,7 +732,6 @@ PARTNERS_TO_SRC_TYPE_TO_MEDIA = {
     "FedGaz": {SourceType.NP: "all"},
     "BNL": {SourceType.NP: "all"},
     "BNF": {SourceType.NP: "all"},
-    "BNF-EN": {SourceType.NP: "all"},
     "BCUL": {SourceType.NP: "all"},
     "BL": {SourceType.NP: "all"},
     "KB": {
