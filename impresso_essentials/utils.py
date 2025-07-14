@@ -34,8 +34,9 @@ POSSIBLE_GRANULARITIES = ["corpus", "title", "year"]
 # a simple data structure to represent input directories
 # a `Document.zip` file is expected to be found in `IssueDir.path`
 # TODO add src type and medium to all issueDirs?
-# IssueDir = namedtuple("IssueDir", ["alias", "date", "edition", "path", "src_type", "src_medium"])
-IssueDir = namedtuple("IssueDir", ["alias", "date", "edition", "path"])
+# IssueDir = namedtuple("IssueDir", ["provider", "alias", "date", "edition", "path", "src_type", "src_medium"])
+IssueDir = namedtuple("IssueDir", ["provider", "alias", "date", "edition", "path"])
+
 
 class DataStage(StrEnum):
     """Enum all stages requiring a versioning manifest.
@@ -77,6 +78,7 @@ class DataStage(StrEnum):
         """
         return value in cls._value2member_map_
 
+
 class SourceType(StrEnum):
     """Enum all types of media sources in Impresso."""
 
@@ -101,6 +103,7 @@ class SourceType(StrEnum):
         """
         return value in cls._value2member_map_
 
+
 class SourceMedium(StrEnum):
     """Enum all mediums of media sources in Impresso."""
 
@@ -120,6 +123,7 @@ class SourceMedium(StrEnum):
             bool: True if the value provided is in this enum's values, False otherwise.
         """
         return value in cls._value2member_map_
+
 
 ########################################
 ###### ALIAS TO PROVIDER MAPPINGS ######
@@ -674,9 +678,7 @@ PARTNER_TO_COUNTRY = {
 # flatten the known journals into a sorted list
 ALL_MEDIA = sorted([j for part_j in PARTNER_TO_MEDIA.values() for j in part_j])
 MEDIA_TO_COUNTRY = {
-    alias: PARTNER_TO_COUNTRY[p] 
-    for p, p_aliases in PARTNER_TO_MEDIA.items() 
-    for alias in p_aliases
+    alias: PARTNER_TO_COUNTRY[p] for p, p_aliases in PARTNER_TO_MEDIA.items() for alias in p_aliases
 }
 PARTNERS_WITHOUT_OLR = ["NZZ", "SWA", "FedGaz", "BCUL", "SWISSINFO", "INA"]
 
@@ -693,7 +695,7 @@ SOURCE_MEDIUMS_TO_PARTNERS_TO_MEDIA = {
         "BNF-EN": "all",
         "BCUL": "all",
         "BL": "all",
-        #"KB": {# SourceMedium.PT: [], # all KB NP titles should be listed},
+        # "KB": {# SourceMedium.PT: [], # all KB NP titles should be listed},
     },
     SourceMedium.TPS: {
         "KB": ["ANP"],
@@ -797,9 +799,8 @@ def get_src_info_for_alias(
 ##################################
 ###### VALIDATION FUNCTIONS ######
 
-def validate_stage(
-    data_stage: str, return_value_str: bool = False
-) -> DataStage | str | None:
+
+def validate_stage(data_stage: str, return_value_str: bool = False) -> DataStage | str | None:
     """Validate the provided data stage if it's in the DataStage Enum (key or value).
 
     Args:
@@ -830,6 +831,7 @@ def validate_granularity(value: str) -> Optional[str]:
 
     Statistics are computed on three granularity levels:
     corpus, title and year.
+    TODO: add provider?
 
     Args:
         value (str): Granularity value to validate
@@ -857,7 +859,7 @@ def validate_source(
         source (str): Source type or medium key or value to validate.
         return_value_str (bool, optional): Whether to return the source type or medium's value if
             it was valid. Defaults to False.
-        medium (bool, optional): Whether to validate a source medium (True) or key (False). 
+        medium (bool, optional): Whether to validate a source medium (True) or key (False).
             Defaults to True.
 
     Raises:
@@ -1126,12 +1128,14 @@ def partitioner(bag: Bag, path: str, nb_partitions: int) -> None:
         items.to_textfiles(path)
 
 
-def id_to_issuedir(canonical_id: str, issue_path: str) -> IssueDir:
+def id_to_issuedir(canonical_id: str, issue_path: str, provider: str | None = None) -> IssueDir:
     """Instantiate an IssueDir object from a canonical ID and the path to the issue.
 
     Args:
         canonical_id (str): Canonical ID of the issue.
         issue_path (str): Local path to the issue files.
+        provider (str | None, optional): Provider associated to that alias. Defaults to None,
+            if not provided, will be deduced from the alias (slight overhead).
 
     Returns:
         IssueDir: IssueDir instance for the object
@@ -1140,7 +1144,12 @@ def id_to_issuedir(canonical_id: str, issue_path: str) -> IssueDir:
     year = int(year)
     month = int(month)
     day = int(day)
-    return IssueDir(alias, date(year, month, day), edition, issue_path)
+
+    if not provider:
+        provider = get_provider_for_alias(alias)
+
+    return IssueDir(provider, alias, date(year, month, day), edition, issue_path)
+    # return IssueDir(alias, date(year, month, day), edition, issue_path)
 
 
 @contextmanager

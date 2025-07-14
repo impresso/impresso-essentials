@@ -134,9 +134,7 @@ def get_last_timestamp(fileobj, ts_key: str, all_lines: bool) -> str:
                             except ValueError:
                                 continue
                         else:
-                            raise ValueError(
-                                f"Timestamp format not recognized: {ts_str}"
-                            )
+                            raise ValueError(f"Timestamp format not recognized: {ts_str}")
 
                         if not all_lines:
                             log.debug("Taking the first timestamp: %s", ts_str)
@@ -146,15 +144,11 @@ def get_last_timestamp(fileobj, ts_key: str, all_lines: bool) -> str:
                             log.debug("Updated latest timestamp to: %s", latest_ts)
                 except (ValueError, TypeError, json.JSONDecodeError) as e:
                     skipped_records += 1
-                    log.warning(
-                        "Skipping invalid record: %s. Line content: %s", e, line[:100]
-                    )
+                    log.warning("Skipping invalid record: %s. Line content: %s", e, line[:100])
                     continue
 
         if not latest_ts:
-            log.warning(
-                "No valid timestamp found in records. Using file modification date."
-            )
+            log.warning("No valid timestamp found in records. Using file modification date.")
             mod_time = datetime.utcfromtimestamp(os.path.getmtime(fileobj))
             return mod_time.strftime("%Y-%m-%dT%H:%M:%SZ")
 
@@ -239,8 +233,7 @@ def update_metadata_if_needed(
     if original_head.get("ETag") != backup_head.get("ETag"):
         log.error("Backup checksum mismatch! Aborting process.")
         raise ValueError(
-            "Backup checksum mismatch. The backup file is not identical to the "
-            "original."
+            "Backup checksum mismatch. The backup file is not identical to the " "original."
         )
 
     log.debug("Backup checksum verified successfully.")
@@ -386,16 +379,12 @@ def main():
         None
     """
     parser = argparse.ArgumentParser(
-        description=(
-            "Update S3 object metadata with the last timestamp in .jsonl file(s)."
-        )
+        description=("Update S3 object metadata with the last timestamp in .jsonl file(s).")
     )
     group = parser.add_mutually_exclusive_group(required=True)
     group.add_argument(
         "--s3-prefix",
-        help=(
-            "S3 prefix to process multiple .jsonl.bz2 files (e.g., s3://bucket/path/)."
-        ),
+        help=("S3 prefix to process multiple .jsonl.bz2 files (e.g., s3://bucket/path/)."),
     )
     group.add_argument(
         "--s3-file",
@@ -413,9 +402,7 @@ def main():
         "--ts-key",
         default="ts",
         choices=["ts", "cdt", "timestamp"],
-        help=(
-            "Key to look for the timestamp in each JSONL record (default: %(default)s)."
-        ),
+        help=("Key to look for the timestamp in each JSONL record (default: %(default)s)."),
     )
     parser.add_argument(
         "--all-lines",
@@ -432,10 +419,7 @@ def main():
     parser.add_argument(
         "--force",
         action="store_true",
-        help=(
-            "Force reprocessing even if metadata is already up-to-date "
-            "(default: False)."
-        ),
+        help=("Force reprocessing even if metadata is already up-to-date " "(default: False)."),
     )
 
     args = parser.parse_args()
