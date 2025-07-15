@@ -14,7 +14,7 @@ from dotenv import load_dotenv
 from smart_open import open as s_open
 import dask.bag as db
 
-from impresso_essentials.utils import bytes_to, id_to_issuedir, IssueDir
+from impresso_essentials.utils import bytes_to, id_to_issuedir, IssueDir, get_provider_for_alias
 
 logger = logging.getLogger(__name__)
 
@@ -417,14 +417,18 @@ def alternative_read_text(
     return text
 
 
-def list_s3_directories(bucket_name: str, prefix: str = "", aliases: bool = True) -> list[str]:
-    """Retrieve 'directory' names (media providers or aliases) in an S3 bucket given a path prefix.
+def list_s3_directories(bucket_name: str, prefix: str = "") -> list[str]:
+    """Retrieve 'directory' names  in an S3 bucket given a path prefix.
 
-    # TODO adapt to add provider
+    Depending on the prefix and the specific bucket, this will either list the media providers
+    or the media aliases.
+    For s3 partitions which have the partner layer, the `prefix` parameter allows to select a
+    specific partner and list its associated media aliases.
 
     Args:
         bucket_name (str): The name of the S3 bucket.
-        prefix (str): The prefix path within the bucket to search. Default is the root ('').
+        prefix (str): The prefix path within the bucket to search (should include a tailing `/`).
+            Defaults to the root ('').
 
     Returns:
         list: A list of 'directory' names found in the specified bucket and prefix.
@@ -473,10 +477,11 @@ def s3_iter_bucket(
 ) -> list:
     """Iterate over a bucket, returning all keys with some filtering options.
 
-    >>> k = s3_iter_bucket("myBucket", prefix='GDL', suffix=".bz2")
-    >>> k = s3_iter_bucket("myBucket", prefix='GDL', accept_key=lambda x: "page" in x)
+    Note that `prefix` should now include the provider if it's the case in the bucket.
 
-    # TODO adapt to add provider
+    >>> k = s3_iter_bucket("myBucket", prefix='SNL', suffix=".bz2")
+    >>> k = s3_iter_bucket("myBucket", prefix='SNL/GDL', accept_key=lambda x: "page" in x)
+    >>> k = s3_iter_bucket("myBucket",  accept_key=lambda x: "/GDL-" in x)
 
     Note:
         If `suffix` is not "", the used accepting condition will become:
@@ -510,30 +515,54 @@ def s3_iter_bucket(
     return keys if keys else []
 
 
-def read_s3_issues(alias: str, year: str, input_bucket: str) -> list[tuple[IssueDir, dict]]:
+def read_s3_issues(
+    alias: str,
+    year: str,
+    input_bucket: str,
+    provider: str | None = None,
+    incl_provider: bool = True,
+) -> list[tuple[IssueDir, dict]]:
     """Read the contents of canonical issues from a given S3 bucket.
 
-    # TODO adapt to add provider
+    By default, it's considered that the bucket includes the provider in its organization.
+    If it's not the case, the parameter `incl_provider=False` should be set to ensure it's
+    in the constructed s3 path.
+    If the provider is not provided, it will be deduced from the alias.
+    The provider will however be returned within the IssueDir object anyways.
 
     Args:
         alias (str): Alias of the media title to read the issues from.
         year (str): Target year to tread issues from.
         input_bucket (str): Bucket from where to fetch the issues.
+        provider (str|None, optional): Provider for the given alias. Defaults to None.
+        incl_provider (bool, optional): Whether to include the provider in the S3 path.
+            Defaults to True.
 
     Returns:
         list[tuple[IssueDir, dict]]: List of IssueDirs and the issues' contents.
     """
-    issue_path_on_s3 = f"s3://{input_bucket}/{alias}/issues/{alias}-{year}-issues.jsonl.bz2"
+    # construct the various elements of the s3 path for canonical issues
+    path_parts = [f"s3://{input_bucket}", alias, "issues", f"{alias}-{year}-issues.jsonl.bz2"]
+
+    if not provider:
+        provider = get_provider_for_alias(alias)
+
+    # if the provider should be included, add it at the top of the structure
+    if incl_provider:
+        path_parts.insert(1, provider)
+
+    issue_path_on_s3 = "/".join(path_parts)
+
     try:
         issues = (
             db.read_text(issue_path_on_s3, storage_options=IMPRESSO_STORAGEOPT)
             .map(json.loads)
-            .map(lambda x: (id_to_issuedir(x["id"], issue_path_on_s3), x))
+            .map(lambda x: (id_to_issuedir(x["id"], issue_path_on_s3, provider), x))
             .compute()
         )
     except FileNotFoundError as e:
-        logger.error(e)
-        print(e)
+        # logger.error(e)
+        print(f"FileNotFoundError: {e}")
         return []
 
     return issues
