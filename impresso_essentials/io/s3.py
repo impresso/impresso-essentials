@@ -572,24 +572,25 @@ def list_media_titles(
     bucket_name: str,
     s3_client=get_s3_client(),
     page_size: int = 10000,
+    prov_included: bool = True,
 ) -> list[str]:
     """List media titles contained in an s3 bucket with impresso data.
 
-    # TODO adapt to add provider
+    By default, it is considered that the bucket contains the provided level.
 
     Note:
         25,000 seems to be the maximum `PageSize` value supported by
         SwitchEngines' S3 implementation (ceph).
-    Note:
-        Copied from https://github.com/impresso/impresso-data-sanitycheck/tree/master/sanity_check/contents/s3_data.py
 
     Args:
         bucket_name (str): Name of the S3 bucket to consider
         s3_client (optional): S3 client to use. Defaults to get_s3_client().
         page_size (int, optional): Pagination configuration. Defaults to 10000.
+        prov_included (bool, optional): Whether the provider level is included in
+            the bucket structure. Defaults to True
 
     Returns:
-        list[str]: List of media titles (aliases) present in the given S3 bucket.
+        list[str]: Sorted list of media titles (aliases) present in the given S3 bucket.
     """
     print(f"Fetching list of media titles from {bucket_name}")
 
@@ -598,7 +599,7 @@ def list_media_titles(
 
     paginator = s3_client.get_paginator("list_objects")
 
-    titles = set()
+    aliases = set()
     for n, resp in enumerate(
         paginator.paginate(Bucket=bucket_name, PaginationConfig={"PageSize": page_size})
     ):
@@ -607,19 +608,90 @@ def list_media_titles(
             continue
 
         for f in resp["Contents"]:
-            titles.add(f["Key"].split("/")[0])
+            aliases.add(f["Key"].split("/")[1 if prov_included else 0])
         msg = (
             f"Paginated listing of keys in {bucket_name}: page {n + 1}, listed "
             f"{len(resp['Contents'])}"
         )
         logger.info(msg)
 
-    print(f"{bucket_name} contains {len(titles)} media titles")
+    print(f"{bucket_name} contains {len(aliases)} media titles")
 
-    return titles
+    return sorted(list(aliases))
 
 
-def list_files(
+def list_providers_and_aliases(bucket_name: str, prefix: str = "") -> list[str]:
+    """Lists providers and their alias directories from an S3 bucket.
+
+    Traverses the given S3 bucket to identify provider directories and their associated alias
+    subdirectories, under an optional prefix. Returns a dictionary mapping each provider
+    to a sorted list of aliases.
+
+    Args:
+        bucket_name (str): The name of the S3 bucket to query.
+        prefix (str, optional): The prefix path within the bucket to search (should have a tailing `/`).
+            Defaults to the root ('').
+
+    Returns:
+        dict[str, list[str]]: Dict mapping sorted provider names to lists of alias directory names.
+
+    Raises:
+        botocore.exceptions.ClientError: If there is an issue communicating with S3.
+
+    Example:
+        >>> list_providers_and_aliases('141-processed-data-staging', 'embeddings/images/embeddings_dinov2_v1-0-0/')
+        {
+            'BCUL': ['ACI', 'AV', 'Bombe', 'CL', ..., 'esta', 'ouistiti'],
+            ...
+            'SNL': ['BDC', 'CDV', ..., 'WHD', 'ZBT']
+        }
+    """
+    msg = f"Listing providers and aliases present in '{bucket_name}' under prefix '{prefix}'."
+    logger.info(msg)
+    print(msg)
+    s3 = get_s3_client()
+    result = s3.list_objects_v2(Bucket=bucket_name, Prefix=prefix, Delimiter="/")
+
+    prov_to_aliases = {}
+    alias_count = 0
+    if "CommonPrefixes" in result:
+
+        # extract the provider names from the common prefixes, and sort them
+        prov_prefixes = sorted(
+            common_prefix["Prefix"][:-1].split("/")[-1]
+            for common_prefix in result["CommonPrefixes"]
+        )
+        # create a dict mapping each provider to its full prefix object
+        prov_to_prefixes = dict(zip(prov_prefixes, result["CommonPrefixes"]))
+
+        for prov, prov_prefix in prov_to_prefixes.items():
+            aliases_result = s3.list_objects_v2(
+                Bucket=bucket_name, Prefix=prov_prefix["Prefix"], Delimiter="/"
+            )
+            if "CommonPrefixes" in aliases_result:
+                # also sort the extracted aliases for this provider
+                prov_to_aliases[prov] = sorted(
+                    [
+                        alias_pref["Prefix"][:-1].split("/")[-1]
+                        for alias_pref in aliases_result["CommonPrefixes"]
+                    ]
+                )
+                alias_count += len(prov_to_aliases[prov])
+
+            msg = (
+                f"Found provider {prov} with the following "
+                f"{len(prov_to_aliases[prov])} alias directories"
+            )
+            logger.debug(msg)
+
+    msg = f"Returning a total of {alias_count} alias dirs for {len(prov_to_aliases)} providers."
+    logger.info(msg)
+    print(msg)
+
+    return prov_to_aliases
+
+
+def list_canonical_files(
     bucket_name: str,
     file_type: str = "issues",
     aliases_filter: list[str] | None = None,
@@ -730,7 +802,7 @@ def fetch_files(
         )
         raise NotImplementedError
 
-    issue_files, support_files = list_files(bucket_name, file_type, newspapers_filter)
+    issue_files, support_files = list_canonical_files(bucket_name, file_type, newspapers_filter)
     # initialize the outputs
     issue_bag, support_files = None, None
 
