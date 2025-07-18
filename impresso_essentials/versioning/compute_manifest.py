@@ -31,7 +31,7 @@ from impresso_essentials.utils import (
     get_provider_for_alias,
     get_src_info_for_alias,
     validate_stage,
-    DataStage
+    DataStage,
 )
 from impresso_essentials.versioning import aggregators
 from impresso_essentials.versioning.data_manifest import DataManifest
@@ -99,7 +99,9 @@ def extract_provider_alias_key(s3_key: str, bucket: str) -> tuple[str, str]:
     return alias, get_provider_for_alias(alias)
 
 
-def remove_corrupted_files(s3_files: dict[str, list[str]]) -> dict[str, list[str]]:
+def remove_corrupted_files(
+    s3_files: dict[str, dict[str, list[str]]],
+) -> dict[str, dict[str, list[str]]]:
     """Check if any of the files to consider found on S3 are corrupted or empty.
 
     If the files are corrupted or empty, they can cause errors in the later steps of
@@ -109,65 +111,73 @@ def remove_corrupted_files(s3_files: dict[str, list[str]]) -> dict[str, list[str
     read by dask.
 
     Args:
-        s3_files (dict[str, list[str]]): S3 archive files to consider that where found.
+        s3_files (dict[str, dict[str, list[str]]]): S3 archive files to consider that where found.
 
     Returns:
-        dict[str, list[str]]: All non-corrupted/empty archives to use for the manifest.
+        dict[str, dict[str, list[str]]]: All non-corrupted/empty archives to use for the manifest.
     """
     msg = "Starting to check all considered s3 archives to ensure they are not corrupted..."
     logger.info(msg)
     print(msg)
     correct_files = {}
     corrupted_files = []
-    for idx, (np, files_np) in enumerate(s3_files.items()):
-        msg = f"Checking for corrupted S3 archives for {np} ({idx+1}/{len(s3_files)}): {len(files_np)} archives"
-        logger.info(msg)
-        print(msg)
-        try:
-            # try to read the file and only take the first one
-            contents = (
-                db.read_text(files_np, storage_options=IMPRESSO_STORAGEOPT)
-                .map(lambda x: (len(json.loads(x)), json.loads(x).keys()))
-                .compute()
-            )
 
-            # add any non-corrupted files to the list of files to consider
-            correct_files[np] = files_np
-            del contents
-        except Exception as e:
-            msg = (
-                f"{np}, an exception occurred trying to read some archives, "
-                f"checking one by 1 for {len(files_np)} archives. \nException: {e}"
-            )
+    for prov, prov_s3_files in s3_files.items():
+        for idx, (alias, files_alias) in enumerate(prov_s3_files.items()):
+            msg = f"Checking for corrupted S3 archives for {alias} ({idx+1}/{len(prov_s3_files)}): {len(files_alias)} archives"
             logger.info(msg)
             print(msg)
-            msg = f"List of archives to check one by one: {files_np}"
-            logger.debug(msg)
-            for file in tqdm(files_np, total=len(files_np)):
-                try:
-                    corr_contents = (
-                        db.read_text(file, storage_options=IMPRESSO_STORAGEOPT)
-                        .map(lambda x: len(json.loads(x)))
-                        .compute()
-                    )
+            try:
+                # try to read the file and only take the first one
+                contents = (
+                    db.read_text(files_alias, storage_options=IMPRESSO_STORAGEOPT)
+                    .map(lambda x: (len(json.loads(x)), json.loads(x).keys()))
+                    .compute()
+                )
 
-                    # add any non-corrupted files to the list of files to consider
-                    if np in correct_files:
-                        correct_files[np].append(file)
-                    else:
-                        correct_files[np] = [file]
-                    del corr_contents
-                except Exception as e2:
-                    msg = (
-                        f"{file}, an exception occurred trying to read it, "
-                        f"it is probably corrupted. {e2}"
-                    )
-                    logger.info(msg)
-                    print(msg)
-                    corrupted_files.append(file)
+                # add any non-corrupted files to the list of files to consider
+                if prov in correct_files:
+                    correct_files[prov][alias] = files_alias
+                else:
+                    correct_files[prov] = {alias: files_alias}
+                del contents
+            except Exception as e:
+                msg = (
+                    f"{alias}, an exception occurred trying to read some archives, "
+                    f"checking one by 1 for {len(files_alias)} archives. \nException: {e}"
+                )
+                logger.info(msg)
+                print(msg)
+                msg = f"List of archives to check one by one: {files_alias}"
+                logger.debug(msg)
+                for file in tqdm(files_alias, total=len(files_alias)):
+                    try:
+                        corr_contents = (
+                            db.read_text(file, storage_options=IMPRESSO_STORAGEOPT)
+                            .map(lambda x: len(json.loads(x)))
+                            .compute()
+                        )
 
-    total_num_files = sum(len(v) for v in s3_files.values())
-    num_ok_files = sum(len(v) for v in correct_files.values())
+                        # add any non-corrupted files to the list of files to consider
+                        if prov in correct_files:
+                            if alias in correct_files:
+                                correct_files[prov][alias].append(file)
+                            else:
+                                correct_files[prov][alias] = [file]
+                        else:
+                            correct_files[prov] = {alias: files_alias}
+                        del corr_contents
+                    except Exception as e2:
+                        msg = (
+                            f"{file}, an exception occurred trying to read it, "
+                            f"it is probably corrupted. {e2}"
+                        )
+                        logger.info(msg)
+                        print(msg)
+                        corrupted_files.append(file)
+
+    total_num_files = sum(len(v) for prov_v in s3_files.values() for v in prov_v.values())
+    num_ok_files = sum(len(v) for prov_v in correct_files.values() for v in prov_v.values())
     msg = (
         f"Found {total_num_files} files on S3, {len(corrupted_files)} were corrupted. As a "
         f"result, the remaining {num_ok_files} will be considered for the manifest computation."
@@ -210,7 +220,7 @@ def get_files_to_consider(config: dict[str, Any]) -> Optional[dict[str, dict[str
         ext = "issues.jsonl.bz2"
     # change "." in ext with `ext.startswith('.')`?
     extension_filter = f"*{ext}" if "." in ext else f"*.{ext}"
-    
+
     # TODO here handle case where provider list is given
     if config["media_aliases"] is None or len(config["media_aliases"]) == 0:
         # if media_aliases is empty, include all media_aliases
@@ -295,13 +305,9 @@ def compute_stats_for_stage(
                 files_bag, include_alias=True, client=client, title=title
             )
         case DataStage.ENTITIES:
-            return aggregators.compute_stats_in_entities_bag(
-                files_bag, client=client, title=title
-            )
+            return aggregators.compute_stats_in_entities_bag(files_bag, client=client, title=title)
         case DataStage.NEWS_AGENCIES:
-            return aggregators.compute_stats_in_entities_bag(
-                files_bag, client=client, title=title
-            )
+            return aggregators.compute_stats_in_entities_bag(files_bag, client=client, title=title)
         case DataStage.PASSIM:
             return aggregators.compute_stats_in_rebuilt_bag(
                 files_bag,
@@ -311,37 +317,25 @@ def compute_stats_for_stage(
                 title=title,
             )
         case DataStage.LANGIDENT:
-            return aggregators.compute_stats_in_langident_bag(
-                files_bag, client=client, title=title
-            )
+            return aggregators.compute_stats_in_langident_bag(files_bag, client=client, title=title)
         case DataStage.TEXT_REUSE:
             return aggregators.compute_stats_in_text_reuse_passage_bag(
                 files_bag, client=client, title=title
             )
         case DataStage.TOPICS:
-            return aggregators.compute_stats_in_topics_bag(
-                files_bag, client=client, title=title
-            )
+            return aggregators.compute_stats_in_topics_bag(files_bag, client=client, title=title)
         case DataStage.EMB_IMAGES:
-            return aggregators.compute_stats_in_img_emb_bag(
-                files_bag, client=client, title=title
-            )
+            return aggregators.compute_stats_in_img_emb_bag(files_bag, client=client, title=title)
         case DataStage.EMB_DOCS:
-            return aggregators.compute_stats_in_doc_emb_bag(
-                files_bag, client=client, title=title
-            )
+            return aggregators.compute_stats_in_doc_emb_bag(files_bag, client=client, title=title)
         case DataStage.LINGPROC:
-            return aggregators.compute_stats_in_lingproc_bag(
-                files_bag, client=client, title=title
-            )
+            return aggregators.compute_stats_in_lingproc_bag(files_bag, client=client, title=title)
         case DataStage.SOLR_TEXT:
             return aggregators.compute_stats_in_solr_text_ing_bag(
                 files_bag, client=client, title=title
             )
         case DataStage.OCRQA:
-            return aggregators.compute_stats_in_ocrqa_bag(
-                files_bag, client=client, title=title
-            )
+            return aggregators.compute_stats_in_ocrqa_bag(files_bag, client=client, title=title)
     raise NotImplementedError(
         "The function computing statistics for this DataStage is not yet implemented."
     )
@@ -416,9 +410,7 @@ def add_stats_to_mft(
             del stats["media_alias"]
             del stats["year"]
             logger.debug("Adding %s to %s-%s (%s)", stats, title, year, provider)
-            manifest.add_by_title_year(
-                title, year, stats, src_medium=src_medium, provider=provider
-            )
+            manifest.add_by_title_year(title, year, stats, src_medium=src_medium, provider=provider)
 
     logger.info("%s - Finished adding stats, going to the next title...", media_alias)
 
@@ -472,9 +464,7 @@ def process_by_title(
                     src_medium=src_medium,
                 )
 
-                manifest = add_stats_to_mft(
-                    manifest, alias, computed_stats, src_medium, provider
-                )
+                manifest = add_stats_to_mft(manifest, alias, computed_stats, src_medium, provider)
             elif alias in ALL_MEDIA:
                 msg = (
                     f"Found S3 files for {alias} which is in ALL_MEDIA but not of "
