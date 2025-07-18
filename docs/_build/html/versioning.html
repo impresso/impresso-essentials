@@ -1881,7 +1881,7 @@ of media aliases and their corresponding lists of S3 file paths.</p></li>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="impresso_essentials.versioning.compute_manifest.remove_corrupted_files">
-<span class="sig-prename descclassname"><span class="pre">impresso_essentials.versioning.compute_manifest.</span></span><span class="sig-name descname"><span class="pre">remove_corrupted_files</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">s3_files</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#impresso_essentials.versioning.compute_manifest.remove_corrupted_files" title="Link to this definition"></a></dt>
+<span class="sig-prename descclassname"><span class="pre">impresso_essentials.versioning.compute_manifest.</span></span><span class="sig-name descname"><span class="pre">remove_corrupted_files</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">s3_files</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#impresso_essentials.versioning.compute_manifest.remove_corrupted_files" title="Link to this definition"></a></dt>
 <dd><p>Check if any of the files to consider found on S3 are corrupted or empty.</p>
 <p>If the files are corrupted or empty, they can cause errors in the later steps of
 the manifest computation. Hence this step allows to prevent this.
@@ -1890,13 +1890,13 @@ This method also logs any file that has been found to create errors when being
 read by dask.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><p><strong>s3_files</strong> (<em>dict</em><em>[</em><em>str</em><em>, </em><em>list</em><em>[</em><em>str</em><em>]</em><em>]</em>) – S3 archive files to consider that where found.</p>
+<dd class="field-odd"><p><strong>s3_files</strong> (<em>dict</em><em>[</em><em>str</em><em>, </em><em>dict</em><em>[</em><em>str</em><em>, </em><em>list</em><em>[</em><em>str</em><em>]</em><em>]</em><em>]</em>) – S3 archive files to consider that where found.</p>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
 <dd class="field-even"><p>All non-corrupted/empty archives to use for the manifest.</p>
 </dd>
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p>dict[str, list[str]]</p>
+<dd class="field-odd"><p>dict[str, dict[str, list[str]]]</p>
 </dd>
 </dl>
 </dd></dl>
