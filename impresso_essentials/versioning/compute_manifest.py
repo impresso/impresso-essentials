@@ -68,7 +68,9 @@ REQ_CONFIG_KEYS = [
 
 def add_to_dict_
 
-def remove_corrupted_files(s3_files: dict[str, list[str]]) -> dict[str, list[str]]:
+def remove_corrupted_files(
+    s3_files: dict[str, dict[str, list[str]]],
+) -> dict[str, dict[str, list[str]]]:
     """Check if any of the files to consider found on S3 are corrupted or empty.
 
     If the files are corrupted or empty, they can cause errors in the later steps of
@@ -78,19 +80,20 @@ def remove_corrupted_files(s3_files: dict[str, list[str]]) -> dict[str, list[str
     read by dask.
 
     Args:
-        s3_files (dict[str, list[str]]): S3 archive files to consider that where found.
+        s3_files (dict[str, dict[str, list[str]]]): S3 archive files to consider that where found.
 
     Returns:
-        dict[str, list[str]]: All non-corrupted/empty archives to use for the manifest.
+        dict[str, dict[str, list[str]]]: All non-corrupted/empty archives to use for the manifest.
     """
     msg = "Starting to check all considered s3 archives to ensure they are not corrupted..."
     logger.info(msg)
     print(msg)
     correct_files = {}
     corrupted_files = []
-    for provider, prov_s3_files in s3_files.items():
-        for idx, (alias, files_alias) in enumerate(prov_s3_files.items(), start=1):
-            msg = f"Checking for corrupted S3 archives for {alias} ({idx}/{len(prov_s3_files)}): {len(files_alias)} archives"
+
+    for prov, prov_s3_files in s3_files.items():
+        for idx, (alias, files_alias) in enumerate(prov_s3_files.items()):
+            msg = f"Checking for corrupted S3 archives for {alias} ({idx+1}/{len(prov_s3_files)}): {len(files_alias)} archives"
             logger.info(msg)
             print(msg)
             try:
@@ -102,10 +105,10 @@ def remove_corrupted_files(s3_files: dict[str, list[str]]) -> dict[str, list[str
                 )
 
                 # add any non-corrupted files to the list of files to consider
-                if provider in correct_files:
-                    correct_files[provider][alias] = files_alias
+                if prov in correct_files:
+                    correct_files[prov][alias] = files_alias
                 else:
-                    correct_files[provider] = {alias: files_alias}
+                    correct_files[prov] = {alias: files_alias}
                 del contents
             except Exception as e:
                 msg = (
@@ -125,13 +128,13 @@ def remove_corrupted_files(s3_files: dict[str, list[str]]) -> dict[str, list[str
                         )
 
                         # add any non-corrupted files to the list of files to consider
-                        if provider in correct_files:
-                            if alias in correct_files[provider]:
-                                correct_files[provider][alias].append(file)
+                        if prov in correct_files:
+                            if alias in correct_files:
+                                correct_files[prov][alias].append(file)
                             else:
-                                correct_files[provider][alias] = [file]
+                                correct_files[prov][alias] = [file]
                         else:
-                            correct_files[provider] = {alias: [file]}
+                            correct_files[prov] = {alias: [file]}
                         del corr_contents
                     except Exception as e2:
                         msg = (
@@ -142,8 +145,8 @@ def remove_corrupted_files(s3_files: dict[str, list[str]]) -> dict[str, list[str
                         print(msg)
                         corrupted_files.append(file)
 
-    total_num_files = sum(len(v) for v in s3_files.values())
-    num_ok_files = sum(len(v) for v in correct_files.values())
+    total_num_files = sum(len(v) for prov_v in s3_files.values() for v in prov_v.values())
+    num_ok_files = sum(len(v) for prov_v in correct_files.values() for v in prov_v.values())
     msg = (
         f"Found {total_num_files} files on S3, {len(corrupted_files)} were corrupted. As a "
         f"result, the remaining {num_ok_files} will be considered for the manifest computation."
