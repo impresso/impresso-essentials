@@ -66,7 +66,6 @@ REQ_CONFIG_KEYS = [
     "file_extensions",
 ]
 
-def add_to_dict_
 
 def remove_corrupted_files(
     s3_files: dict[str, dict[str, list[str]]],
