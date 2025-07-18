@@ -51,6 +51,7 @@ def get_storage_options() -> dict[str, dict | str]:
 
 IMPRESSO_STORAGEOPT = get_storage_options()
 
+
 def get_s3_client(
     host_url: str | None = "https://os.zhdk.cloud.switch.ch/",
 ) -> BaseClient:
@@ -434,9 +435,7 @@ def list_s3_directories(bucket_name: str, prefix: str = "") -> list[str]:
 
     directories = []
     if "CommonPrefixes" in result:
-        directories = [
-            prefix["Prefix"][:-1].split("/")[-1] for prefix in result["CommonPrefixes"]
-        ]
+        directories = [prefix["Prefix"][:-1].split("/")[-1] for prefix in result["CommonPrefixes"]]
     logger.info("Returning %s directories.", len(directories))
 
     return directories
@@ -709,15 +708,11 @@ def fetch_files(
     msg = "Fetching "
     if issue_files is not None:
         msg = f"{msg} issue ids from {len(issue_files)} .bz2 files, "
-        issue_bag = db.read_text(issue_files, storage_options=IMPRESSO_STORAGEOPT).map(
-            json.loads
-        )
+        issue_bag = db.read_text(issue_files, storage_options=IMPRESSO_STORAGEOPT).map(json.loads)
     if support_files is not None:
         # make sure all files are .bz2 files and exactly have the naming format they should
         prev_len = len(support_files)
-        support_files = [
-            s for s in support_files if ".jsonl.bz2" in s and len(s.split("-")) > 5
-        ]
+        support_files = [s for s in support_files if ".jsonl.bz2" in s and len(s.split("-")) > 5]
         msg = f"{msg} page and audio ids from {len(support_files)} .bz2 files ({prev_len} files before filtering), "
         support_bag = db.read_text(support_files, storage_options=IMPRESSO_STORAGEOPT).map(
             json.loads
