@@ -14,7 +14,13 @@ from dotenv import load_dotenv
 from smart_open import open as s_open
 import dask.bag as db
 
-from impresso_essentials.utils import bytes_to, id_to_issuedir, IssueDir, get_provider_for_alias
+from impresso_essentials.utils import (
+    bytes_to,
+    id_to_issuedir,
+    IssueDir,
+    get_provider_for_alias,
+    PARTNER_TO_MEDIA,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -665,6 +671,9 @@ def list_providers_and_aliases(bucket_name: str, prefix: str = "") -> list[str]:
         prov_to_prefixes = dict(zip(prov_prefixes, result["CommonPrefixes"]))
 
         for prov, prov_prefix in prov_to_prefixes.items():
+            if prov not in PARTNER_TO_MEDIA:
+                print(f"{prov} is not a provider, skipping it.")
+                continue
             aliases_result = s3.list_objects_v2(
                 Bucket=bucket_name, Prefix=prov_prefix["Prefix"], Delimiter="/"
             )
@@ -694,14 +703,29 @@ def list_providers_and_aliases(bucket_name: str, prefix: str = "") -> list[str]:
 def list_canonical_files(
     bucket_name: str,
     file_type: str = "issues",
+    providers_filter: list[str] | None = None,
     aliases_filter: list[str] | None = None,
 ) -> tuple[list[str] | None, list[str] | None]:
     """List the canonical files located in a given S3 bucket.
 
+    Note:
+        The filters are applied in a hierchical manner; first at provider level,
+        then at alias level if no provider filter was given.
+
+    Note:
+        For the file type, the possible values are the following:
+        - "issues", "pages", "audios": include only bz2 files of the given type.
+        - "supports": include all pages and audios bz2 files, returned in the second
+            element of the tuple.
+        - "both": include all types of files, with issues in the first element of
+            the tuple and supports (pages and audios) in the second.
+
     Args:
         bucket_name (str): S3 bucket name.
         file_type (str, optional): Type of files to list, possible values are "issues",
-            "pages" "audios", "supports" and "both". Defaults to "issues".
+            "pages", "audios", "supports" and "both". Defaults to "issues".
+        providers_filter (list[str] | None, optional): List of providers for which to consider
+            the aliases. If None, `aliases_filter` will be considered. Defaults to None.
         aliases_filter (list[str] | None, optional): List of aliases to consider.
             If None, all will be considered. Defaults to None.
 
@@ -720,36 +744,53 @@ def list_canonical_files(
 
     # initialize the output lists
     issue_files, page_files, audio_files = None, None, None
-    # list the newspapers in the bucket
-    media_titles = list_media_titles(bucket_name)
-
-    if aliases_filter is not None:
-        suffix = f"for the provided media aliases {aliases_filter}"
+    # initialize the output lists
+    issue_files, page_files, audio_files = None, None, None
+    # list all the providers and aliases in the bucket
+    all_present = list_providers_and_aliases(bucket_name)
+    if providers_filter:
+        # only keep the providers listed
+        aliases_list = [
+            (prov, a)
+            for prov, aliases in all_present.items()
+            for a in aliases
+            if prov in providers_filter
+        ]
+        suffix = (
+            f"for the media aliases {aliases_list} (from the provided providers {providers_filter})"
+        )
+    elif aliases_filter:
+        # only keep the aliases listed
+        aliases_list = [
+            (prov, a)
+            for prov, aliases in all_present.items()
+            for a in aliases
+            if a in aliases_filter
+        ]
+        suffix = f"for the provided media aliases {aliases_list}"
     else:
+        aliases_list = [(prov, a) for prov, aliases in all_present.items() for a in aliases]
         suffix = ""
 
     if file_type in ["issues", "both"]:
         issue_files = [
             file
-            for alias in media_titles
-            if aliases_filter is not None and alias in aliases_filter
-            for file in fixed_s3fs_glob(os.path.join(bucket_name, f"{alias}/issues/*"))
+            for prov, alias in aliases_list
+            for file in fixed_s3fs_glob(os.path.join(bucket_name, f"{prov}/{alias}/issues/*"))
         ]
         print(f"{bucket_name} contains {len(issue_files)} .bz2 issue files {suffix}")
     if file_type in ["pages", "supports", "both"]:
         page_files = [
             file
-            for alias in media_titles
-            if aliases_filter is not None and alias in aliases_filter
-            for file in fixed_s3fs_glob(f"{os.path.join(bucket_name, f'{alias}/pages/*')}")
+            for prov, alias in aliases_list
+            for file in fixed_s3fs_glob(f"{os.path.join(bucket_name, f'{prov}/{alias}/pages/*')}")
         ]
         print(f"{bucket_name} contains {len(page_files)} .bz2 page files {suffix}")
     if file_type in ["audios", "supports", "both"]:
         audio_files = [
             file
-            for alias in media_titles
-            if aliases_filter is not None and alias in aliases_filter
-            for file in fixed_s3fs_glob(f"{os.path.join(bucket_name, f'{alias}/audios/*')}")
+            for prov, alias in aliases_list
+            for file in fixed_s3fs_glob(f"{os.path.join(bucket_name, f'{prov}/{alias}/audios/*')}")
         ]
         print(f"{bucket_name} contains {len(audio_files)} .bz2 audio files {suffix}")
 
@@ -766,13 +807,21 @@ def fetch_files(
     bucket_name: str,
     compute: bool = True,
     file_type: str = "issues",
-    newspapers_filter: list[str] | None = None,
+    providers_filter: list[str] | None = None,
+    aliases_filter: list[str] | None = None,
 ) -> tuple[db.core.Bag | None, db.core.Bag | None] | tuple[list[str] | None, list[str] | None]:
     """Fetch issue and/or page canonical JSON files from an s3 bucket.
 
     If compute=True, the output will be a list of the contents of all files in the
     bucket for the specified newspapers and type of files.
     If compute=False, the output will remain in a distributed dask.bag.
+
+    For the file type, the possible values are the following:
+    - "issues", "pages", "audios": include only bz2 files of the given type.
+    - "supports": include all pages and audios bz2 files, returned in the second
+        element of the tuple.
+    - "both": include all types of files, with issues in the first element of
+        the tuple and supports (pages and audios) in the second.
 
     Based on file_type, the issue files, page/audio ("support") files or both will be returned.
     In the returned tuple, issues are always in the first element and supports in the
@@ -785,7 +834,9 @@ def fetch_files(
             Defaults to True.
         file_type: (str, optional): Type of files to list, possible values are "issues",
             "pages", "audios", "supports" and "both". Defaults to "issues".
-        newspapers_filter: (list[str]|None,optional): List of newspapers to consider.
+        providers_filter (list[str] | None, optional): List of providers for which to consider
+            the aliases. If None, `aliases_filter` will be considered. Defaults to None.
+        aliases_filter (list[str] | None, optional): List of aliases to consider.
             If None, all will be considered. Defaults to None.
 
     Raises:
@@ -802,7 +853,9 @@ def fetch_files(
         )
         raise NotImplementedError
 
-    issue_files, support_files = list_canonical_files(bucket_name, file_type, newspapers_filter)
+    issue_files, support_files = list_canonical_files(
+        bucket_name, file_type, providers_filter, aliases_filter
+    )
     # initialize the outputs
     issue_bag, support_files = None, None
 
@@ -826,3 +879,41 @@ def fetch_files(
         issue_bag = issue_bag.compute() if issue_files is not None else issue_bag
 
     return issue_bag, support_bag
+
+
+def extract_provider_alias_key(
+    s3_key: str, bucket: str, prov_included: bool = True
+) -> tuple[str, str]:
+    """Extract the media alias an s3:key corresponds to given the bucket and partition
+
+    eg. s3_key is in format:
+    - s3_key: 's3://31-passim-rebuilt-staging/passim/[provider]/[alias]/[alias]-[year].jsonl.bz2'
+    - bucket: '31-passim-rebuilt-staging/passim'
+    - prov_included: True
+    --> returns (provider, alias)
+
+    Args:
+        s3_key (str): Full S3 path of a file (as returned by fixed_s3fs_glob).
+        bucket (str): S3 bucket, including partition, in which the media dirs are.
+        prov_included (bool, optional): Whether or not the provider level is present in the
+            structure of the provided bucket. Defaults to True.
+
+    Returns:
+        tuple[str, str]: Media alias of the corresponding media, and corresponding provider.
+    """
+    # in format: 's3://31-passim-rebuilt-staging/passim/BNL/indeplux/indeplux-1889.jsonl.bz2'
+    if not bucket.endswith("/"):
+        bucket = f"{bucket}/"
+
+    if "s3://" in bucket:
+        key_no_bucket = s3_key.replace(f"{bucket}", "")
+    else:
+        key_no_bucket = s3_key.replace(f"s3://{bucket}", "")
+
+    # Not all buckets separate the data per title, but the title will always come first.
+
+    sep = "/" if "/" in key_no_bucket else "-"
+    alias = key_no_bucket.split(sep)[1 if prov_included else 0]
+    provider = key_no_bucket.split(sep)[0] if prov_included else get_provider_for_alias(alias)
+
+    return provider, alias
