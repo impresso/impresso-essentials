@@ -356,11 +356,12 @@ def add_stats_to_mft(
         DataManifest: The updated DataManifest instance with the added statistics.
     """
     logger.info(
-        "%s - Populating the manifest with the resulting %s yearly statistics found...",
+        "%s (%s) - Populating the manifest with the resulting %s yearly statistics found...",
         media_alias,
+        provider,
         len(computed_stats),
     )
-    logger.debug("%s - computed_stats: %s", media_alias, computed_stats)
+    logger.debug("%s (%s) - computed_stats: %s", media_alias, provider, computed_stats)
 
     for stats in computed_stats:
         title = stats["media_alias"]
@@ -368,7 +369,7 @@ def add_stats_to_mft(
             # unless the value for np_title is the name of a file, ensure the correct stats are being added.
             msg = (
                 "Warning, some stats were computed on the wrong title! Not adding them."
-                f"media_alias={media_alias}, title={title}, year={stats['year']}."
+                f"provider={provider}, media_alias={media_alias}, title={title}, year={stats['year']}."
             )
             print(msg)
             logger.info(msg)
