@@ -167,8 +167,6 @@ def remove_corrupted_files(
 def get_files_to_consider(config: dict[str, Any]) -> Optional[dict[str, dict[str, list[str]]]]:
     """Get the list of S3 files to consider based on the provided configuration.
 
-    # TODO add "provider" to the config dict and use it to filter the files
-
     The s3_files mapping is now provider -> alias -> list of files.
 
     Args:
@@ -191,8 +189,9 @@ def get_files_to_consider(config: dict[str, Any]) -> Optional[dict[str, dict[str
         ext = "issues.jsonl.bz2"
     # change "." in ext with `ext.startswith('.')`?
     extension_filter = f"*{ext}" if "." in ext else f"*.{ext}"
+    # check if bucket has provider level while some buckets have providers and others not
+    incl_provider = provider_in_path(config["output_bucket"])
 
-    # TODO here handle case where provider list is given
     if config["prov_alias_pairs"] is None:
         # if media_aliases is empty, include all media_aliases
         logger.info("Fetching the files to consider for all titles...")
@@ -205,7 +204,9 @@ def get_files_to_consider(config: dict[str, Any]) -> Optional[dict[str, dict[str
         )
         s3_files = {}
         for s3_key in files:
-            provider, alias = extract_provider_alias_key(s3_key, config["output_bucket"])
+            provider, alias = extract_provider_alias_key(
+                s3_key, config["output_bucket"], prov_included=incl_provider
+            )
             if alias not in blacklist:
                 # add the provider as a first level key
                 if provider in s3_files:
@@ -230,7 +231,7 @@ def get_files_to_consider(config: dict[str, Any]) -> Optional[dict[str, dict[str
         s3_files = {}
         for provider, alias in config["prov_alias_pairs"]:
             # Temporary fix until all buckets have the provider level
-            if provider_in_path(config["output_bucket"]):
+            if incl_provider:
                 s3_path = fixed_s3fs_glob(
                     os.path.join(config["output_bucket"], provider, alias, extension_filter)
                 )
@@ -609,10 +610,12 @@ def create_manifest(config_dict: dict[str, Any], client: Optional[Client] = None
     # fetch the names of the files to consider separated per title
     s3_files = get_files_to_consider(config_dict)
 
-    num_files = sum(len(aliases.values()) for aliases in s3_files.values())
+    num_files = sum(len(aliases.values()) for prov in s3_files.values() for aliases in prov)
+    num_aliases = sum(len(prov.values()) for prov in s3_files.values())
     logger.info(
-        "Collected a total of %s files from %s media titles, reading them...",
+        "Collected a total of %s files from %s aliases (and %s providers), reading them...",
         num_files,
+        num_aliases,
         len(s3_files.values()),
     )
 

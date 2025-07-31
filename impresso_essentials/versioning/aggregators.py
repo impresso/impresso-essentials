@@ -11,7 +11,9 @@ from dask.distributed import progress, Client
 logger = logging.getLogger(__name__)
 
 
-def log_src_medium_mismatch(obj_id: str, stage: str, prov_src_medium: str, found_src_medium: str) -> None:
+def log_src_medium_mismatch(
+    obj_id: str, stage: str, prov_src_medium: str, found_src_medium: str
+) -> None:
     """Log that the source medium found in the data to agg doesn't match the one previously set.
 
     Args:
@@ -76,9 +78,7 @@ def counts_for_canonical_issue(
 
         # case of paper (print and typescripts)
         update_dict["pages"] = len(set(issue["pp"]))
-        update_dict["images"] = len(
-            [item for item in issue["i"] if item["m"]["tp"] == "image"]
-        )
+        update_dict["images"] = len([item for item in issue["i"] if item["m"]["tp"] == "image"])
         counts.update(update_dict)
 
     return counts
@@ -189,6 +189,7 @@ def compute_stats_in_canonical_bag(
 
 
 ### DEFINITION of tunique ###
+
 
 # define locally the nunique() aggregation function for dask
 def chunk(s):
