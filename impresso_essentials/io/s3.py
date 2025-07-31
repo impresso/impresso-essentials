@@ -20,6 +20,7 @@ from impresso_essentials.utils import (
     IssueDir,
     get_provider_for_alias,
     PARTNER_TO_MEDIA,
+    ALL_MEDIA,
 )
 
 logger = logging.getLogger(__name__)
@@ -917,3 +918,56 @@ def extract_provider_alias_key(
     provider = key_no_bucket.split(sep)[0] if prov_included else get_provider_for_alias(alias)
 
     return provider, alias
+
+
+def provider_in_path(s3_path=None, bucket=None, prefix="") -> bool:
+    """Determines whether the given S3 path or prefix includes a provider-level directory structure.
+
+    Args:
+        s3_path (str, optional): Full S3 URI (e.g., 's3://my-bucket/prefix/').
+            If provided, it overrides `bucket` and `prefix`.
+        bucket (str, optional): S3 bucket name. Required if `s3_path` is not given.
+        prefix (str, optional): Prefix (folder path) within the bucket.
+            Ignored if `s3_path` is provided. Defaults to ''.
+
+    Returns:
+        bool:
+            - True if all immediate subfolders match known providers.
+            - False if all match known media aliases.
+
+    Raises:
+        AttributeError:
+            - If neither `s3_path` nor `bucket` is provided.
+            - If a mix of provider and alias directories is found.
+    """
+    if not bucket and not s3_path:
+        raise AttributeError("At least one of s3_path or bucket must be defined!!")
+    if s3_path:
+        if s3_path.startswith("s3://"):
+            s3_path = s3_path[5:]
+        bucket = s3_path.split("/")[0]
+        prefix = "/".join(s3_path.split("/")[1:])
+
+    s3 = get_s3_client()
+    msg = f"Checking S3 structure in bucket '{bucket}' under prefix '{prefix}'"
+    print(msg)
+    logger.info(msg)
+    result = s3.list_objects_v2(Bucket=bucket, Prefix=prefix, Delimiter="/")
+
+    if "CommonPrefixes" in result:
+        prefixes = [
+            common_prefix["Prefix"][:-1].split("/")[-1]
+            for common_prefix in result["CommonPrefixes"]
+        ]
+        print(prefixes)
+        if all(p in PARTNER_TO_MEDIA.keys() for p in prefixes):
+            return True
+        if all(p in ALL_MEDIA for p in prefixes):
+            return False
+        msg = f"Warning! Bucket {bucket} with prefix {prefix} has a mix of partner and media levels in its strucure!"
+        raise AttributeError(msg)
+    else:
+        msg = f"No subdirectories found under given bucket & prefix {bucket}, {prefix}"
+        print(msg)
+        logger.warning(msg)
+        return False
