@@ -77,6 +77,7 @@
 <li class="toctree-l4"><a class="reference internal" href="#impresso_essentials.utils.IssueDir.date"><code class="docutils literal notranslate"><span class="pre">IssueDir.date</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="#impresso_essentials.utils.IssueDir.edition"><code class="docutils literal notranslate"><span class="pre">IssueDir.edition</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="#impresso_essentials.utils.IssueDir.path"><code class="docutils literal notranslate"><span class="pre">IssueDir.path</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#impresso_essentials.utils.IssueDir.provider"><code class="docutils literal notranslate"><span class="pre">IssueDir.provider</span></code></a></li>
 </ul>
 </li>
 <li class="toctree-l3"><a class="reference internal" href="#impresso_essentials.utils.SourceMedium"><code class="docutils literal notranslate"><span class="pre">SourceMedium</span></code></a><ul>
@@ -103,6 +104,7 @@
 </li>
 <li class="toctree-l3"><a class="reference internal" href="#impresso_essentials.utils.bytes_to"><code class="docutils literal notranslate"><span class="pre">bytes_to()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#impresso_essentials.utils.chunk"><code class="docutils literal notranslate"><span class="pre">chunk()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#impresso_essentials.utils.disable_interrupts"><code class="docutils literal notranslate"><span class="pre">disable_interrupts()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#impresso_essentials.utils.get_list_intersection"><code class="docutils literal notranslate"><span class="pre">get_list_intersection()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#impresso_essentials.utils.get_pkg_resource"><code class="docutils literal notranslate"><span class="pre">get_pkg_resource()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#impresso_essentials.utils.get_provider_for_alias"><code class="docutils literal notranslate"><span class="pre">get_provider_for_alias()</span></code></a></li>
@@ -282,31 +284,37 @@ each generated manifest accordingly.</p>
 
 <dl class="py class">
 <dt class="sig sig-object py" id="impresso_essentials.utils.IssueDir">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">impresso_essentials.utils.</span></span><span class="sig-name descname"><span class="pre">IssueDir</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">alias</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">date</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">edition</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">path</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#impresso_essentials.utils.IssueDir" title="Link to this definition"></a></dt>
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">impresso_essentials.utils.</span></span><span class="sig-name descname"><span class="pre">IssueDir</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">provider</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">alias</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">date</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">edition</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">path</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#impresso_essentials.utils.IssueDir" title="Link to this definition"></a></dt>
 <dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">tuple</span></code></p>
-<p>Create new instance of IssueDir(alias, date, edition, path)</p>
+<p>Create new instance of IssueDir(provider, alias, date, edition, path)</p>
 <dl class="py attribute">
 <dt class="sig sig-object py" id="impresso_essentials.utils.IssueDir.alias">
 <span class="sig-name descname"><span class="pre">alias</span></span><a class="headerlink" href="#impresso_essentials.utils.IssueDir.alias" title="Link to this definition"></a></dt>
-<dd><p>Alias for field number 0</p>
+<dd><p>Alias for field number 1</p>
 </dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="impresso_essentials.utils.IssueDir.date">
 <span class="sig-name descname"><span class="pre">date</span></span><a class="headerlink" href="#impresso_essentials.utils.IssueDir.date" title="Link to this definition"></a></dt>
-<dd><p>Alias for field number 1</p>
+<dd><p>Alias for field number 2</p>
 </dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="impresso_essentials.utils.IssueDir.edition">
 <span class="sig-name descname"><span class="pre">edition</span></span><a class="headerlink" href="#impresso_essentials.utils.IssueDir.edition" title="Link to this definition"></a></dt>
-<dd><p>Alias for field number 2</p>
+<dd><p>Alias for field number 3</p>
 </dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="impresso_essentials.utils.IssueDir.path">
 <span class="sig-name descname"><span class="pre">path</span></span><a class="headerlink" href="#impresso_essentials.utils.IssueDir.path" title="Link to this definition"></a></dt>
-<dd><p>Alias for field number 3</p>
+<dd><p>Alias for field number 4</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="impresso_essentials.utils.IssueDir.provider">
+<span class="sig-name descname"><span class="pre">provider</span></span><a class="headerlink" href="#impresso_essentials.utils.IssueDir.provider" title="Link to this definition"></a></dt>
+<dd><p>Alias for field number 0</p>
 </dd></dl>
 
 </dd></dl>
@@ -491,6 +499,12 @@ each generated manifest accordingly.</p>
 </dd></dl>
 
 <dl class="py function">
+<dt class="sig sig-object py" id="impresso_essentials.utils.disable_interrupts">
+<span class="sig-prename descclassname"><span class="pre">impresso_essentials.utils.</span></span><span class="sig-name descname"><span class="pre">disable_interrupts</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#impresso_essentials.utils.disable_interrupts" title="Link to this definition"></a></dt>
+<dd><p>Context manager to temporarily disable keyboard interrupts.</p>
+</dd></dl>
+
+<dl class="py function">
 <dt class="sig sig-object py" id="impresso_essentials.utils.get_list_intersection">
 <span class="sig-prename descclassname"><span class="pre">impresso_essentials.utils.</span></span><span class="sig-name descname"><span class="pre">get_list_intersection</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">list1</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">list</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">list2</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">list</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">list</span></span></span><a class="headerlink" href="#impresso_essentials.utils.get_list_intersection" title="Link to this definition"></a></dt>
 <dd><p>Compute the intersection between two lists.</p>
@@ -577,13 +591,15 @@ provider will be determined from the media alias. Defaults to None.</p></li>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="impresso_essentials.utils.id_to_issuedir">
-<span class="sig-prename descclassname"><span class="pre">impresso_essentials.utils.</span></span><span class="sig-name descname"><span class="pre">id_to_issuedir</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">canonical_id</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">issue_path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#impresso_essentials.utils.IssueDir" title="impresso_essentials.utils.IssueDir"><span class="pre">IssueDir</span></a></span></span><a class="headerlink" href="#impresso_essentials.utils.id_to_issuedir" title="Link to this definition"></a></dt>
+<span class="sig-prename descclassname"><span class="pre">impresso_essentials.utils.</span></span><span class="sig-name descname"><span class="pre">id_to_issuedir</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">canonical_id</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">issue_path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">provider</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#impresso_essentials.utils.IssueDir" title="impresso_essentials.utils.IssueDir"><span class="pre">IssueDir</span></a></span></span><a class="headerlink" href="#impresso_essentials.utils.id_to_issuedir" title="Link to this definition"></a></dt>
 <dd><p>Instantiate an IssueDir object from a canonical ID and the path to the issue.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>canonical_id</strong> (<em>str</em>) – Canonical ID of the issue.</p></li>
 <li><p><strong>issue_path</strong> (<em>str</em>) – Local path to the issue files.</p></li>
+<li><p><strong>provider</strong> (<em>str</em><em> | </em><em>None</em><em>, </em><em>optional</em>) – Provider associated to that alias. Defaults to None,
+if not provided, will be deduced from the alias (slight overhead).</p></li>
 </ul>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
@@ -717,7 +733,8 @@ Defaults to “impresso-schemas/json/versioning/manifest.schema.json”.</p></li
 <span class="sig-prename descclassname"><span class="pre">impresso_essentials.utils.</span></span><span class="sig-name descname"><span class="pre">validate_granularity</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span></span><a class="headerlink" href="#impresso_essentials.utils.validate_granularity" title="Link to this definition"></a></dt>
 <dd><p>Validate that the granularity value provided is valid.</p>
 <p>Statistics are computed on three granularity levels:
-corpus, title and year.</p>
+corpus, title and year.
+TODO: add provider?</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><p><strong>value</strong> (<em>str</em>) – Granularity value to validate</p>

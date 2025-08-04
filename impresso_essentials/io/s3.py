@@ -716,10 +716,8 @@ def list_canonical_files(
     Note:
         For the file type, the possible values are the following:
         - "issues", "pages", "audios": include only bz2 files of the given type.
-        - "supports": include all pages and audios bz2 files, returned in the second
-            element of the tuple.
-        - "both": include all types of files, with issues in the first element of
-            the tuple and supports (pages and audios) in the second.
+        - "supports": include all pages and audios bz2 files, returned [1] element of the tuple.
+        - "both": include all types of files, with issues ([0]) and supports ([1]).
 
     Args:
         bucket_name (str): S3 bucket name.
@@ -818,11 +816,9 @@ def fetch_files(
     If compute=False, the output will remain in a distributed dask.bag.
 
     For the file type, the possible values are the following:
-    - "issues", "pages", "audios": include only bz2 files of the given type.
-    - "supports": include all pages and audios bz2 files, returned in the second
-        element of the tuple.
-    - "both": include all types of files, with issues in the first element of
-        the tuple and supports (pages and audios) in the second.
+    - 'issues', 'pages', 'audios': include only bz2 files of the given type.
+    - 'supports': include all pages and audios bz2 files, returned in element [1] of the tuple.
+    - 'both': include all types of files, with issues ([0]) and supports -pages and audios- ([1]).
 
     Based on file_type, the issue files, page/audio ("support") files or both will be returned.
     In the returned tuple, issues are always in the first element and supports in the
@@ -847,6 +843,7 @@ def fetch_files(
         tuple[db.core.Bag|None, db.core.Bag|None] | tuple[list[str]|None, list[str]|None]:
             [0] Issue files' contents or None and
             [1] Page and Audio Record files' contents or None based on `file_type`
+
     """
     if file_type not in ["issues", "pages", "audios", "supports", "both"]:
         logger.error(

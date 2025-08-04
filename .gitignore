@@ -3,6 +3,7 @@
 *egg-info
 build/
 dist/
+impresso_essentials/data/logs/*
 .pytest_cache
 .ipynb_*
 *.__pyc
