@@ -140,9 +140,9 @@
 </li>
 <li class="toctree-l2"><a class="reference internal" href="#module-impresso_essentials.versioning.compute_manifest">Manifest Computing Script</a><ul>
 <li class="toctree-l3"><a class="reference internal" href="#impresso_essentials.versioning.compute_manifest.add_stats_to_mft"><code class="docutils literal notranslate"><span class="pre">add_stats_to_mft()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#impresso_essentials.versioning.compute_manifest.aliases_to_process"><code class="docutils literal notranslate"><span class="pre">aliases_to_process()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#impresso_essentials.versioning.compute_manifest.compute_stats_for_stage"><code class="docutils literal notranslate"><span class="pre">compute_stats_for_stage()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#impresso_essentials.versioning.compute_manifest.create_manifest"><code class="docutils literal notranslate"><span class="pre">create_manifest()</span></code></a></li>
-<li class="toctree-l3"><a class="reference internal" href="#impresso_essentials.versioning.compute_manifest.extract_provider_alias_key"><code class="docutils literal notranslate"><span class="pre">extract_provider_alias_key()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#impresso_essentials.versioning.compute_manifest.get_files_to_consider"><code class="docutils literal notranslate"><span class="pre">get_files_to_consider()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#impresso_essentials.versioning.compute_manifest.main"><code class="docutils literal notranslate"><span class="pre">main()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#impresso_essentials.versioning.compute_manifest.process_altogether"><code class="docutils literal notranslate"><span class="pre">process_altogether()</span></code></a></li>
@@ -1728,6 +1728,45 @@ statistics corresponding to a given stage along with <cite>media_alias</cite> an
 </dd></dl>
 
 <dl class="py function">
+<dt class="sig sig-object py" id="impresso_essentials.versioning.compute_manifest.aliases_to_process">
+<span class="sig-prename descclassname"><span class="pre">impresso_essentials.versioning.compute_manifest.</span></span><span class="sig-name descname"><span class="pre">aliases_to_process</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">config</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Any</span><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">str</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span></span><a class="headerlink" href="#impresso_essentials.versioning.compute_manifest.aliases_to_process" title="Link to this definition"></a></dt>
+<dd><p>Generate a list of (provider, alias) pairs to consider based on the config.</p>
+<p>Uses the input configuration to determine which provider-alias pairs should be
+included when building the manifest. Blacklisted aliases in <cite>alias_blacklist</cite> are
+excluded from the result.</p>
+<p>If neither <cite>providers</cite> nor <cite>media_aliases</cite> are specified, the function returns <cite>None</cite>,
+indicating that all data should be processed. However, any aliases in the blacklist will
+still be excluded from the processing in this case.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>config</strong> (<em>dict</em><em>[</em><em>str</em><em>, </em><em>Any</em><em>]</em>) – A configuration dictionary expected to contain:
+- “providers” (list[str] | None): Optional list of provider names.
+- “media_aliases” (list[str] | None): Optional list of specific media aliases.
+- “alias_blacklist” (list[str] | None): Optional list of aliases to exclude.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>A list of (provider, alias) tuples to process,
+or None if all data should be considered (no filtering).</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>list[tuple[str, str]] | None</p>
+</dd>
+</dl>
+<p class="rubric">Example</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">config</span> <span class="o">=</span> <span class="p">{</span>
+<span class="go">    ...</span>
+<span class="go">    &quot;providers&quot;: [&quot;BNF&quot;],</span>
+<span class="go">    &quot;media_aliases&quot;: [&quot;NZZ&quot;],</span>
+<span class="go">    &quot;alias_blacklist&quot;: [&quot;JGD&quot;, &quot;marieclaire&quot;, &quot;lepetitparisien&quot;, &quot;legaulois&quot;, &quot;lematin&quot;]</span>
+<span class="go">}</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">aliases_to_process</span><span class="p">(</span><span class="n">config</span><span class="p">)</span>
+<span class="go">[(&#39;BNF&#39;, &#39;excelsior&#39;), (&#39;BNF&#39;, &#39;lafronde&#39;), (&#39;BNF&#39;, &#39;oeuvre&#39;), (&#39;BNF&#39;, &#39;jdpl&#39;),</span>
+<span class="go"> (&#39;BNF&#39;, &#39;lepji&#39;), (&#39;BNF&#39;, &#39;oecaen&#39;), (&#39;BNF&#39;, &#39;oerennes&#39;), (&#39;NZZ&#39;, &#39;NZZ&#39;)]</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="py function">
 <dt class="sig sig-object py" id="impresso_essentials.versioning.compute_manifest.compute_stats_for_stage">
 <span class="sig-prename descclassname"><span class="pre">impresso_essentials.versioning.compute_manifest.</span></span><span class="sig-name descname"><span class="pre">compute_stats_for_stage</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">files_bag</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Bag</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">stage</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="utils.html#impresso_essentials.utils.DataStage" title="impresso_essentials.utils.DataStage"><span class="pre">DataStage</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">client</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Client</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">title</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">src_medium</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">dict</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span></span><a class="headerlink" href="#impresso_essentials.versioning.compute_manifest.compute_stats_for_stage" title="Link to this definition"></a></dt>
 <dd><p>Compute statistics for a specific data stage.</p>
@@ -1776,35 +1815,9 @@ Defaults to None.</p></li>
 </dd></dl>
 
 <dl class="py function">
-<dt class="sig sig-object py" id="impresso_essentials.versioning.compute_manifest.extract_provider_alias_key">
-<span class="sig-prename descclassname"><span class="pre">impresso_essentials.versioning.compute_manifest.</span></span><span class="sig-name descname"><span class="pre">extract_provider_alias_key</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">s3_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">bucket</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#impresso_essentials.versioning.compute_manifest.extract_provider_alias_key" title="Link to this definition"></a></dt>
-<dd><p>Extract the media alias an s3:key corresponds to given the bucket and partition</p>
-<p>TODO adapt when provider is added to the s3 organisation.</p>
-<p>eg. s3_key is in format:
-- s3_key: ‘s3://31-passim-rebuilt-staging/passim/[provider]/indeplux/indeplux-1889.jsonl.bz2’
-- bucket: ‘31-passim-rebuilt-staging/passim’
-–&gt; returns ‘indeplux’</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>s3_key</strong> (<em>str</em>) – Full S3 path of a file (as returned by fixed_s3fs_glob).</p></li>
-<li><p><strong>bucket</strong> (<em>str</em>) – S3 bucket, including partition, in which the media dirs are.</p></li>
-</ul>
-</dd>
-<dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p>Media alias of the corresponding media, and corresponding provider.</p>
-</dd>
-<dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p>tuple[str, str]</p>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="py function">
 <dt class="sig sig-object py" id="impresso_essentials.versioning.compute_manifest.get_files_to_consider">
 <span class="sig-prename descclassname"><span class="pre">impresso_essentials.versioning.compute_manifest.</span></span><span class="sig-name descname"><span class="pre">get_files_to_consider</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">config</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Any</span><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span></span><a class="headerlink" href="#impresso_essentials.versioning.compute_manifest.get_files_to_consider" title="Link to this definition"></a></dt>
 <dd><p>Get the list of S3 files to consider based on the provided configuration.</p>
-<p># TODO add “provider” to the config dict and use it to filter the files</p>
 <p>The s3_files mapping is now provider -&gt; alias -&gt; list of files.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>

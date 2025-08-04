@@ -49,6 +49,7 @@
 <li class="toctree-l1 current"><a class="current reference internal" href="#">Input/Output</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="#module-impresso_essentials.io.s3">I/O from and to S3</a><ul>
 <li class="toctree-l3"><a class="reference internal" href="#impresso_essentials.io.s3.alternative_read_text"><code class="docutils literal notranslate"><span class="pre">alternative_read_text()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#impresso_essentials.io.s3.extract_provider_alias_key"><code class="docutils literal notranslate"><span class="pre">extract_provider_alias_key()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#impresso_essentials.io.s3.fetch_files"><code class="docutils literal notranslate"><span class="pre">fetch_files()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#impresso_essentials.io.s3.fixed_s3fs_glob"><code class="docutils literal notranslate"><span class="pre">fixed_s3fs_glob()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#impresso_essentials.io.s3.get_bucket"><code class="docutils literal notranslate"><span class="pre">get_bucket()</span></code></a></li>
@@ -57,9 +58,11 @@
 <li class="toctree-l3"><a class="reference internal" href="#impresso_essentials.io.s3.get_s3_object_size"><code class="docutils literal notranslate"><span class="pre">get_s3_object_size()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#impresso_essentials.io.s3.get_s3_resource"><code class="docutils literal notranslate"><span class="pre">get_s3_resource()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#impresso_essentials.io.s3.get_storage_options"><code class="docutils literal notranslate"><span class="pre">get_storage_options()</span></code></a></li>
-<li class="toctree-l3"><a class="reference internal" href="#impresso_essentials.io.s3.list_files"><code class="docutils literal notranslate"><span class="pre">list_files()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#impresso_essentials.io.s3.list_canonical_files"><code class="docutils literal notranslate"><span class="pre">list_canonical_files()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#impresso_essentials.io.s3.list_media_titles"><code class="docutils literal notranslate"><span class="pre">list_media_titles()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#impresso_essentials.io.s3.list_providers_and_aliases"><code class="docutils literal notranslate"><span class="pre">list_providers_and_aliases()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#impresso_essentials.io.s3.list_s3_directories"><code class="docutils literal notranslate"><span class="pre">list_s3_directories()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#impresso_essentials.io.s3.provider_in_path"><code class="docutils literal notranslate"><span class="pre">provider_in_path()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#impresso_essentials.io.s3.read_jsonlines"><code class="docutils literal notranslate"><span class="pre">read_jsonlines()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#impresso_essentials.io.s3.read_s3_issues"><code class="docutils literal notranslate"><span class="pre">read_s3_issues()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#impresso_essentials.io.s3.readtext_jsonlines"><code class="docutils literal notranslate"><span class="pre">readtext_jsonlines()</span></code></a></li>
@@ -82,6 +85,23 @@
 <li class="toctree-l2"><a class="reference internal" href="#module-impresso_essentials.io.s3_delete">Deleting keys from S3</a><ul>
 <li class="toctree-l3"><a class="reference internal" href="#impresso_essentials.io.s3_delete.delete_versioned_keys"><code class="docutils literal notranslate"><span class="pre">delete_versioned_keys()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#impresso_essentials.io.s3_delete.main"><code class="docutils literal notranslate"><span class="pre">main()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#module-impresso_essentials.io.s3_set_timestamp">Setting timestamp metadata on S3 files</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#impresso_essentials.io.s3_set_timestamp.compute_statistics"><code class="docutils literal notranslate"><span class="pre">compute_statistics()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#impresso_essentials.io.s3_set_timestamp.disable_interrupts"><code class="docutils literal notranslate"><span class="pre">disable_interrupts()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#impresso_essentials.io.s3_set_timestamp.get_last_timestamp"><code class="docutils literal notranslate"><span class="pre">get_last_timestamp()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#impresso_essentials.io.s3_set_timestamp.get_s3_client"><code class="docutils literal notranslate"><span class="pre">get_s3_client()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#impresso_essentials.io.s3_set_timestamp.main"><code class="docutils literal notranslate"><span class="pre">main()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#impresso_essentials.io.s3_set_timestamp.update_metadata_for_prefix"><code class="docutils literal notranslate"><span class="pre">update_metadata_for_prefix()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#impresso_essentials.io.s3_set_timestamp.update_metadata_if_needed"><code class="docutils literal notranslate"><span class="pre">update_metadata_if_needed()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#module-impresso_essentials.io.s3_add_provider">Adding the provider level to S3 partitions</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#impresso_essentials.io.s3_add_provider.add_provider_to_s3_partition"><code class="docutils literal notranslate"><span class="pre">add_provider_to_s3_partition()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#impresso_essentials.io.s3_add_provider.construct_dest_key"><code class="docutils literal notranslate"><span class="pre">construct_dest_key()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#impresso_essentials.io.s3_add_provider.get_alias_from_path"><code class="docutils literal notranslate"><span class="pre">get_alias_from_path()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#impresso_essentials.io.s3_add_provider.main"><code class="docutils literal notranslate"><span class="pre">main()</span></code></a></li>
 </ul>
 </li>
 </ul>
@@ -151,12 +171,43 @@ Defaults to True.</p></li>
 </dd></dl>
 
 <dl class="py function">
+<dt class="sig sig-object py" id="impresso_essentials.io.s3.extract_provider_alias_key">
+<span class="sig-prename descclassname"><span class="pre">impresso_essentials.io.s3.</span></span><span class="sig-name descname"><span class="pre">extract_provider_alias_key</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">s3_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">bucket</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">prov_included</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#impresso_essentials.io.s3.extract_provider_alias_key" title="Link to this definition"></a></dt>
+<dd><p>Extract the media alias an s3:key corresponds to given the bucket and partition</p>
+<p>eg. s3_key is in format:
+- s3_key: ‘s3://31-passim-rebuilt-staging/passim/[provider]/[alias]/[alias]-[year].jsonl.bz2’
+- bucket: ‘31-passim-rebuilt-staging/passim’
+- prov_included: True
+–&gt; returns (provider, alias)</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>s3_key</strong> (<em>str</em>) – Full S3 path of a file (as returned by fixed_s3fs_glob).</p></li>
+<li><p><strong>bucket</strong> (<em>str</em>) – S3 bucket, including partition, in which the media dirs are.</p></li>
+<li><p><strong>prov_included</strong> (<em>bool</em><em>, </em><em>optional</em>) – Whether or not the provider level is present in the
+structure of the provided bucket. Defaults to True.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Media alias of the corresponding media, and corresponding provider.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>tuple[str, str]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
 <dt class="sig sig-object py" id="impresso_essentials.io.s3.fetch_files">
-<span class="sig-prename descclassname"><span class="pre">impresso_essentials.io.s3.</span></span><span class="sig-name descname"><span class="pre">fetch_files</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">bucket_name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">compute</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">file_type</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'issues'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">newspapers_filter</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">Bag</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Bag</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#impresso_essentials.io.s3.fetch_files" title="Link to this definition"></a></dt>
+<span class="sig-prename descclassname"><span class="pre">impresso_essentials.io.s3.</span></span><span class="sig-name descname"><span class="pre">fetch_files</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">bucket_name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">compute</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">file_type</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'issues'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">providers_filter</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">aliases_filter</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">Bag</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Bag</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#impresso_essentials.io.s3.fetch_files" title="Link to this definition"></a></dt>
 <dd><p>Fetch issue and/or page canonical JSON files from an s3 bucket.</p>
 <p>If compute=True, the output will be a list of the contents of all files in the
 bucket for the specified newspapers and type of files.
 If compute=False, the output will remain in a distributed dask.bag.</p>
+<p>For the file type, the possible values are the following:
+- ‘issues’, ‘pages’, ‘audios’: include only bz2 files of the given type.
+- ‘supports’: include all pages and audios bz2 files, returned in element [1] of the tuple.
+- ‘both’: include all types of files, with issues ([0]) and supports -pages and audios- ([1]).</p>
 <p>Based on file_type, the issue files, page/audio (“support”) files or both will be returned.
 In the returned tuple, issues are always in the first element and supports in the
 second, hence if file_type is not ‘both’, the tuple entry corresponding to the
@@ -169,7 +220,9 @@ undesired type of files will be None.</p>
 Defaults to True.</p></li>
 <li><p><strong>file_type</strong> – (str, optional): Type of files to list, possible values are “issues”,
 “pages”, “audios”, “supports” and “both”. Defaults to “issues”.</p></li>
-<li><p><strong>newspapers_filter</strong> – (list[str]|None,optional): List of newspapers to consider.
+<li><p><strong>providers_filter</strong> (<em>list</em><em>[</em><em>str</em><em>] </em><em>| </em><em>None</em><em>, </em><em>optional</em>) – List of providers for which to consider
+the aliases. If None, <cite>aliases_filter</cite> will be considered. Defaults to None.</p></li>
+<li><p><strong>aliases_filter</strong> (<em>list</em><em>[</em><em>str</em><em>] </em><em>| </em><em>None</em><em>, </em><em>optional</em>) – List of aliases to consider.
 If None, all will be considered. Defaults to None.</p></li>
 </ul>
 </dd>
@@ -354,15 +407,29 @@ Defaults to False.</p></li>
 </dd></dl>
 
 <dl class="py function">
-<dt class="sig sig-object py" id="impresso_essentials.io.s3.list_files">
-<span class="sig-prename descclassname"><span class="pre">impresso_essentials.io.s3.</span></span><span class="sig-name descname"><span class="pre">list_files</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">bucket_name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">file_type</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'issues'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">aliases_filter</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#impresso_essentials.io.s3.list_files" title="Link to this definition"></a></dt>
+<dt class="sig sig-object py" id="impresso_essentials.io.s3.list_canonical_files">
+<span class="sig-prename descclassname"><span class="pre">impresso_essentials.io.s3.</span></span><span class="sig-name descname"><span class="pre">list_canonical_files</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">bucket_name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">file_type</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'issues'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">providers_filter</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">aliases_filter</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#impresso_essentials.io.s3.list_canonical_files" title="Link to this definition"></a></dt>
 <dd><p>List the canonical files located in a given S3 bucket.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>The filters are applied in a hierchical manner; first at provider level,
+then at alias level if no provider filter was given.</p>
+</div>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>For the file type, the possible values are the following:
+- “issues”, “pages”, “audios”: include only bz2 files of the given type.
+- “supports”: include all pages and audios bz2 files, returned [1] element of the tuple.
+- “both”: include all types of files, with issues ([0]) and supports ([1]).</p>
+</div>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>bucket_name</strong> (<em>str</em>) – S3 bucket name.</p></li>
 <li><p><strong>file_type</strong> (<em>str</em><em>, </em><em>optional</em>) – Type of files to list, possible values are “issues”,
-“pages” “audios”, “supports” and “both”. Defaults to “issues”.</p></li>
+“pages”, “audios”, “supports” and “both”. Defaults to “issues”.</p></li>
+<li><p><strong>providers_filter</strong> (<em>list</em><em>[</em><em>str</em><em>] </em><em>| </em><em>None</em><em>, </em><em>optional</em>) – List of providers for which to consider
+the aliases. If None, <cite>aliases_filter</cite> will be considered. Defaults to None.</p></li>
 <li><p><strong>aliases_filter</strong> (<em>list</em><em>[</em><em>str</em><em>] </em><em>| </em><em>None</em><em>, </em><em>optional</em>) – List of aliases to consider.
 If None, all will be considered. Defaults to None.</p></li>
 </ul>
@@ -385,17 +452,13 @@ If None, all will be considered. Defaults to None.</p></li>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="impresso_essentials.io.s3.list_media_titles">
-<span class="sig-prename descclassname"><span class="pre">impresso_essentials.io.s3.</span></span><span class="sig-name descname"><span class="pre">list_media_titles</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">bucket_name:</span> <span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">s3_client=&lt;botocore.client.S3</span> <span class="pre">object&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">page_size:</span> <span class="pre">int</span> <span class="pre">=</span> <span class="pre">10000</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#impresso_essentials.io.s3.list_media_titles" title="Link to this definition"></a></dt>
+<span class="sig-prename descclassname"><span class="pre">impresso_essentials.io.s3.</span></span><span class="sig-name descname"><span class="pre">list_media_titles</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">bucket_name:</span> <span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">s3_client=&lt;botocore.client.S3</span> <span class="pre">object&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">page_size:</span> <span class="pre">int</span> <span class="pre">=</span> <span class="pre">10000</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">prov_included:</span> <span class="pre">bool</span> <span class="pre">=</span> <span class="pre">True</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#impresso_essentials.io.s3.list_media_titles" title="Link to this definition"></a></dt>
 <dd><p>List media titles contained in an s3 bucket with impresso data.</p>
-<p># TODO adapt to add provider</p>
+<p>By default, it is considered that the bucket contains the provided level.</p>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
 <p>25,000 seems to be the maximum <cite>PageSize</cite> value supported by
 SwitchEngines’ S3 implementation (ceph).</p>
-</div>
-<div class="admonition note">
-<p class="admonition-title">Note</p>
-<p>Copied from <a class="reference external" href="https://github.com/impresso/impresso-data-sanitycheck/tree/master/sanity_check/contents/s3_data.py">https://github.com/impresso/impresso-data-sanitycheck/tree/master/sanity_check/contents/s3_data.py</a></p>
 </div>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
@@ -403,10 +466,12 @@ SwitchEngines’ S3 implementation (ceph).</p>
 <li><p><strong>bucket_name</strong> (<em>str</em>) – Name of the S3 bucket to consider</p></li>
 <li><p><strong>s3_client</strong> (<em>optional</em>) – S3 client to use. Defaults to get_s3_client().</p></li>
 <li><p><strong>page_size</strong> (<em>int</em><em>, </em><em>optional</em>) – Pagination configuration. Defaults to 10000.</p></li>
+<li><p><strong>prov_included</strong> (<em>bool</em><em>, </em><em>optional</em>) – Whether the provider level is included in
+the bucket structure. Defaults to True</p></li>
 </ul>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p>List of media titles (aliases) present in the given S3 bucket.</p>
+<dd class="field-even"><p>Sorted list of media titles (aliases) present in the given S3 bucket.</p>
 </dd>
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
 <dd class="field-odd"><p>list[str]</p>
@@ -415,15 +480,55 @@ SwitchEngines’ S3 implementation (ceph).</p>
 </dd></dl>
 
 <dl class="py function">
+<dt class="sig sig-object py" id="impresso_essentials.io.s3.list_providers_and_aliases">
+<span class="sig-prename descclassname"><span class="pre">impresso_essentials.io.s3.</span></span><span class="sig-name descname"><span class="pre">list_providers_and_aliases</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">bucket_name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">prefix</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">''</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#impresso_essentials.io.s3.list_providers_and_aliases" title="Link to this definition"></a></dt>
+<dd><p>Lists providers and their alias directories from an S3 bucket.</p>
+<p>Traverses the given S3 bucket to identify provider directories and their associated alias
+subdirectories, under an optional prefix. Returns a dictionary mapping each provider
+to a sorted list of aliases.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>bucket_name</strong> (<em>str</em>) – The name of the S3 bucket to query.</p></li>
+<li><p><strong>prefix</strong> (<em>str</em><em>, </em><em>optional</em>) – The prefix path within the bucket to search (should have a tailing <cite>/</cite>).
+Defaults to the root (‘’).</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Dict mapping sorted provider names to lists of alias directory names.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>dict[str, list[str]]</p>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>botocore.exceptions.ClientError</strong> – If there is an issue communicating with S3.</p>
+</dd>
+</dl>
+<p class="rubric">Example</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">list_providers_and_aliases</span><span class="p">(</span><span class="s1">&#39;141-processed-data-staging&#39;</span><span class="p">,</span> <span class="s1">&#39;embeddings/images/embeddings_dinov2_v1-0-0/&#39;</span><span class="p">)</span>
+<span class="go">{</span>
+<span class="go">    &#39;BCUL&#39;: [&#39;ACI&#39;, &#39;AV&#39;, &#39;Bombe&#39;, &#39;CL&#39;, ..., &#39;esta&#39;, &#39;ouistiti&#39;],</span>
+<span class="go">    ...</span>
+<span class="go">    &#39;SNL&#39;: [&#39;BDC&#39;, &#39;CDV&#39;, ..., &#39;WHD&#39;, &#39;ZBT&#39;]</span>
+<span class="go">}</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="py function">
 <dt class="sig sig-object py" id="impresso_essentials.io.s3.list_s3_directories">
 <span class="sig-prename descclassname"><span class="pre">impresso_essentials.io.s3.</span></span><span class="sig-name descname"><span class="pre">list_s3_directories</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">bucket_name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">prefix</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">''</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#impresso_essentials.io.s3.list_s3_directories" title="Link to this definition"></a></dt>
-<dd><p>Retrieve ‘directory’ names (media aliases) in an S3 bucket given a path prefix.</p>
-<p># TODO adapt to add provider</p>
+<dd><p>Retrieve ‘directory’ names  in an S3 bucket given a path prefix.</p>
+<p>Depending on the prefix and the specific bucket, this will either list the media providers
+or the media aliases.
+For s3 partitions which have the partner layer, the <cite>prefix</cite> parameter allows to select a
+specific partner and list its associated media aliases.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>bucket_name</strong> (<em>str</em>) – The name of the S3 bucket.</p></li>
-<li><p><strong>prefix</strong> (<em>str</em>) – The prefix path within the bucket to search. Default is the root (‘’).</p></li>
+<li><p><strong>prefix</strong> (<em>str</em>) – The prefix path within the bucket to search (should include a tailing <cite>/</cite>).
+Defaults to the root (‘’).</p></li>
 </ul>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
@@ -431,6 +536,40 @@ SwitchEngines’ S3 implementation (ceph).</p>
 </dd>
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
 <dd class="field-odd"><p>list</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="impresso_essentials.io.s3.provider_in_path">
+<span class="sig-prename descclassname"><span class="pre">impresso_essentials.io.s3.</span></span><span class="sig-name descname"><span class="pre">provider_in_path</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">s3_path</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">bucket</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">prefix</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">''</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">bool</span></span></span><a class="headerlink" href="#impresso_essentials.io.s3.provider_in_path" title="Link to this definition"></a></dt>
+<dd><p>Determines whether the given S3 path or prefix includes a provider-level directory structure.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>s3_path</strong> (<em>str</em><em>, </em><em>optional</em>) – Full S3 URI (e.g., ‘s3://my-bucket/prefix/’).
+If provided, it overrides <cite>bucket</cite> and <cite>prefix</cite>.</p></li>
+<li><p><strong>bucket</strong> (<em>str</em><em>, </em><em>optional</em>) – S3 bucket name. Required if <cite>s3_path</cite> is not given.</p></li>
+<li><p><strong>prefix</strong> (<em>str</em><em>, </em><em>optional</em>) – Prefix (folder path) within the bucket.
+Ignored if <cite>s3_path</cite> is provided. Defaults to ‘’.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><ul class="simple">
+<li><p>True if all immediate subfolders match known providers.</p></li>
+<li><p>False if all match known media aliases.</p></li>
+</ul>
+</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>bool</p>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>AttributeError</strong> – <ul class="simple">
+<li><p>If neither <cite>s3_path</cite> nor <cite>bucket</cite> is provided.
+    - If a mix of provider and alias directories is found.</p></li>
+</ul>
+</p>
 </dd>
 </dl>
 </dd></dl>
@@ -460,15 +599,22 @@ SwitchEngines’ S3 implementation (ceph).</p>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="impresso_essentials.io.s3.read_s3_issues">
-<span class="sig-prename descclassname"><span class="pre">impresso_essentials.io.s3.</span></span><span class="sig-name descname"><span class="pre">read_s3_issues</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">alias</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">year</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">input_bucket</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">tuple</span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="utils.html#impresso_essentials.utils.IssueDir" title="impresso_essentials.utils.IssueDir"><span class="pre">IssueDir</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">dict</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#impresso_essentials.io.s3.read_s3_issues" title="Link to this definition"></a></dt>
+<span class="sig-prename descclassname"><span class="pre">impresso_essentials.io.s3.</span></span><span class="sig-name descname"><span class="pre">read_s3_issues</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">alias</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">year</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">input_bucket</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">provider</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">incl_provider</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">tuple</span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="utils.html#impresso_essentials.utils.IssueDir" title="impresso_essentials.utils.IssueDir"><span class="pre">IssueDir</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">dict</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#impresso_essentials.io.s3.read_s3_issues" title="Link to this definition"></a></dt>
 <dd><p>Read the contents of canonical issues from a given S3 bucket.</p>
-<p># TODO adapt to add provider</p>
+<p>By default, it’s considered that the bucket includes the provider in its organization.
+If it’s not the case, the parameter <cite>incl_provider=False</cite> should be set to ensure it’s
+in the constructed s3 path.
+If the provider is not provided, it will be deduced from the alias.
+The provider will however be returned within the IssueDir object anyways.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>alias</strong> (<em>str</em>) – Alias of the media title to read the issues from.</p></li>
 <li><p><strong>year</strong> (<em>str</em>) – Target year to tread issues from.</p></li>
 <li><p><strong>input_bucket</strong> (<em>str</em>) – Bucket from where to fetch the issues.</p></li>
+<li><p><strong>provider</strong> (<em>str</em><em>|</em><em>None</em><em>, </em><em>optional</em>) – Provider for the given alias. Defaults to None.</p></li>
+<li><p><strong>incl_provider</strong> (<em>bool</em><em>, </em><em>optional</em>) – Whether to include the provider in the S3 path.
+Defaults to True.</p></li>
 </ul>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
@@ -538,11 +684,12 @@ created from the path.</p></li>
 <dt class="sig sig-object py" id="impresso_essentials.io.s3.s3_iter_bucket">
 <span class="sig-prename descclassname"><span class="pre">impresso_essentials.io.s3.</span></span><span class="sig-name descname"><span class="pre">s3_iter_bucket</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="pre">bucket_name:</span> <span class="pre">str,</span> <span class="pre">prefix:</span> <span class="pre">str</span> <span class="pre">=</span> <span class="pre">'',</span> <span class="pre">suffix:</span> <span class="pre">str</span> <span class="pre">=</span> <span class="pre">'',</span> <span class="pre">accept_key:</span> <span class="pre">~typing.Callable[[str],</span> <span class="pre">bool]</span> <span class="pre">=</span> <span class="pre">&lt;function</span> <span class="pre">&lt;lambda&gt;&gt;</span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">list</span></span></span><a class="headerlink" href="#impresso_essentials.io.s3.s3_iter_bucket" title="Link to this definition"></a></dt>
 <dd><p>Iterate over a bucket, returning all keys with some filtering options.</p>
-<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">k</span> <span class="o">=</span> <span class="n">s3_iter_bucket</span><span class="p">(</span><span class="s2">&quot;myBucket&quot;</span><span class="p">,</span> <span class="n">prefix</span><span class="o">=</span><span class="s1">&#39;GDL&#39;</span><span class="p">,</span> <span class="n">suffix</span><span class="o">=</span><span class="s2">&quot;.bz2&quot;</span><span class="p">)</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">k</span> <span class="o">=</span> <span class="n">s3_iter_bucket</span><span class="p">(</span><span class="s2">&quot;myBucket&quot;</span><span class="p">,</span> <span class="n">prefix</span><span class="o">=</span><span class="s1">&#39;GDL&#39;</span><span class="p">,</span> <span class="n">accept_key</span><span class="o">=</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="s2">&quot;page&quot;</span> <span class="ow">in</span> <span class="n">x</span><span class="p">)</span>
+<p>Note that <cite>prefix</cite> should now include the provider if it’s the case in the bucket.</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">k</span> <span class="o">=</span> <span class="n">s3_iter_bucket</span><span class="p">(</span><span class="s2">&quot;myBucket&quot;</span><span class="p">,</span> <span class="n">prefix</span><span class="o">=</span><span class="s1">&#39;SNL&#39;</span><span class="p">,</span> <span class="n">suffix</span><span class="o">=</span><span class="s2">&quot;.bz2&quot;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">k</span> <span class="o">=</span> <span class="n">s3_iter_bucket</span><span class="p">(</span><span class="s2">&quot;myBucket&quot;</span><span class="p">,</span> <span class="n">prefix</span><span class="o">=</span><span class="s1">&#39;SNL/GDL&#39;</span><span class="p">,</span> <span class="n">accept_key</span><span class="o">=</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="s2">&quot;page&quot;</span> <span class="ow">in</span> <span class="n">x</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">k</span> <span class="o">=</span> <span class="n">s3_iter_bucket</span><span class="p">(</span><span class="s2">&quot;myBucket&quot;</span><span class="p">,</span>  <span class="n">accept_key</span><span class="o">=</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="s2">&quot;/GDL-&quot;</span> <span class="ow">in</span> <span class="n">x</span><span class="p">)</span>
 </pre></div>
 </div>
-<p># TODO adapt to add provider</p>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
 <p>If <cite>suffix</cite> is not “”, the used accepting condition will become:
@@ -594,7 +741,7 @@ as a lambda function. Defaults to lambda k: True.</p></li>
 <p>Code for parsing impresso’s canonical directory structures.</p>
 <dl class="py function">
 <dt class="sig sig-object py" id="impresso_essentials.io.fs_utils.canonical_path">
-<span class="sig-prename descclassname"><span class="pre">impresso_essentials.io.fs_utils.</span></span><span class="sig-name descname"><span class="pre">canonical_path</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">issuedir</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="utils.html#impresso_essentials.utils.IssueDir" title="impresso_essentials.utils.IssueDir"><span class="pre">IssueDir</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">suffix</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">extension</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">as_dir</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">str</span></span></span><a class="headerlink" href="#impresso_essentials.io.fs_utils.canonical_path" title="Link to this definition"></a></dt>
+<span class="sig-prename descclassname"><span class="pre">impresso_essentials.io.fs_utils.</span></span><span class="sig-name descname"><span class="pre">canonical_path</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">issuedir</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="utils.html#impresso_essentials.utils.IssueDir" title="impresso_essentials.utils.IssueDir"><span class="pre">IssueDir</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">suffix</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">extension</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">as_dir</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">incl_provider</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">str</span></span></span><a class="headerlink" href="#impresso_essentials.io.fs_utils.canonical_path" title="Link to this definition"></a></dt>
 <dd><p>Create a canonical dir, filename or ID from an <cite>IssueDir</cite> object.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
@@ -606,6 +753,8 @@ eg. Can be ‘pages’, ‘i0001’ or <cite>“p” + str(num).zfill(4)</cite>.
 Defaults to None.</p></li>
 <li><p><strong>as_dir</strong> (<em>bool</em><em>, </em><em>optional</em>) – Whether the result is a directory (‘/’ separator) or a
 filename or ID (‘-’ separator). Defaults to False.</p></li>
+<li><p><strong>incl_provider</strong> (<em>bool</em><em>, </em><em>optional</em>) – Whether to include the provider when <cite>as_dir=True</cite>.
+Defaults to True.</p></li>
 </ul>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
@@ -661,11 +810,15 @@ One of “issue”, “page”, “audio”, “content-item”. Defaults to ‘
 
 <dl class="py function">
 <dt class="sig sig-object py" id="impresso_essentials.io.fs_utils.get_issueshortpath">
-<span class="sig-prename descclassname"><span class="pre">impresso_essentials.io.fs_utils.</span></span><span class="sig-name descname"><span class="pre">get_issueshortpath</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">issuedir</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="utils.html#impresso_essentials.utils.IssueDir" title="impresso_essentials.utils.IssueDir"><span class="pre">IssueDir</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">str</span></span></span><a class="headerlink" href="#impresso_essentials.io.fs_utils.get_issueshortpath" title="Link to this definition"></a></dt>
+<span class="sig-prename descclassname"><span class="pre">impresso_essentials.io.fs_utils.</span></span><span class="sig-name descname"><span class="pre">get_issueshortpath</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">issuedir</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="utils.html#impresso_essentials.utils.IssueDir" title="impresso_essentials.utils.IssueDir"><span class="pre">IssueDir</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">incl_provider</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">str</span></span></span><a class="headerlink" href="#impresso_essentials.io.fs_utils.get_issueshortpath" title="Link to this definition"></a></dt>
 <dd><p>Return short version of an IssueDir’s path, starting from the media alias.</p>
+<p>If <cite>incl_provider</cite>, beware that the provider needs to be</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><p><strong>issuedir</strong> (<a class="reference internal" href="utils.html#impresso_essentials.utils.IssueDir" title="impresso_essentials.utils.IssueDir"><em>IssueDir</em></a>) – IssueDir instance from which to get the short path.</p>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>issuedir</strong> (<a class="reference internal" href="utils.html#impresso_essentials.utils.IssueDir" title="impresso_essentials.utils.IssueDir"><em>IssueDir</em></a>) – IssueDir instance from which to get the short path.</p></li>
+<li><p><strong>incl_provider</strong> (<em>bool</em><em>, </em><em>optional</em>) – whether to include the provider. Defaults to True.</p></li>
+</ul>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
 <dd class="field-even"><p>Canonical path to the issue starting at the media alias.</p>
@@ -796,6 +949,315 @@ One of “issue”, “page”, “audio”, “content-item”. Defaults to ‘
 <dl class="py function">
 <dt class="sig sig-object py" id="impresso_essentials.io.s3_delete.main">
 <span class="sig-prename descclassname"><span class="pre">impresso_essentials.io.s3_delete.</span></span><span class="sig-name descname"><span class="pre">main</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#impresso_essentials.io.s3_delete.main" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+</section>
+<section id="module-impresso_essentials.io.s3_set_timestamp">
+<span id="setting-timestamp-metadata-on-s3-files"></span><h2>Setting timestamp metadata on S3 files<a class="headerlink" href="#module-impresso_essentials.io.s3_set_timestamp" title="Link to this heading"></a></h2>
+<p>This script processes a .jsonl file stored in an S3 bucket to extract the latest
+timestamp from a specified key in the file’s records. It then updates the S3
+object’s metadata with the extracted timestamp. Optionally, the updated metadata
+can be written to a new S3 location.</p>
+<dl>
+<dt>Usage:</dt><dd><p>python s3_set_timestamp.py –s3-file s3://bucket/path/file.jsonl.bz2         –metadata-key impresso-last-ts         –ts-key ts         –all-lines         –output s3://bucket/path/output.jsonl</p>
+<p>python s3_set_timestamp.py –s3-prefix s3://bucket/path/         –metadata-key impresso-last-ts         –ts-key ts         –all-lines</p>
+</dd>
+</dl>
+<dl class="field-list simple">
+<dt class="field-odd">param –s3-prefix<span class="colon">:</span></dt>
+<dd class="field-odd"><p>The S3 prefix to process multiple .jsonl.bz2 files.</p>
+</dd>
+<dt class="field-even">param –s3-file<span class="colon">:</span></dt>
+<dd class="field-even"><p>The S3 URI of a single .jsonl.bz2 file to process.</p>
+</dd>
+<dt class="field-odd">param –metadata-key<span class="colon">:</span></dt>
+<dd class="field-odd"><p>The metadata key to update with the latest timestamp
+(default: impresso-last-ts).</p>
+</dd>
+<dt class="field-even">param –ts-key<span class="colon">:</span></dt>
+<dd class="field-even"><p>The key in the JSONL records to extract the timestamp from
+(default: ts).</p>
+</dd>
+<dt class="field-odd">param –all-lines<span class="colon">:</span></dt>
+<dd class="field-odd"><p>If False, only the first timestamp is considered.</p>
+</dd>
+<dt class="field-even">param –output<span class="colon">:</span></dt>
+<dd class="field-even"><p>Optional S3 URI for the output file with updated metadata (only for –s3-file).</p>
+</dd>
+<dt class="field-odd">param –force<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Force reprocessing even if metadata is already up-to-date (default: False).</p>
+</dd>
+</dl>
+<dl class="py function">
+<dt class="sig sig-object py" id="impresso_essentials.io.s3_set_timestamp.compute_statistics">
+<span class="sig-prename descclassname"><span class="pre">impresso_essentials.io.s3_set_timestamp.</span></span><span class="sig-name descname"><span class="pre">compute_statistics</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">skipped</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">processed</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#impresso_essentials.io.s3_set_timestamp.compute_statistics" title="Link to this definition"></a></dt>
+<dd><p>Compute and log overall statistics for the files processed.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>skipped</strong> (<em>int</em>) – Number of files skipped.</p></li>
+<li><p><strong>processed</strong> (<em>int</em>) – Number of files processed.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>None</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="impresso_essentials.io.s3_set_timestamp.disable_interrupts">
+<span class="sig-prename descclassname"><span class="pre">impresso_essentials.io.s3_set_timestamp.</span></span><span class="sig-name descname"><span class="pre">disable_interrupts</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#impresso_essentials.io.s3_set_timestamp.disable_interrupts" title="Link to this definition"></a></dt>
+<dd><p>Context manager to temporarily disable keyboard interrupts.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="impresso_essentials.io.s3_set_timestamp.get_last_timestamp">
+<span class="sig-prename descclassname"><span class="pre">impresso_essentials.io.s3_set_timestamp.</span></span><span class="sig-name descname"><span class="pre">get_last_timestamp</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">fileobj</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ts_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">all_lines</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">str</span></span></span><a class="headerlink" href="#impresso_essentials.io.s3_set_timestamp.get_last_timestamp" title="Link to this definition"></a></dt>
+<dd><p>Extracts the latest timestamp from a .jsonl file based on the specified key.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>fileobj</strong> – The file object or path to the .jsonl file (supports .bz2 compression).</p></li>
+<li><p><strong>ts_key</strong> – The key in the JSONL records to extract the timestamp from.</p></li>
+<li><p><strong>all_lines</strong> – If False, only the first timestamp is considered.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The latest timestamp in ISO 8601 format (e.g., ‘2023-01-01T12:00:00Z’).</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>str</p>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>ValueError</strong> – If no valid timestamp is found or the key format is unknown.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="impresso_essentials.io.s3_set_timestamp.get_s3_client">
+<span class="sig-prename descclassname"><span class="pre">impresso_essentials.io.s3_set_timestamp.</span></span><span class="sig-name descname"><span class="pre">get_s3_client</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">client</span></span></span><a class="headerlink" href="#impresso_essentials.io.s3_set_timestamp.get_s3_client" title="Link to this definition"></a></dt>
+<dd><p>Creates and returns a boto3 S3 client configured with credentials and endpoint.</p>
+<dl class="simple">
+<dt>The client is configured using environment variables:</dt><dd><ul class="simple">
+<li><p>SE_ACCESS_KEY: AWS access key ID.</p></li>
+<li><p>SE_SECRET_KEY: AWS secret access key.</p></li>
+<li><p>SE_HOST_URL: S3 endpoint URL (default: <a class="reference external" href="https://os.zhdk.cloud.switch.ch/">https://os.zhdk.cloud.switch.ch/</a>).</p></li>
+<li><p>SE_REGION: AWS region (default: us-east-1).</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>A configured S3 client instance.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>boto3.client</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="impresso_essentials.io.s3_set_timestamp.main">
+<span class="sig-prename descclassname"><span class="pre">impresso_essentials.io.s3_set_timestamp.</span></span><span class="sig-name descname"><span class="pre">main</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#impresso_essentials.io.s3_set_timestamp.main" title="Link to this definition"></a></dt>
+<dd><p>Parses command-line arguments and triggers the metadata update process.</p>
+<dl class="simple">
+<dt>This function handles the following arguments:</dt><dd><ul class="simple">
+<li><p>–s3-prefix: The S3 prefix to process multiple .jsonl.bz2 files.</p></li>
+<li><p>–s3-file: The S3 URI of a single .jsonl.bz2 file to process.</p></li>
+<li><p>–metadata-key: The metadata key to update with the latest timestamp.</p></li>
+<li><p>–ts-key: The key in the JSONL records to extract the timestamp from.</p></li>
+<li><p>–all-lines: If False, only the first timestamp is considered.</p></li>
+<li><p>–output: Optional S3 URI for the output file with updated metadata.
+Only valid with –s3-file.</p></li>
+<li><p>–force: Force reprocessing even if metadata is already up-to-date.</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>None</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="impresso_essentials.io.s3_set_timestamp.update_metadata_for_prefix">
+<span class="sig-prename descclassname"><span class="pre">impresso_essentials.io.s3_set_timestamp.</span></span><span class="sig-name descname"><span class="pre">update_metadata_for_prefix</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">s3_prefix</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">metadata_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ts_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">all_lines</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">force</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#impresso_essentials.io.s3_set_timestamp.update_metadata_for_prefix" title="Link to this definition"></a></dt>
+<dd><p>Updates the metadata for all S3 objects matching a given prefix.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>s3_prefix</strong> – The S3 prefix to search for .jsonl.bz2 files.</p></li>
+<li><p><strong>metadata_key</strong> – The metadata key to update with the latest timestamp.</p></li>
+<li><p><strong>ts_key</strong> – The key in the JSONL records to extract the timestamp from.</p></li>
+<li><p><strong>all_lines</strong> – If False, only the first timestamp is considered.</p></li>
+<li><p><strong>force</strong> – Force reprocessing even if metadata is already up-to-date.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>None</p>
+</dd>
+<dt class="field-odd">Raises<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>ValueError</strong> – If the prefix does not match any files.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="impresso_essentials.io.s3_set_timestamp.update_metadata_if_needed">
+<span class="sig-prename descclassname"><span class="pre">impresso_essentials.io.s3_set_timestamp.</span></span><span class="sig-name descname"><span class="pre">update_metadata_if_needed</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">s3_uri</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">metadata_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ts_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">all_lines</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">output_s3_uri</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">force</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#impresso_essentials.io.s3_set_timestamp.update_metadata_if_needed" title="Link to this definition"></a></dt>
+<dd><p>Updates the metadata of an S3 object with the latest timestamp from a .jsonl file.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>s3_uri</strong> – The S3 URI of the .jsonl file to process.</p></li>
+<li><p><strong>metadata_key</strong> – The metadata key to update with the latest timestamp.</p></li>
+<li><p><strong>ts_key</strong> – The key in the JSONL records to extract the timestamp from.</p></li>
+<li><p><strong>all_lines</strong> – If False, only the first timestamp is considered.</p></li>
+<li><p><strong>output_s3_uri</strong> – Optional S3 URI for the output file with updated metadata.</p></li>
+<li><p><strong>force</strong> – Force reprocessing even if metadata is already up-to-date.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>None</p>
+</dd>
+<dt class="field-odd">Raises<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>ValueError</strong> – If the timestamp extraction or metadata update fails.</p>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+<section id="module-impresso_essentials.io.s3_add_provider">
+<span id="adding-the-provider-level-to-s3-partitions"></span><h2>Adding the provider level to S3 partitions<a class="headerlink" href="#module-impresso_essentials.io.s3_add_provider" title="Link to this heading"></a></h2>
+<p>Command-line script to generate a manifest for an S3 bucket or partition after a processing.</p>
+<dl class="simple">
+<dt>Usage:</dt><dd><p>s3_add_provider.py –s3-partition-path=&lt;pp&gt; –log-file=&lt;lf&gt; [–dest-bucket=&lt;db&gt; –remove-src-keys –no-copy –verbose]</p>
+</dd>
+</dl>
+<p>Options:</p>
+<dl class="option-list">
+<dt><kbd><span class="option">--s3-partition-path=<var>&lt;pp&gt;</var></span></kbd></dt>
+<dd><p>S3 path to the partition to which the provider level should be added.
+Corresponds to the last partition before the list of media titles - where to add the provider.
+Eg. “”s3://122-rebuilt-final” or “s3://142-processed-data-final/langident/langident_v1-4-4”</p>
+</dd>
+<dt><kbd><span class="option">--log-file=<var>&lt;lf&gt;</var></span></kbd></dt>
+<dd><p>Path to log file to use.</p>
+</dd>
+<dt><kbd><span class="option">--dest-bucket=<var>&lt;db&gt;</var></span></kbd></dt>
+<dd><p>Destination bucket in which to copy the data with the provider layer. If not
+defined, will default to the input bucket (corresponding to simply adding the provider).
+Eg. “122-rebuilt-staging”.</p>
+</dd>
+<dt><kbd><span class="option">--remove-src-keys</span></kbd></dt>
+<dd><p>Whether to remove the source keys which don’t have the provider after performing the
+addition and/or copy. If True, the old keys without the provider will be removed. Defaults to False.</p>
+</dd>
+<dt><kbd><span class="option">--no-copy</span></kbd></dt>
+<dd><p>Launch the scrip in debug mode - will not perform copies but list which would have been done</p>
+</dd>
+<dt><kbd><span class="option">--verbose</span></kbd></dt>
+<dd><p>Set logging level to DEBUG (by default is INFO).</p>
+</dd>
+</dl>
+<dl class="py function">
+<dt class="sig sig-object py" id="impresso_essentials.io.s3_add_provider.add_provider_to_s3_partition">
+<span class="sig-prename descclassname"><span class="pre">impresso_essentials.io.s3_add_provider.</span></span><span class="sig-name descname"><span class="pre">add_provider_to_s3_partition</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">src_bucket</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dest_bucket</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">exact_partition</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">perform_copy</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">remove_src_keys</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">metadata_directive</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'COPY'</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#impresso_essentials.io.s3_add_provider.add_provider_to_s3_partition" title="Link to this definition"></a></dt>
+<dd><p>Add a provider-level directory to an S3 partition by restructuring file paths.</p>
+<p>Iterate over all <cite>.jsonl.bz2</cite> files under the given S3 partition and rewrite their
+keys to include the provider name as a directory level. Optionally copy the files
+to a destination bucket using the new structure, and/or also delete the original keys.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>src_bucket</strong> (<em>str</em>) – Name of the source S3 bucket.</p></li>
+<li><p><strong>dest_bucket</strong> (<em>str</em>) – Name of the destination S3 bucket.</p></li>
+<li><p><strong>exact_partition</strong> (<em>str</em>) – The key prefix representing the S3 partition to process.</p></li>
+<li><p><strong>perform_copy</strong> (<em>bool</em><em>, </em><em>optional</em>) – If True, files are copied to the new key structure.
+If False, only logs the intended actions. Defaults to False.</p></li>
+<li><p><strong>remove_src_keys</strong> (<em>bool</em><em>, </em><em>optional</em>) – If True and <cite>perform_copy</cite> is enabled, removes
+the source keys after copying (except those with “pages” in the key). Defaults to False.</p></li>
+<li><p><strong>metadata_directive</strong> (<em>str</em><em>, </em><em>optional</em>) – Directive passed to <cite>s3.copy_object</cite>, usually
+“COPY” or “REPLACE”. Defaults to “COPY”.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>AttributeError</strong> – If alias or provider cannot be inferred from a file path.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="impresso_essentials.io.s3_add_provider.construct_dest_key">
+<span class="sig-prename descclassname"><span class="pre">impresso_essentials.io.s3_add_provider.</span></span><span class="sig-name descname"><span class="pre">construct_dest_key</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">src_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">provider</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">og_partition</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">current_alias</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">found_prov</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">str</span></span></span><a class="headerlink" href="#impresso_essentials.io.s3_add_provider.construct_dest_key" title="Link to this definition"></a></dt>
+<dd><p>Construct a destination S3 key by inserting the provider into the path structure.</p>
+<p>Modify the original source key by adding the provider name at the correct position,
+depending on whether a partition is defined.
+If a <cite>found_prov</cite> is given, the key is returned unchanged, assuming the provider is
+already present.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>src_key</strong> (<em>str</em>) – The original source key (e.g., a file path in S3).</p></li>
+<li><p><strong>provider</strong> (<em>str</em>) – The name of the provider to inject into the key path.</p></li>
+<li><p><strong>og_partition</strong> (<em>str</em>) – The original partition prefix.</p></li>
+<li><p><strong>current_alias</strong> (<em>str</em><em> | </em><em>None</em><em>, </em><em>optional</em>) – The media alias currently being processed.
+Used only for logging/debugging. Defaults to None.</p></li>
+<li><p><strong>found_prov</strong> (<em>str</em><em> | </em><em>None</em><em>, </em><em>optional</em>) – If provided, assumes the provider is already in the path
+and skips modifying the key. Defaults to None.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The modified destination key with the provider inserted, or the original key
+if <cite>found_prov</cite> is set.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>str</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="impresso_essentials.io.s3_add_provider.get_alias_from_path">
+<span class="sig-prename descclassname"><span class="pre">impresso_essentials.io.s3_add_provider.</span></span><span class="sig-name descname"><span class="pre">get_alias_from_path</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">source_path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">og_partition</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#impresso_essentials.io.s3_add_provider.get_alias_from_path" title="Link to this definition"></a></dt>
+<dd><p>Extract the media alias (and optionally the provider) from a given S3 source path.</p>
+<p>Based on the original partition prefix, determine the position of the
+media alias and whether the provider is included in the path.</p>
+<p>The logic distinguishes between:
+- paths where the alias is directly in the root (e.g., <cite>alias/…</cite>)
+- paths that include a provider level (e.g., <cite>provider/alias/…</cite>)</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>source_path</strong> (<em>str</em>) – Full S3-like path to a file or folder.</p></li>
+<li><p><strong>og_partition</strong> (<em>str</em>) – The partition/prefix that was originally used (e.g., “stage/”).</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><dl class="simple">
+<dt>A tuple of:</dt><dd><ul class="simple">
+<li><p>The media alias string.</p></li>
+<li><p>The provider name if found, otherwise <cite>None</cite>.</p></li>
+</ul>
+</dd>
+</dl>
+</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>tuple[str, str | None]</p>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>AttributeError</strong> – If the alias cannot be identified from the path.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="impresso_essentials.io.s3_add_provider.main">
+<span class="sig-prename descclassname"><span class="pre">impresso_essentials.io.s3_add_provider.</span></span><span class="sig-name descname"><span class="pre">main</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#impresso_essentials.io.s3_add_provider.main" title="Link to this definition"></a></dt>
 <dd></dd></dl>
 
 </section>

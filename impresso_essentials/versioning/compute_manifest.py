@@ -23,7 +23,12 @@ from tqdm import tqdm
 
 import dask.bag as db
 from dask.distributed import Client
-from impresso_essentials.io.s3 import fixed_s3fs_glob, IMPRESSO_STORAGEOPT
+from impresso_essentials.io.s3 import (
+    fixed_s3fs_glob,
+    IMPRESSO_STORAGEOPT,
+    extract_provider_alias_key,
+    provider_in_path,
+)
 from impresso_essentials.utils import (
     init_logger,
     ALL_MEDIA,
@@ -41,7 +46,9 @@ logger = logging.getLogger(__name__)
 # list of optional configurations
 OPT_CONFIG_KEYS = [
     "input_bucket",
+    "providers",
     "media_aliases",
+    "alias_blacklist",
     "previous_mft_s3_path",
     "is_patch",
     "patched_fields",
@@ -61,42 +68,6 @@ REQ_CONFIG_KEYS = [
     "git_repository",
     "file_extensions",
 ]
-
-
-def extract_provider_alias_key(s3_key: str, bucket: str) -> tuple[str, str]:
-    """Extract the media alias an s3:key corresponds to given the bucket and partition
-
-    TODO adapt when provider is added to the s3 organisation.
-
-    eg. s3_key is in format:
-    - s3_key: 's3://31-passim-rebuilt-staging/passim/[provider]/indeplux/indeplux-1889.jsonl.bz2'
-    - bucket: '31-passim-rebuilt-staging/passim'
-    --> returns 'indeplux'
-
-    Args:
-        s3_key (str): Full S3 path of a file (as returned by fixed_s3fs_glob).
-        bucket (str): S3 bucket, including partition, in which the media dirs are.
-
-    Returns:
-        tuple[str, str]: Media alias of the corresponding media, and corresponding provider.
-    """
-    # TODO change to extract alias key and add provider
-    # in format: 's3://31-passim-rebuilt-staging/passim/indeplux/indeplux-1889.jsonl.bz2'
-    if not bucket.endswith("/"):
-        bucket = f"{bucket}/"
-
-    if "s3://" in bucket:
-        key_no_bucket = s3_key.replace(f"{bucket}", "")
-    else:
-        key_no_bucket = s3_key.replace(f"s3://{bucket}", "")
-
-    # Not all buckets separate the data per title, but the title will always come first.
-    if "/" in key_no_bucket:
-        alias = key_no_bucket.split("/")[0]
-    else:
-        alias = key_no_bucket.split("-")[0]
-
-    return alias, get_provider_for_alias(alias)
 
 
 def remove_corrupted_files(
@@ -165,7 +136,7 @@ def remove_corrupted_files(
                             else:
                                 correct_files[prov][alias] = [file]
                         else:
-                            correct_files[prov] = {alias: files_alias}
+                            correct_files[prov] = {alias: [file]}
                         del corr_contents
                     except Exception as e2:
                         msg = (
@@ -196,8 +167,6 @@ def remove_corrupted_files(
 def get_files_to_consider(config: dict[str, Any]) -> Optional[dict[str, dict[str, list[str]]]]:
     """Get the list of S3 files to consider based on the provided configuration.
 
-    # TODO add "provider" to the config dict and use it to filter the files
-
     The s3_files mapping is now provider -> alias -> list of files.
 
     Args:
@@ -220,44 +189,60 @@ def get_files_to_consider(config: dict[str, Any]) -> Optional[dict[str, dict[str
         ext = "issues.jsonl.bz2"
     # change "." in ext with `ext.startswith('.')`?
     extension_filter = f"*{ext}" if "." in ext else f"*.{ext}"
+    # check if bucket has provider level while some buckets have providers and others not
+    incl_provider = provider_in_path(config["output_bucket"])
 
-    # TODO here handle case where provider list is given
-    if config["media_aliases"] is None or len(config["media_aliases"]) == 0:
+    if config["prov_alias_pairs"] is None:
         # if media_aliases is empty, include all media_aliases
         logger.info("Fetching the files to consider for all titles...")
         print("Fetching the files to consider for all titles...")
         # return all filenames in the given bucket partition with the correct extension
         files = fixed_s3fs_glob(os.path.join(config["output_bucket"], extension_filter))
+        # Ensure blacklist is defined and a list in the case there is any alias to exclude
+        blacklist = blacklist = (
+            config["alias_blacklist"] if config["alias_blacklist"] is not None else []
+        )
         s3_files = {}
         for s3_key in files:
-            alias, provider = extract_provider_alias_key(s3_key, config["output_bucket"])
-            # add the provider as a first level key
-            if provider in s3_files:
-                if alias in s3_files[provider]:
-                    s3_files[provider][alias].append(s3_key)
+            provider, alias = extract_provider_alias_key(
+                s3_key, config["output_bucket"], prov_included=incl_provider
+            )
+            if alias not in blacklist:
+                # add the provider as a first level key
+                if provider in s3_files:
+                    if alias in s3_files[provider]:
+                        s3_files[provider][alias].append(s3_key)
+                    else:
+                        s3_files[provider][alias] = [s3_key]
                 else:
-                    s3_files[provider][alias] = [s3_key]
+                    s3_files[provider] = {alias: [s3_key]}
             else:
-                s3_files[provider] = {alias: [s3_key]}
+                msg = (
+                    f"Skipping the processing of alias {alias} since it's part of the blacklist..."
+                )
+                print(msg)
+                logger.info(msg)
 
     else:
         # here only add files for aliases in media_aliases instead
-        msg = f"Fetching the files to consider for titles {config['media_aliases']}..."
+        msg = f"Fetching the files to consider for provider-alias pairs {config['prov_alias_pairs']}..."
         logger.info(msg)
         print(msg)
         s3_files = {}
-        for alias in config["media_aliases"]:
-            provider = get_provider_for_alias(alias)
-            if provider in s3_files:
-                s3_files[provider][alias] = fixed_s3fs_glob(
-                    os.path.join(config["output_bucket"], alias, extension_filter)
-                )  # TODO add provider to path when s3 structure changes
+        for provider, alias in config["prov_alias_pairs"]:
+            # Temporary fix until all buckets have the provider level
+            if incl_provider:
+                s3_path = fixed_s3fs_glob(
+                    os.path.join(config["output_bucket"], provider, alias, extension_filter)
+                )
             else:
-                s3_files[provider] = {
-                    alias: fixed_s3fs_glob(
-                        os.path.join(config["output_bucket"], alias, extension_filter)
-                    )  # TODO add providerto path when s3 structure changes
-                }
+                s3_path = fixed_s3fs_glob(
+                    os.path.join(config["output_bucket"], alias, extension_filter)
+                )
+            if provider in s3_files:
+                s3_files[provider][alias] = s3_path
+            else:
+                s3_files[provider] = {alias: s3_path}
 
     if config["check_s3_archives"]:
         # filter out empty or corrupted files
@@ -341,6 +326,56 @@ def compute_stats_for_stage(
     )
 
 
+def aliases_to_process(config: dict[str, Any]) -> list[tuple[str, str]] | None:
+    """Generate a list of (provider, alias) pairs to consider based on the config.
+
+    Uses the input configuration to determine which provider-alias pairs should be
+    included when building the manifest. Blacklisted aliases in `alias_blacklist` are
+    excluded from the result.
+
+    If neither `providers` nor `media_aliases` are specified, the function returns `None`,
+    indicating that all data should be processed. However, any aliases in the blacklist will
+    still be excluded from the processing in this case.
+
+    Args:
+        config (dict[str, Any]): A configuration dictionary expected to contain:
+            - "providers" (list[str] | None): Optional list of provider names.
+            - "media_aliases" (list[str] | None): Optional list of specific media aliases.
+            - "alias_blacklist" (list[str] | None): Optional list of aliases to exclude.
+
+    Returns:
+        list[tuple[str, str]] | None: A list of (provider, alias) tuples to process,
+        or None if all data should be considered (no filtering).
+
+    Example:
+        >>> config = {
+            ...
+            "providers": ["BNF"],
+            "media_aliases": ["NZZ"],
+            "alias_blacklist": ["JGD", "marieclaire", "lepetitparisien", "legaulois", "lematin"]
+        }
+        >>> aliases_to_process(config)
+        [('BNF', 'excelsior'), ('BNF', 'lafronde'), ('BNF', 'oeuvre'), ('BNF', 'jdpl'),
+         ('BNF', 'lepji'), ('BNF', 'oecaen'), ('BNF', 'oerennes'), ('NZZ', 'NZZ')]
+    """
+    aliases = []
+
+    blacklist = config["alias_blacklist"] if config["alias_blacklist"] is not None else []
+    providers = config["providers"] if config["providers"] is not None else []
+    media_aliases = config["media_aliases"] if config["media_aliases"] is not None else []
+
+    # if both lista are empty, there is no list to return
+    if not providers and not media_aliases:
+        return None
+
+    # first collect all the aliases from the list of providers
+    aliases = [(p, a) for p in providers for a in PARTNER_TO_MEDIA[p] if a not in blacklist]
+    # then add the aliases from the list of aliases
+    aliases.extend([(get_provider_for_alias(a), a) for a in media_aliases if a not in blacklist])
+
+    return aliases
+
+
 def validate_config(config: dict[str, Any]) -> dict[str, Any]:
     """Ensure all required configurations are defined, add any missing optional ones.
 
@@ -354,13 +389,15 @@ def validate_config(config: dict[str, Any]) -> dict[str, Any]:
         dict[str, Any]: Updated config, with any mssing optional argument set to None.
     """
     logger.info("Validating that the provided configuration has all required arugments.")
-    if not all([k in config for k in REQ_CONFIG_KEYS]):
+    if not all(k in config for k in REQ_CONFIG_KEYS):
         raise ValueError(f"Missing some required configurations: {REQ_CONFIG_KEYS}")
 
     for k in OPT_CONFIG_KEYS:
         if k not in config:
             logger.debug("%s was missing form the configuration, setting it to None", k)
             config[k] = None
+
+    config["prov_alias_pairs"] = aliases_to_process(config)
 
     return config
 
@@ -388,19 +425,20 @@ def add_stats_to_mft(
         DataManifest: The updated DataManifest instance with the added statistics.
     """
     logger.info(
-        "%s - Populating the manifest with the resulting %s yearly statistics found...",
+        "%s (%s) - Populating the manifest with the resulting %s yearly statistics found...",
         media_alias,
+        provider,
         len(computed_stats),
     )
-    logger.debug("%s - computed_stats: %s", media_alias, computed_stats)
+    logger.debug("%s (%s) - computed_stats: %s", media_alias, provider, computed_stats)
 
     for stats in computed_stats:
         title = stats["media_alias"]
         if title != media_alias and media_alias in ALL_MEDIA:
-            # unless the value for np_title is the name of a file, ensure the correct stats are being added.
+            # ensure the correct stats are being added.
             msg = (
                 "Warning, some stats were computed on the wrong title! Not adding them."
-                f"media_alias={media_alias}, title={title}, year={stats['year']}."
+                f"provider={provider}, alias={media_alias}, title={title}, year={stats['year']}."
             )
             print(msg)
             logger.info(msg)
@@ -572,10 +610,12 @@ def create_manifest(config_dict: dict[str, Any], client: Optional[Client] = None
     # fetch the names of the files to consider separated per title
     s3_files = get_files_to_consider(config_dict)
 
-    num_files = sum(len(aliases.values()) for aliases in s3_files.values())
+    num_files = sum(len(aliases.values()) for prov in s3_files.values() for aliases in prov)
+    num_aliases = sum(len(prov.values()) for prov in s3_files.values())
     logger.info(
-        "Collected a total of %s files from %s media titles, reading them...",
+        "Collected a total of %s files from %s aliases (and %s providers), reading them...",
         num_files,
+        num_aliases,
         len(s3_files.values()),
     )
 
@@ -623,10 +663,15 @@ def create_manifest(config_dict: dict[str, Any], client: Optional[Client] = None
         manifest.append_to_notes(config_dict["notes"])
     else:
         note = f"Processing data to generate {stage} for "
-        if len(config_dict["media_aliases"]) != 0:
-            note += f"titles: {config_dict['media_aliases']}."
+        if config_dict["prov_alias_pairs"]:
+            note += f"titles: {config_dict['prov_alias_pairs']}."
         else:
-            note += "all media titles."
+            blacklist_aliases = (
+                f" except {config_dict['alias_blacklist']}"
+                if config_dict["alias_blacklist"] is not None
+                else None
+            )
+            note += f"all media titles{blacklist_aliases}."
 
         manifest.append_to_notes(note)
 

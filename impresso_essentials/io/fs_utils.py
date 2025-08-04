@@ -71,7 +71,11 @@ def list_local_directories(path: str) -> list[str]:
 
 
 def canonical_path(
-    issuedir: IssueDir, suffix: str = None, extension: str = None, as_dir: bool = False
+    issuedir: IssueDir,
+    suffix: str = None,
+    extension: str = None,
+    as_dir: bool = False,
+    incl_provider: bool = True,
 ) -> str:
     """Create a canonical dir, filename or ID from an `IssueDir` object.
 
@@ -83,12 +87,17 @@ def canonical_path(
             Defaults to None.
         as_dir (bool, optional): Whether the result is a directory ('/' separator) or a
             filename or ID ('-' separator). Defaults to False.
+        incl_provider (bool, optional): Whether to include the provider when `as_dir=True`.
+            Defaults to True.
 
     Returns:
         str: Constructed canonical ID, filename or canonical path for given IssueDir.
     """
     sep = "/" if as_dir else "-"
-    base = sep.join(
+
+    # if in dir mode add provider
+    parts = [issuedir.provider] if incl_provider and as_dir else []
+    parts.extend(
         [
             issuedir.alias,
             str(issuedir.date.year),
@@ -97,6 +106,7 @@ def canonical_path(
             issuedir.edition,
         ]
     )
+    base = sep.join(parts)
 
     # if the suffix and extension are not defined, return directly
     if as_dir or not (extension or suffix):
@@ -152,24 +162,40 @@ def check_id(canonical_id: str, object_type: str = "issue") -> re.Match[str] | N
         case "issue":
             pattern = re.compile(r"^[A-Za-z][A-Za-z0-9_]*-\\d{4}-\\d{2}-\\d{2}-[a-z]{1,2}$")
         case "page":
-            pattern = re.compile(r"^[A-Za-z][A-Za-z0-9_]*-\\d{4}-\\d{2}-\\d{2}-[a-z]{1,2}-p[0-9]{4}$")
+            pattern = re.compile(
+                r"^[A-Za-z][A-Za-z0-9_]*-\\d{4}-\\d{2}-\\d{2}-[a-z]{1,2}-p[0-9]{4}$"
+            )
         case "audio":
-            pattern = re.compile(r"^[A-Za-z][A-Za-z0-9_]*-\\d{4}-\\d{2}-\\d{2}-[a-z]{1,2}-r[0-9]{4}$")
+            pattern = re.compile(
+                r"^[A-Za-z][A-Za-z0-9_]*-\\d{4}-\\d{2}-\\d{2}-[a-z]{1,2}-r[0-9]{4}$"
+            )
         case "content-item":
-            pattern = re.compile(r"^[A-Za-z][A-Za-z0-9_]*-\\d{4}-\\d{2}-\\d{2}-[a-z]{1,2}-i[0-9]{4}$")
+            pattern = re.compile(
+                r"^[A-Za-z][A-Za-z0-9_]*-\\d{4}-\\d{2}-\\d{2}-[a-z]{1,2}-i[0-9]{4}$"
+            )
     return pattern.match(canonical_id)
 
 
-def get_issueshortpath(issuedir: IssueDir) -> str:
+def get_issueshortpath(issuedir: IssueDir, incl_provider: bool = True) -> str:
     """Return short version of an IssueDir's path, starting from the media alias.
+
+    If `incl_provider`, beware that the provider needs to be
 
     Args:
         issuedir (IssueDir): IssueDir instance from which to get the short path.
+        incl_provider (bool, optional): whether to include the provider. Defaults to True.
 
     Returns:
         str: Canonical path to the issue starting at the media alias.
     """
     path = issuedir.path
+    if incl_provider:
+        if issuedir.provider in path:
+            return path[path.index(issuedir.provider) :]
+        else:
+            msg = f"Warning! Provider not in path {path}. Acting as if `incl_provider=False`."
+            print(msg)
+            logger.warning(msg)
     return path[path.index(issuedir.alias) :]
 
 

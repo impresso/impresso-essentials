@@ -15,9 +15,11 @@ Below is an example for the case of NE-processing, as well as a description of e
     "output_bucket": "processing-canonical-data/ner_el/v02_feb_2024",
     "input_bucket": "rebuilt-data",
     "git_repository": "/local/path/to/NER-EL/repo",
+    "providers": ["LeTemps"], 
     "media_aliases": [
         "DLE", "BNN"
     ],
+    "alias_blacklist": ["JDG"],
     "temp_directory": "/local/path/to/a/temp/file",
     "previous_mft_s3_path": "",
     "is_patch": false,
@@ -33,6 +35,7 @@ Below is an example for the case of NE-processing, as well as a description of e
     "check_s3_archives": true
 }
 ```
+__*Note*__: In the above example, the list of media aliases considered would be: `["GDL", "DLE", "BNN"]`. Since the aliases from "LeTemps" are "GDL" and "JDG".
 
 ## Arguments
 
@@ -42,9 +45,15 @@ Below is an example for the case of NE-processing, as well as a description of e
   - For any text-mining task, this will correspond to either a bucket with rebuilt or evenized data.
   - Can be left empty (`""` or `null`) in the case of *canonical* processing, were the input data is not on S3.
 - __*git_repository*__: (required) The path to the *local* (folder of the) git repository that was used to process the data to inside `output_bucket` to be versioned. Will be used to extract the last commit on the active branch.
-- __*media_aliases*__: (required) List of newspaper titles to consider for  the versioning, used for filtering the files within the bucket partition.
+- __*providers*__: (required) List of data providers to consider for the versioning, used for filtering the files within the bucket partition. Setting any value inside this list is the equivalent of listing all aliases corresponding to the given provider(s) in `media_aliases`.
+  - If left empty, the filtering is defined by `media_aliases`. If both lists are empty, *all* files within the bucket partition will be considered.
+  - If the processing can only performed on the entire corpus at once, should be left empty.
+- __*media_aliases*__: (required) List of media titles to consider for the versioning, used for filtering the files within the bucket partition.
   - If left empty, *all* files within the bucket partition will be considered.
   - If the processing can only performed on the entire corpus at once, should be left empty.
+- __*alias_blacklist*__: (optional) List of media titles to *exclude* from the versioning, including any title which might have been part of the `providers` or `media_aliases` parameters (ie. a conservative approach is taken where the blacklist has the priority over the other parameters). 
+  - If left empty, *all* files corresponding to `providers` or `media_aliases` will be considered.
+  - If `providers` or `media_aliases` are not empty, it's not necessary to list any alias which would already not be included (eg. if `providers=['BCUL']`, it is not necessary to add "NZZ" to the blacklist).
 - __*temp_directory*__: (required) Temporary directory to use to clone the `impresso/impresso-data-release` git repository (to push the generated manifest).
 - __*previous_mft_s3_path*__: (optional) S3 path of the *previous* manifest to use, if it is not located inside `output_bucket`.
   - Should be left empty (`""` or `null`) if a versioning manifest for this specific `data_stage` is already present inside `output_bucket`.

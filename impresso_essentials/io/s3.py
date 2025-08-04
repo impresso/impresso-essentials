@@ -14,7 +14,14 @@ from dotenv import load_dotenv
 from smart_open import open as s_open
 import dask.bag as db
 
-from impresso_essentials.utils import bytes_to, id_to_issuedir, IssueDir
+from impresso_essentials.utils import (
+    bytes_to,
+    id_to_issuedir,
+    IssueDir,
+    get_provider_for_alias,
+    PARTNER_TO_MEDIA,
+    ALL_MEDIA,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -418,13 +425,17 @@ def alternative_read_text(
 
 
 def list_s3_directories(bucket_name: str, prefix: str = "") -> list[str]:
-    """Retrieve 'directory' names (media aliases) in an S3 bucket given a path prefix.
+    """Retrieve 'directory' names  in an S3 bucket given a path prefix.
 
-    # TODO adapt to add provider
+    Depending on the prefix and the specific bucket, this will either list the media providers
+    or the media aliases.
+    For s3 partitions which have the partner layer, the `prefix` parameter allows to select a
+    specific partner and list its associated media aliases.
 
     Args:
         bucket_name (str): The name of the S3 bucket.
-        prefix (str): The prefix path within the bucket to search. Default is the root ('').
+        prefix (str): The prefix path within the bucket to search (should include a tailing `/`).
+            Defaults to the root ('').
 
     Returns:
         list: A list of 'directory' names found in the specified bucket and prefix.
@@ -473,10 +484,11 @@ def s3_iter_bucket(
 ) -> list:
     """Iterate over a bucket, returning all keys with some filtering options.
 
-    >>> k = s3_iter_bucket("myBucket", prefix='GDL', suffix=".bz2")
-    >>> k = s3_iter_bucket("myBucket", prefix='GDL', accept_key=lambda x: "page" in x)
+    Note that `prefix` should now include the provider if it's the case in the bucket.
 
-    # TODO adapt to add provider
+    >>> k = s3_iter_bucket("myBucket", prefix='SNL', suffix=".bz2")
+    >>> k = s3_iter_bucket("myBucket", prefix='SNL/GDL', accept_key=lambda x: "page" in x)
+    >>> k = s3_iter_bucket("myBucket",  accept_key=lambda x: "/GDL-" in x)
 
     Note:
         If `suffix` is not "", the used accepting condition will become:
@@ -510,30 +522,54 @@ def s3_iter_bucket(
     return keys if keys else []
 
 
-def read_s3_issues(alias: str, year: str, input_bucket: str) -> list[tuple[IssueDir, dict]]:
+def read_s3_issues(
+    alias: str,
+    year: str,
+    input_bucket: str,
+    provider: str | None = None,
+    incl_provider: bool = True,
+) -> list[tuple[IssueDir, dict]]:
     """Read the contents of canonical issues from a given S3 bucket.
 
-    # TODO adapt to add provider
+    By default, it's considered that the bucket includes the provider in its organization.
+    If it's not the case, the parameter `incl_provider=False` should be set to ensure it's
+    in the constructed s3 path.
+    If the provider is not provided, it will be deduced from the alias.
+    The provider will however be returned within the IssueDir object anyways.
 
     Args:
         alias (str): Alias of the media title to read the issues from.
         year (str): Target year to tread issues from.
         input_bucket (str): Bucket from where to fetch the issues.
+        provider (str|None, optional): Provider for the given alias. Defaults to None.
+        incl_provider (bool, optional): Whether to include the provider in the S3 path.
+            Defaults to True.
 
     Returns:
         list[tuple[IssueDir, dict]]: List of IssueDirs and the issues' contents.
     """
-    issue_path_on_s3 = f"s3://{input_bucket}/{alias}/issues/{alias}-{year}-issues.jsonl.bz2"
+    # construct the various elements of the s3 path for canonical issues
+    path_parts = [f"s3://{input_bucket}", alias, "issues", f"{alias}-{year}-issues.jsonl.bz2"]
+
+    if not provider:
+        provider = get_provider_for_alias(alias)
+
+    # if the provider should be included, add it at the top of the structure
+    if incl_provider:
+        path_parts.insert(1, provider)
+
+    issue_path_on_s3 = "/".join(path_parts)
+
     try:
         issues = (
             db.read_text(issue_path_on_s3, storage_options=IMPRESSO_STORAGEOPT)
             .map(json.loads)
-            .map(lambda x: (id_to_issuedir(x["id"], issue_path_on_s3), x))
+            .map(lambda x: (id_to_issuedir(x["id"], issue_path_on_s3, provider), x))
             .compute()
         )
     except FileNotFoundError as e:
-        logger.error(e)
-        print(e)
+        # logger.error(e)
+        print(f"FileNotFoundError: {e}")
         return []
 
     return issues
@@ -543,24 +579,25 @@ def list_media_titles(
     bucket_name: str,
     s3_client=get_s3_client(),
     page_size: int = 10000,
+    prov_included: bool = True,
 ) -> list[str]:
     """List media titles contained in an s3 bucket with impresso data.
 
-    # TODO adapt to add provider
+    By default, it is considered that the bucket contains the provided level.
 
     Note:
         25,000 seems to be the maximum `PageSize` value supported by
         SwitchEngines' S3 implementation (ceph).
-    Note:
-        Copied from https://github.com/impresso/impresso-data-sanitycheck/tree/master/sanity_check/contents/s3_data.py
 
     Args:
         bucket_name (str): Name of the S3 bucket to consider
         s3_client (optional): S3 client to use. Defaults to get_s3_client().
         page_size (int, optional): Pagination configuration. Defaults to 10000.
+        prov_included (bool, optional): Whether the provider level is included in
+            the bucket structure. Defaults to True
 
     Returns:
-        list[str]: List of media titles (aliases) present in the given S3 bucket.
+        list[str]: Sorted list of media titles (aliases) present in the given S3 bucket.
     """
     print(f"Fetching list of media titles from {bucket_name}")
 
@@ -569,7 +606,7 @@ def list_media_titles(
 
     paginator = s3_client.get_paginator("list_objects")
 
-    titles = set()
+    aliases = set()
     for n, resp in enumerate(
         paginator.paginate(Bucket=bucket_name, PaginationConfig={"PageSize": page_size})
     ):
@@ -578,29 +615,116 @@ def list_media_titles(
             continue
 
         for f in resp["Contents"]:
-            titles.add(f["Key"].split("/")[0])
+            aliases.add(f["Key"].split("/")[1 if prov_included else 0])
         msg = (
             f"Paginated listing of keys in {bucket_name}: page {n + 1}, listed "
             f"{len(resp['Contents'])}"
         )
         logger.info(msg)
 
-    print(f"{bucket_name} contains {len(titles)} media titles")
+    print(f"{bucket_name} contains {len(aliases)} media titles")
 
-    return titles
+    return sorted(list(aliases))
 
 
-def list_files(
+def list_providers_and_aliases(bucket_name: str, prefix: str = "") -> list[str]:
+    """Lists providers and their alias directories from an S3 bucket.
+
+    Traverses the given S3 bucket to identify provider directories and their associated alias
+    subdirectories, under an optional prefix. Returns a dictionary mapping each provider
+    to a sorted list of aliases.
+
+    Args:
+        bucket_name (str): The name of the S3 bucket to query.
+        prefix (str, optional): The prefix path within the bucket to search (should have a tailing `/`).
+            Defaults to the root ('').
+
+    Returns:
+        dict[str, list[str]]: Dict mapping sorted provider names to lists of alias directory names.
+
+    Raises:
+        botocore.exceptions.ClientError: If there is an issue communicating with S3.
+
+    Example:
+        >>> list_providers_and_aliases('141-processed-data-staging', 'embeddings/images/embeddings_dinov2_v1-0-0/')
+        {
+            'BCUL': ['ACI', 'AV', 'Bombe', 'CL', ..., 'esta', 'ouistiti'],
+            ...
+            'SNL': ['BDC', 'CDV', ..., 'WHD', 'ZBT']
+        }
+    """
+    msg = f"Listing providers and aliases present in '{bucket_name}' under prefix '{prefix}'."
+    logger.info(msg)
+    print(msg)
+    s3 = get_s3_client()
+    result = s3.list_objects_v2(Bucket=bucket_name, Prefix=prefix, Delimiter="/")
+
+    prov_to_aliases = {}
+    alias_count = 0
+    if "CommonPrefixes" in result:
+
+        # extract the provider names from the common prefixes, and sort them
+        prov_prefixes = sorted(
+            common_prefix["Prefix"][:-1].split("/")[-1]
+            for common_prefix in result["CommonPrefixes"]
+        )
+        # create a dict mapping each provider to its full prefix object
+        prov_to_prefixes = dict(zip(prov_prefixes, result["CommonPrefixes"]))
+
+        for prov, prov_prefix in prov_to_prefixes.items():
+            if prov not in PARTNER_TO_MEDIA:
+                print(f"{prov} is not a provider, skipping it.")
+                continue
+            aliases_result = s3.list_objects_v2(
+                Bucket=bucket_name, Prefix=prov_prefix["Prefix"], Delimiter="/"
+            )
+            if "CommonPrefixes" in aliases_result:
+                # also sort the extracted aliases for this provider
+                prov_to_aliases[prov] = sorted(
+                    [
+                        alias_pref["Prefix"][:-1].split("/")[-1]
+                        for alias_pref in aliases_result["CommonPrefixes"]
+                    ]
+                )
+                alias_count += len(prov_to_aliases[prov])
+
+            msg = (
+                f"Found provider {prov} with the following "
+                f"{len(prov_to_aliases[prov])} alias directories"
+            )
+            logger.debug(msg)
+
+    msg = f"Returning a total of {alias_count} alias dirs for {len(prov_to_aliases)} providers."
+    logger.info(msg)
+    print(msg)
+
+    return prov_to_aliases
+
+
+def list_canonical_files(
     bucket_name: str,
     file_type: str = "issues",
+    providers_filter: list[str] | None = None,
     aliases_filter: list[str] | None = None,
 ) -> tuple[list[str] | None, list[str] | None]:
     """List the canonical files located in a given S3 bucket.
 
+    Note:
+        The filters are applied in a hierchical manner; first at provider level,
+        then at alias level if no provider filter was given.
+
+    Note:
+        For the file type, the possible values are the following:
+        - "issues", "pages", "audios": include only bz2 files of the given type.
+        - "supports": include all pages and audios bz2 files, returned [1] element of the tuple.
+        - "both": include all types of files, with issues ([0]) and supports ([1]).
+
     Args:
         bucket_name (str): S3 bucket name.
         file_type (str, optional): Type of files to list, possible values are "issues",
-            "pages" "audios", "supports" and "both". Defaults to "issues".
+            "pages", "audios", "supports" and "both". Defaults to "issues".
+        providers_filter (list[str] | None, optional): List of providers for which to consider
+            the aliases. If None, `aliases_filter` will be considered. Defaults to None.
         aliases_filter (list[str] | None, optional): List of aliases to consider.
             If None, all will be considered. Defaults to None.
 
@@ -619,36 +743,53 @@ def list_files(
 
     # initialize the output lists
     issue_files, page_files, audio_files = None, None, None
-    # list the newspapers in the bucket
-    media_titles = list_media_titles(bucket_name)
-
-    if aliases_filter is not None:
-        suffix = f"for the provided media aliases {aliases_filter}"
+    # initialize the output lists
+    issue_files, page_files, audio_files = None, None, None
+    # list all the providers and aliases in the bucket
+    all_present = list_providers_and_aliases(bucket_name)
+    if providers_filter:
+        # only keep the providers listed
+        aliases_list = [
+            (prov, a)
+            for prov, aliases in all_present.items()
+            for a in aliases
+            if prov in providers_filter
+        ]
+        suffix = (
+            f"for the media aliases {aliases_list} (from the provided providers {providers_filter})"
+        )
+    elif aliases_filter:
+        # only keep the aliases listed
+        aliases_list = [
+            (prov, a)
+            for prov, aliases in all_present.items()
+            for a in aliases
+            if a in aliases_filter
+        ]
+        suffix = f"for the provided media aliases {aliases_list}"
     else:
+        aliases_list = [(prov, a) for prov, aliases in all_present.items() for a in aliases]
         suffix = ""
 
     if file_type in ["issues", "both"]:
         issue_files = [
             file
-            for alias in media_titles
-            if aliases_filter is not None and alias in aliases_filter
-            for file in fixed_s3fs_glob(os.path.join(bucket_name, f"{alias}/issues/*"))
+            for prov, alias in aliases_list
+            for file in fixed_s3fs_glob(os.path.join(bucket_name, f"{prov}/{alias}/issues/*"))
         ]
         print(f"{bucket_name} contains {len(issue_files)} .bz2 issue files {suffix}")
     if file_type in ["pages", "supports", "both"]:
         page_files = [
             file
-            for alias in media_titles
-            if aliases_filter is not None and alias in aliases_filter
-            for file in fixed_s3fs_glob(f"{os.path.join(bucket_name, f'{alias}/pages/*')}")
+            for prov, alias in aliases_list
+            for file in fixed_s3fs_glob(f"{os.path.join(bucket_name, f'{prov}/{alias}/pages/*')}")
         ]
         print(f"{bucket_name} contains {len(page_files)} .bz2 page files {suffix}")
     if file_type in ["audios", "supports", "both"]:
         audio_files = [
             file
-            for alias in media_titles
-            if aliases_filter is not None and alias in aliases_filter
-            for file in fixed_s3fs_glob(f"{os.path.join(bucket_name, f'{alias}/audios/*')}")
+            for prov, alias in aliases_list
+            for file in fixed_s3fs_glob(f"{os.path.join(bucket_name, f'{prov}/{alias}/audios/*')}")
         ]
         print(f"{bucket_name} contains {len(audio_files)} .bz2 audio files {suffix}")
 
@@ -665,13 +806,19 @@ def fetch_files(
     bucket_name: str,
     compute: bool = True,
     file_type: str = "issues",
-    newspapers_filter: list[str] | None = None,
+    providers_filter: list[str] | None = None,
+    aliases_filter: list[str] | None = None,
 ) -> tuple[db.core.Bag | None, db.core.Bag | None] | tuple[list[str] | None, list[str] | None]:
     """Fetch issue and/or page canonical JSON files from an s3 bucket.
 
     If compute=True, the output will be a list of the contents of all files in the
     bucket for the specified newspapers and type of files.
     If compute=False, the output will remain in a distributed dask.bag.
+
+    For the file type, the possible values are the following:
+    - 'issues', 'pages', 'audios': include only bz2 files of the given type.
+    - 'supports': include all pages and audios bz2 files, returned in element [1] of the tuple.
+    - 'both': include all types of files, with issues ([0]) and supports -pages and audios- ([1]).
 
     Based on file_type, the issue files, page/audio ("support") files or both will be returned.
     In the returned tuple, issues are always in the first element and supports in the
@@ -684,7 +831,9 @@ def fetch_files(
             Defaults to True.
         file_type: (str, optional): Type of files to list, possible values are "issues",
             "pages", "audios", "supports" and "both". Defaults to "issues".
-        newspapers_filter: (list[str]|None,optional): List of newspapers to consider.
+        providers_filter (list[str] | None, optional): List of providers for which to consider
+            the aliases. If None, `aliases_filter` will be considered. Defaults to None.
+        aliases_filter (list[str] | None, optional): List of aliases to consider.
             If None, all will be considered. Defaults to None.
 
     Raises:
@@ -694,6 +843,7 @@ def fetch_files(
         tuple[db.core.Bag|None, db.core.Bag|None] | tuple[list[str]|None, list[str]|None]:
             [0] Issue files' contents or None and
             [1] Page and Audio Record files' contents or None based on `file_type`
+
     """
     if file_type not in ["issues", "pages", "audios", "supports", "both"]:
         logger.error(
@@ -701,7 +851,9 @@ def fetch_files(
         )
         raise NotImplementedError
 
-    issue_files, support_files = list_files(bucket_name, file_type, newspapers_filter)
+    issue_files, support_files = list_canonical_files(
+        bucket_name, file_type, providers_filter, aliases_filter
+    )
     # initialize the outputs
     issue_bag, support_files = None, None
 
@@ -725,3 +877,94 @@ def fetch_files(
         issue_bag = issue_bag.compute() if issue_files is not None else issue_bag
 
     return issue_bag, support_bag
+
+
+def extract_provider_alias_key(
+    s3_key: str, bucket: str, prov_included: bool = True
+) -> tuple[str, str]:
+    """Extract the media alias an s3:key corresponds to given the bucket and partition
+
+    eg. s3_key is in format:
+    - s3_key: 's3://31-passim-rebuilt-staging/passim/[provider]/[alias]/[alias]-[year].jsonl.bz2'
+    - bucket: '31-passim-rebuilt-staging/passim'
+    - prov_included: True
+    --> returns (provider, alias)
+
+    Args:
+        s3_key (str): Full S3 path of a file (as returned by fixed_s3fs_glob).
+        bucket (str): S3 bucket, including partition, in which the media dirs are.
+        prov_included (bool, optional): Whether or not the provider level is present in the
+            structure of the provided bucket. Defaults to True.
+
+    Returns:
+        tuple[str, str]: Media alias of the corresponding media, and corresponding provider.
+    """
+    # in format: 's3://31-passim-rebuilt-staging/passim/BNL/indeplux/indeplux-1889.jsonl.bz2'
+    if not bucket.endswith("/"):
+        bucket = f"{bucket}/"
+
+    if "s3://" in bucket:
+        key_no_bucket = s3_key.replace(f"{bucket}", "")
+    else:
+        key_no_bucket = s3_key.replace(f"s3://{bucket}", "")
+
+    # Not all buckets separate the data per title, but the title will always come first.
+
+    sep = "/" if "/" in key_no_bucket else "-"
+    alias = key_no_bucket.split(sep)[1 if prov_included else 0]
+    provider = key_no_bucket.split(sep)[0] if prov_included else get_provider_for_alias(alias)
+
+    return provider, alias
+
+
+def provider_in_path(s3_path=None, bucket=None, prefix="") -> bool:
+    """Determines whether the given S3 path or prefix includes a provider-level directory structure.
+
+    Args:
+        s3_path (str, optional): Full S3 URI (e.g., 's3://my-bucket/prefix/').
+            If provided, it overrides `bucket` and `prefix`.
+        bucket (str, optional): S3 bucket name. Required if `s3_path` is not given.
+        prefix (str, optional): Prefix (folder path) within the bucket.
+            Ignored if `s3_path` is provided. Defaults to ''.
+
+    Returns:
+        bool:
+            - True if all immediate subfolders match known providers.
+            - False if all match known media aliases.
+
+    Raises:
+        AttributeError:
+            - If neither `s3_path` nor `bucket` is provided.
+            - If a mix of provider and alias directories is found.
+    """
+    if not bucket and not s3_path:
+        raise AttributeError("At least one of s3_path or bucket must be defined!!")
+    if s3_path:
+        if s3_path.startswith("s3://"):
+            s3_path = s3_path[5:]
+        bucket = s3_path.split("/")[0]
+        prefix = "/".join(s3_path.split("/")[1:])
+
+    s3 = get_s3_client()
+    msg = f"Checking S3 structure in bucket '{bucket}' under prefix '{prefix}'"
+    print(msg)
+    logger.info(msg)
+    result = s3.list_objects_v2(Bucket=bucket, Prefix=prefix, Delimiter="/")
+
+    if "CommonPrefixes" in result:
+        prefixes = [
+            common_prefix["Prefix"][:-1].split("/")[-1]
+            for common_prefix in result["CommonPrefixes"]
+        ]
+        print(prefixes)
+        if all(p in PARTNER_TO_MEDIA.keys() for p in prefixes):
+            return True
+        if all(p in ALL_MEDIA for p in prefixes):
+            return False
+        msg = f"Warning! Bucket {bucket} with prefix {prefix} has a mix of partner and media levels in its strucure!"
+        raise AttributeError(msg)
+    else:
+        msg = f"No subdirectories found under given bucket & prefix {bucket}, {prefix}"
+        print(msg)
+        logger.warning(msg)
+        return False
