@@ -667,7 +667,7 @@ def create_manifest(config_dict: dict[str, Any], client: Optional[Client] = None
             note += f"titles: {config_dict['prov_alias_pairs']}."
         else:
             blacklist_aliases = (
-                f" except {config_dict["alias_blacklist"]}"
+                f" except {config_dict['alias_blacklist']}"
                 if config_dict["alias_blacklist"] is not None
                 else None
             )
