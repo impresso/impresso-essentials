@@ -9,6 +9,7 @@ Usage:
 - verbose : set the log level to DEBUG, otherwise will be INFO.
 - log-file : path to logfile to use, otherwise will print in stdout.
 """
+
 import json
 import logging
 import argparse
@@ -20,13 +21,36 @@ from impresso_essentials.bbox_visualizer.get_bbox import (
     get_page_bounding_boxes,
     get_ci_bounding_boxes,
     get_issue_bounding_boxes,
-    create_s3_path
+    create_s3_path,
 )
+
 
 logger = logging.getLogger(__name__)
 
+
+def get_iiif_image_suffix(iiif_base: str):
+    iiif_url_suffixes = {
+        "impresso": "/full/full/0/default.jpg",
+        "bnf": "/full/full/0/default.jpg",
+        "bnl": "/full/full/0/default.jpg",
+        "swa": "/max/full/0/default.jpg",
+        "bcul": "/full/{width},/0/default.jpg",
+    }
+    suffix = "/full/full/0/default.jpg"
+    if "ark" in iiif_base:
+        suffix = iiif_url_suffixes["bnf"]
+    elif "bcu" in iiif_base:
+        suffix = iiif_url_suffixes["bcul"]
+    elif "unibas" in iiif_base:
+        suffix = iiif_url_suffixes["swa"]
+    return suffix
+
+
 def build_bbox_json(
-    element_id: str, level: str = "regions", output_path: str = None
+    element_id: str,
+    level: str = "regions",
+    output_path: str = None,
+    output: bool = False,
 ) -> dict:
     """
     Build the JSON of the bounding boxes of a page, CI, or issue at the specified level.
@@ -36,6 +60,7 @@ def build_bbox_json(
         level (str): The level at which to extract the bounding boxes
                      Options: "regions", "paragraphs", "lines", "tokens"
         output_path (str): Optional output file path
+        output (bool): If True, the function will return the JSON structure
 
     Returns:
         dict: The JSON structure containing the bounding boxes
@@ -60,7 +85,7 @@ def build_bbox_json(
     if len(id_parts) == 6:  # either a page or a CI
         if "p" in id_parts[-1]:  # a page (canonical manifest)
             bounding_boxes = get_page_bounding_boxes(manifest_json, level)
-        elif "i" in id_parts[-1]: # a CI (rebuilt manifest)
+        elif "i" in id_parts[-1]:  # a CI (rebuilt manifest)
             bounding_boxes = get_ci_bounding_boxes(manifest_json, level)
     elif len(id_parts) == 5:  # It is an issue
         bounding_boxes = get_issue_bounding_boxes(manifest_json, level)
@@ -71,18 +96,20 @@ def build_bbox_json(
         "iiif_img_base_uri": list(bounding_boxes.keys()),
         "bboxes": bounding_boxes,
     }
-    new_uri =  []
-    for iiif_img_base_uri in bbox_json["iiif_img_base_uri"]:
-            if "unibas" in iiif_img_base_uri:
-                bbox_json["bboxes"][iiif_img_base_uri + "/info.json"] = bbox_json["bboxes"].pop(iiif_img_base_uri)   
-                new_uri.append(iiif_img_base_uri + "/info.json")
-    if new_uri:            
-        bbox_json["iiif_img_base_uri"] = new_uri
-            
-    if not output_path:
-        output_path = f"{element_id}_bbox.json"
-    with open(output_path, "w", encoding="utf-8") as f:
-        json.dump(bbox_json, f)
+    # new_uri = []
+    # for iiif_img_base_uri in bbox_json["iiif_img_base_uri"]:
+    #     bbox_json["bboxes"][
+    #         iiif_img_base_uri + get_iiif_image_suffix(iiif_img_base_uri)
+    #     ] = bbox_json["bboxes"].pop(iiif_img_base_uri)
+    #     new_uri.append(iiif_img_base_uri + get_iiif_image_suffix(iiif_img_base_uri))
+    # if new_uri:
+    #     bbox_json["iiif_img_base_uri"] = new_uri
+
+    if output:
+        if not output_path:
+            output_path = f"{element_id}_bbox.json"
+        with open(output_path, "w", encoding="utf-8") as f:
+            json.dump(bbox_json, f)
 
     return bbox_json
 
@@ -122,7 +149,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
     log_level = logging.DEBUG if args.verbose else logging.INFO
 
-    init_logger(logger, log_level, args.log_file) 
+    init_logger(logger, log_level, args.log_file)
 
     build_bbox_json(args.element_id, args.level, args.output)
     logger.info(

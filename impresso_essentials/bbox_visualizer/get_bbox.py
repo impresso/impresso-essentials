@@ -2,6 +2,7 @@
 Helper functions to extract bounding boxes from the manifest,
 with improvements to reduce S3 calls.
 """
+
 import logging
 import json
 from dask import bag as db
@@ -19,7 +20,7 @@ TYPE_MAPPINGS = {
     "table": "tb",
     "death_notice": "ob",
     "weather": "w",
-    "page":"page"
+    "page": "page",
 }
 
 # Global cache for CI type lookups
@@ -27,6 +28,7 @@ _ci_type_cache = {}
 MAX_CACHE_SIZE = 10000
 
 logger = logging.getLogger(__name__)
+
 
 def create_s3_path(element_id: str) -> str:
     """
@@ -138,7 +140,7 @@ def _get_page_regions_bboxes(canonical_page_json: dict):
         canonical_page_json (dict): JSON object of the page in canonical format.
     """
     bboxes = []
-    page_number = page_number = int(canonical_page_json["id"].split("-")[-1].replace("p", ""))
+    page_number = int(canonical_page_json["id"].split("-")[-1].replace("p", ""))
     for region in tqdm(
         canonical_page_json["r"], desc=f"Getting bboxes for page {page_number}"
     ):
@@ -157,7 +159,9 @@ def _get_page_paragraphs_bboxes(canonical_page_json: dict):
     Args:
         canonical_page_json (dict): JSON object of the page in canonical format.
     """
-    page_number = page_number = int(canonical_page_json["id"].split("-")[-1].replace("p", ""))
+    page_number = page_number = int(
+        canonical_page_json["id"].split("-")[-1].replace("p", "")
+    )
     bboxes = []
     for region in tqdm(
         canonical_page_json["r"], desc=f"Getting bboxes for page {page_number}"
@@ -179,7 +183,9 @@ def _get_page_lines_bboxes(canonical_page_json: dict):
         canonical_page_json (dict): JSON object of the page in canonical format.
     """
     bboxes = []
-    page_number = page_number = int(canonical_page_json["id"].split("-")[-1].replace("p", ""))
+    page_number = page_number = int(
+        canonical_page_json["id"].split("-")[-1].replace("p", "")
+    )
     for region in tqdm(
         canonical_page_json["r"], desc=f"Getting bboxes for page {page_number}"
     ):
@@ -201,7 +207,9 @@ def _get_page_tokens_bboxes(canonical_page_json: dict):
         canonical_page_json (dict): JSON object of the page in canonical format.
     """
     bboxes = []
-    page_number = page_number = int(canonical_page_json["id"].split("-")[-1].replace("p", ""))
+    page_number = page_number = int(
+        canonical_page_json["id"].split("-")[-1].replace("p", "")
+    )
     for region in tqdm(
         canonical_page_json["r"], desc=f"Getting bboxes for page {page_number}"
     ):
@@ -292,18 +300,28 @@ def get_ci_bounding_boxes(rebuilt_ci_json: dict, level: str = "regions") -> dict
             bounding_boxes[image_url] = []
             for region in page["r"]:  # For each box given as region
                 bounding_boxes[image_url].append(
-                    {"t": rebuilt_ci_json["tp"], "ci": rebuilt_ci_json["id"], "c": region}
+                    {
+                        "t": rebuilt_ci_json["tp"],
+                        "ci": rebuilt_ci_json["id"],
+                        "c": region,
+                    }
                 )
         elif level == "tokens":
             bounding_boxes[image_url] = []
             for token in page["t"]:
                 bounding_boxes[image_url].append(
-                    {"t": rebuilt_ci_json["tp"], "ci": rebuilt_ci_json["id"], "c": token["c"]}
+                    {
+                        "t": rebuilt_ci_json["tp"],
+                        "ci": rebuilt_ci_json["id"],
+                        "c": token["c"],
+                    }
                 )
     return bounding_boxes
 
 
-def get_issue_bounding_boxes(canonical_issue_json: dict, level: str = "regions") -> dict:
+def get_issue_bounding_boxes(
+    canonical_issue_json: dict, level: str = "regions"
+) -> dict:
     """
     Extract bounding boxes from the issue manifest at the specified level from the rebuilt manifest.
 
