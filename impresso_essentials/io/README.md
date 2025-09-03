@@ -78,15 +78,17 @@ Options:
 - The provider data can either be added "in place" or as the data is copied to another destination.
   - To perform this addition in place: leave the `--dest-bucket` undefined and activate the `--remove-src-keys` flag:
     ```
-    s3_add_provider.py --s3-partition-path=s3://path/to/bucket/or/partition --log-file=/path/to/logfile.log --remove-src-keys
+    python s3_add_provider.py --s3-partition-path=s3://path/to/bucket/or/partition --log-file=/path/to/logfile.log --remove-src-keys
     ```
   - To directly copy the data with the added provider level to another location (Eg. the corresponding bucket for the next release): define the `--dest-bucket`:
     ```
-    s3_add_provider.py --s3-partition-path=s3://path/to/bucket/or/partition --log-file=/path/to/logfile.log --dest-bucket=s3://path/to/new/bucket/or/partition
+    python s3_add_provider.py --s3-partition-path=s3://path/to/bucket/or/partition --log-file=/path/to/logfile.log --dest-bucket=s3://path/to/new/bucket/or/partition
     ```
   - In general, the flag `--no-copy` can always be set first to ensure the rest of the parameters are correct and the script has the desired behavior. This is recommended as a sanitycheck.
  
 Note that this script is especially useful during the transition period between the two file-structure organizations. As soon as all the data stored on S3 is organized according to the newly defined convention, this script won't be necessary anymore.
+
+This script can be run from the CLI or as a module as long as you have the impresso-essentials package installed.
 
 ## Example use-cases
 
