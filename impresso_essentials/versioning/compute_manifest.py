@@ -239,10 +239,16 @@ def get_files_to_consider(config: dict[str, Any]) -> Optional[dict[str, dict[str
                 s3_path = fixed_s3fs_glob(
                     os.path.join(config["output_bucket"], alias, extension_filter)
                 )
-            if provider in s3_files:
-                s3_files[provider][alias] = s3_path
+
+            if len(s3_path) != 0:
+                if provider in s3_files:
+                    s3_files[provider][alias] = s3_path
+                else:
+                    s3_files[provider] = {alias: s3_path}
             else:
-                s3_files[provider] = {alias: s3_path}
+                msg = f"{provider}-{alias} - No files found on S3!"
+                logger.warning(msg)
+                print(msg)
 
     if config["check_s3_archives"]:
         # filter out empty or corrupted files
@@ -610,7 +616,7 @@ def create_manifest(config_dict: dict[str, Any], client: Optional[Client] = None
     # fetch the names of the files to consider separated per title
     s3_files = get_files_to_consider(config_dict)
 
-    num_files = sum(len(aliases.values()) for prov in s3_files.values() for aliases in prov)
+    num_files = sum(len(files) for prov in s3_files.values() for alias, files in prov.items())
     num_aliases = sum(len(prov.values()) for prov in s3_files.values())
     logger.info(
         "Collected a total of %s files from %s aliases (and %s providers), reading them...",
