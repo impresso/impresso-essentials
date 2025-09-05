@@ -4,6 +4,19 @@ timestamp from a specified key in the file's records. It then updates the S3
 object's metadata with the extracted timestamp. Optionally, the updated metadata
 can be written to a new S3 location.
 
+Supported Timestamp Formats:
+    For 'ts' and 'timestamp' keys:
+        - 2024-04-05T18:14:47Z (UTC with Z suffix)
+        - 2024-04-05T18:14:47 (no timezone info, treated as UTC)
+        - 2024-04-05T18:14:47+00:00 (UTC with timezone offset)
+        - 2024-04-05T18:14:47+02:00 (any timezone offset, converted to UTC)
+    
+    For 'cdt' key:
+        - 2024-04-05 18:14:47 (space-separated format, treated as UTC)
+
+    If no valid timestamp is found in the records, the S3 object's last modified
+    time is used as a fallback.
+
 Usage:
     python s3_set_timestamp.py --s3-file s3://bucket/path/file.jsonl.bz2 \
         --metadata-key impresso-last-ts \
@@ -22,7 +35,7 @@ Arguments:
     --metadata-key: The metadata key to update with the latest timestamp
         (default: impresso-last-ts).
     --ts-key: The key in the JSONL records to extract the timestamp from
-        (default: ts).
+        (default: ts). Choices: ts, cdt, timestamp.
     --all-lines: If False, only the first timestamp is considered.
     --output: Optional S3 URI for the output file with updated metadata (only for --s3-file).
     --force: Force reprocessing even if metadata is already up-to-date (default: False).
@@ -102,9 +115,9 @@ def get_last_timestamp(fileobj, ts_key: str, all_lines: bool, fallback_timestamp
     latest_ts = None
     # Known formats - treat all timestamps as UTC at face value
     known_formats = {
-        "ts": ["%Y-%m-%dT%H:%M:%SZ", "%Y-%m-%dT%H:%M:%S"],
+        "ts": ["%Y-%m-%dT%H:%M:%SZ", "%Y-%m-%dT%H:%M:%S", "%Y-%m-%dT%H:%M:%S%z"],
         "cdt": ["%Y-%m-%d %H:%M:%S"],
-        "timestamp": ["%Y-%m-%dT%H:%M:%SZ", "%Y-%m-%dT%H:%M:%S"],
+        "timestamp": ["%Y-%m-%dT%H:%M:%SZ", "%Y-%m-%dT%H:%M:%S", "%Y-%m-%dT%H:%M:%S%z"],
     }
     skipped_records = 0
 
@@ -112,7 +125,13 @@ def get_last_timestamp(fileobj, ts_key: str, all_lines: bool, fallback_timestamp
         """Parse timestamp treating all as UTC at face value."""
         for fmt in formats:
             try:
-                return datetime.strptime(ts_str, fmt)
+                dt = datetime.strptime(ts_str, fmt)
+                # If the timestamp has timezone info, convert to UTC and remove tzinfo
+                if dt.tzinfo is not None:
+                    # Convert to UTC and make timezone-naive for consistent comparison
+                    dt = dt.utctimetuple()
+                    dt = datetime(*dt[:6])
+                return dt
             except ValueError:
                 continue
         return None
