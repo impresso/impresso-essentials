@@ -7,3 +7,4 @@ impresso_essentials/data/logs/*
 .pytest_cache
 .ipynb_*
 *.__pyc
+venv/
