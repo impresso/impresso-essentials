@@ -83,7 +83,7 @@ def get_s3_client() -> "boto3.client":
     )
 
 
-def get_last_timestamp(fileobj, ts_key: str, all_lines: bool) -> str:
+def get_last_timestamp(fileobj, ts_key: str, all_lines: bool, fallback_timestamp: str = None) -> str:
     """
     Extracts the latest timestamp from a .jsonl file based on the specified key.
 
@@ -91,6 +91,7 @@ def get_last_timestamp(fileobj, ts_key: str, all_lines: bool) -> str:
         fileobj: The file object or path to the .jsonl file (supports .bz2 compression).
         ts_key: The key in the JSONL records to extract the timestamp from.
         all_lines: If False, only the first timestamp is considered.
+        fallback_timestamp: Fallback timestamp to use if no valid timestamp is found in records.
 
     Returns:
         str: The latest timestamp in ISO 8601 format (e.g., '2023-01-01T12:00:00Z').
@@ -157,9 +158,12 @@ def get_last_timestamp(fileobj, ts_key: str, all_lines: bool) -> str:
                     continue
 
         if not latest_ts:
-            log.warning("No valid timestamp found in records. Using file modification date.")
-            mod_time = datetime.utcfromtimestamp(os.path.getmtime(fileobj))
-            return mod_time.strftime("%Y-%m-%dT%H:%M:%SZ")
+            if fallback_timestamp:
+                log.warning("No valid timestamp found in records. Using fallback timestamp: %s", fallback_timestamp)
+                return fallback_timestamp
+            else:
+                log.warning("No valid timestamp found in records and no fallback timestamp provided.")
+                raise ValueError("No valid timestamp found in records and no fallback timestamp provided.")
 
     except Exception as e:
         log.error("Error processing timestamps: %s", e)
@@ -214,13 +218,20 @@ def update_metadata_if_needed(
         log.info("[SKIP] Metadata key '%s' already exists.", metadata_key)
         raise ValueError("Metadata key already exists.")
 
+    # Get S3 object's last modified time as fallback
+    s3_last_modified = head.get("LastModified")
+    fallback_timestamp = None
+    if s3_last_modified:
+        fallback_timestamp = s3_last_modified.strftime("%Y-%m-%dT%H:%M:%SZ")
+        log.debug("S3 object last modified time: %s", fallback_timestamp)
+
     # Proceed with downloading the file only if the metadata key does not exist
     with tempfile.NamedTemporaryFile(mode="w+b", delete=True) as tmp:
         log.debug("Downloading S3 object to temporary file")
         s3.download_fileobj(bucket, key, tmp)
         tmp.seek(0)
         latest_ts = get_last_timestamp(
-            tmp.name, ts_key, all_lines
+            tmp.name, ts_key, all_lines, fallback_timestamp
         )  # Pass the file path to smart_open
 
     log.debug("Latest timestamp extracted: %s", latest_ts)
@@ -356,7 +367,7 @@ def update_metadata_for_prefix(
                         metadata_key,
                         ts_key,
                         all_lines,
-                        force,
+                        force=force,
                     )
                     processed += 1
                 except ValueError as e:
