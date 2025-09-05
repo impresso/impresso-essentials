@@ -93,6 +93,8 @@
 <li class="toctree-l3"><a class="reference internal" href="#impresso_essentials.io.s3_set_timestamp.get_last_timestamp"><code class="docutils literal notranslate"><span class="pre">get_last_timestamp()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#impresso_essentials.io.s3_set_timestamp.get_s3_client"><code class="docutils literal notranslate"><span class="pre">get_s3_client()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#impresso_essentials.io.s3_set_timestamp.main"><code class="docutils literal notranslate"><span class="pre">main()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#impresso_essentials.io.s3_set_timestamp.report_missing_metadata"><code class="docutils literal notranslate"><span class="pre">report_missing_metadata()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#impresso_essentials.io.s3_set_timestamp.report_missing_metadata_dirs"><code class="docutils literal notranslate"><span class="pre">report_missing_metadata_dirs()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#impresso_essentials.io.s3_set_timestamp.update_metadata_for_prefix"><code class="docutils literal notranslate"><span class="pre">update_metadata_for_prefix()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#impresso_essentials.io.s3_set_timestamp.update_metadata_if_needed"><code class="docutils literal notranslate"><span class="pre">update_metadata_if_needed()</span></code></a></li>
 </ul>
@@ -959,6 +961,22 @@ timestamp from a specified key in the file’s records. It then updates the S3
 object’s metadata with the extracted timestamp. Optionally, the updated metadata
 can be written to a new S3 location.</p>
 <dl>
+<dt>Supported Timestamp Formats:</dt><dd><dl class="simple">
+<dt>For ‘ts’ and ‘timestamp’ keys:</dt><dd><ul class="simple">
+<li><p>2024-04-05T18:14:47Z (UTC with Z suffix)</p></li>
+<li><p>2024-04-05T18:14:47 (no timezone info, treated as UTC)</p></li>
+<li><p>2024-04-05T18:14:47+00:00 (UTC with timezone offset)</p></li>
+<li><p>2024-04-05T18:14:47+02:00 (any timezone offset, converted to UTC)</p></li>
+</ul>
+</dd>
+<dt>For ‘cdt’ key:</dt><dd><ul class="simple">
+<li><p>2024-04-05 18:14:47 (space-separated format, treated as UTC)</p></li>
+</ul>
+</dd>
+</dl>
+<p>If no valid timestamp is found in the records, the S3 object’s last modified
+time is used as a fallback.</p>
+</dd>
 <dt>Usage:</dt><dd><p>python s3_set_timestamp.py –s3-file s3://bucket/path/file.jsonl.bz2         –metadata-key impresso-last-ts         –ts-key ts         –all-lines         –output s3://bucket/path/output.jsonl</p>
 <p>python s3_set_timestamp.py –s3-prefix s3://bucket/path/         –metadata-key impresso-last-ts         –ts-key ts         –all-lines</p>
 </dd>
@@ -976,7 +994,7 @@ can be written to a new S3 location.</p>
 </dd>
 <dt class="field-even">param –ts-key<span class="colon">:</span></dt>
 <dd class="field-even"><p>The key in the JSONL records to extract the timestamp from
-(default: ts).</p>
+(default: ts). Choices: ts, cdt, timestamp.</p>
 </dd>
 <dt class="field-odd">param –all-lines<span class="colon">:</span></dt>
 <dd class="field-odd"><p>If False, only the first timestamp is considered.</p>
@@ -1013,7 +1031,7 @@ can be written to a new S3 location.</p>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="impresso_essentials.io.s3_set_timestamp.get_last_timestamp">
-<span class="sig-prename descclassname"><span class="pre">impresso_essentials.io.s3_set_timestamp.</span></span><span class="sig-name descname"><span class="pre">get_last_timestamp</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">fileobj</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ts_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">all_lines</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">str</span></span></span><a class="headerlink" href="#impresso_essentials.io.s3_set_timestamp.get_last_timestamp" title="Link to this definition"></a></dt>
+<span class="sig-prename descclassname"><span class="pre">impresso_essentials.io.s3_set_timestamp.</span></span><span class="sig-name descname"><span class="pre">get_last_timestamp</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">fileobj</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ts_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">all_lines</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fallback_timestamp</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">str</span></span></span><a class="headerlink" href="#impresso_essentials.io.s3_set_timestamp.get_last_timestamp" title="Link to this definition"></a></dt>
 <dd><p>Extracts the latest timestamp from a .jsonl file based on the specified key.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
@@ -1021,6 +1039,7 @@ can be written to a new S3 location.</p>
 <li><p><strong>fileobj</strong> – The file object or path to the .jsonl file (supports .bz2 compression).</p></li>
 <li><p><strong>ts_key</strong> – The key in the JSONL records to extract the timestamp from.</p></li>
 <li><p><strong>all_lines</strong> – If False, only the first timestamp is considered.</p></li>
+<li><p><strong>fallback_timestamp</strong> – Fallback timestamp to use if no valid timestamp is found in records.</p></li>
 </ul>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
@@ -1072,12 +1091,49 @@ can be written to a new S3 location.</p>
 <li><p>–output: Optional S3 URI for the output file with updated metadata.
 Only valid with –s3-file.</p></li>
 <li><p>–force: Force reprocessing even if metadata is already up-to-date.</p></li>
+<li><p>–report: Report all files missing the specified metadata key.</p></li>
+<li><p>–report-dirs: Report all directories containing files missing the specified metadata key.</p></li>
 </ul>
 </dd>
 </dl>
 <dl class="field-list simple">
 <dt class="field-odd">Returns<span class="colon">:</span></dt>
 <dd class="field-odd"><p>None</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="impresso_essentials.io.s3_set_timestamp.report_missing_metadata">
+<span class="sig-prename descclassname"><span class="pre">impresso_essentials.io.s3_set_timestamp.</span></span><span class="sig-name descname"><span class="pre">report_missing_metadata</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">s3_prefix</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">metadata_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#impresso_essentials.io.s3_set_timestamp.report_missing_metadata" title="Link to this definition"></a></dt>
+<dd><p>Reports all S3 objects matching a given prefix that are missing the specified metadata key.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>s3_prefix</strong> – The S3 prefix to search for .jsonl.bz2 files.</p></li>
+<li><p><strong>metadata_key</strong> – The metadata key to check for.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>None</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="impresso_essentials.io.s3_set_timestamp.report_missing_metadata_dirs">
+<span class="sig-prename descclassname"><span class="pre">impresso_essentials.io.s3_set_timestamp.</span></span><span class="sig-name descname"><span class="pre">report_missing_metadata_dirs</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">s3_prefix</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">metadata_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#impresso_essentials.io.s3_set_timestamp.report_missing_metadata_dirs" title="Link to this definition"></a></dt>
+<dd><p>Reports all directories matching a given prefix that contain .jsonl.bz2 files
+missing the specified metadata key.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>s3_prefix</strong> – The S3 prefix to search for .jsonl.bz2 files.</p></li>
+<li><p><strong>metadata_key</strong> – The metadata key to check for.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>None</p>
 </dd>
 </dl>
 </dd></dl>

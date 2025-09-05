@@ -4,6 +4,19 @@ timestamp from a specified key in the file's records. It then updates the S3
 object's metadata with the extracted timestamp. Optionally, the updated metadata
 can be written to a new S3 location.
 
+Supported Timestamp Formats:
+    For 'ts' and 'timestamp' keys:
+        - 2024-04-05T18:14:47Z (UTC with Z suffix)
+        - 2024-04-05T18:14:47 (no timezone info, treated as UTC)
+        - 2024-04-05T18:14:47+00:00 (UTC with timezone offset)
+        - 2024-04-05T18:14:47+02:00 (any timezone offset, converted to UTC)
+    
+    For 'cdt' key:
+        - 2024-04-05 18:14:47 (space-separated format, treated as UTC)
+
+    If no valid timestamp is found in the records, the S3 object's last modified
+    time is used as a fallback.
+
 Usage:
     python s3_set_timestamp.py --s3-file s3://bucket/path/file.jsonl.bz2 \
         --metadata-key impresso-last-ts \
@@ -22,7 +35,7 @@ Arguments:
     --metadata-key: The metadata key to update with the latest timestamp
         (default: impresso-last-ts).
     --ts-key: The key in the JSONL records to extract the timestamp from
-        (default: ts).
+        (default: ts). Choices: ts, cdt, timestamp.
     --all-lines: If False, only the first timestamp is considered.
     --output: Optional S3 URI for the output file with updated metadata (only for --s3-file).
     --force: Force reprocessing even if metadata is already up-to-date (default: False).
@@ -83,7 +96,7 @@ def get_s3_client() -> "boto3.client":
     )
 
 
-def get_last_timestamp(fileobj, ts_key: str, all_lines: bool) -> str:
+def get_last_timestamp(fileobj, ts_key: str, all_lines: bool, fallback_timestamp: str = None) -> str:
     """
     Extracts the latest timestamp from a .jsonl file based on the specified key.
 
@@ -91,6 +104,7 @@ def get_last_timestamp(fileobj, ts_key: str, all_lines: bool) -> str:
         fileobj: The file object or path to the .jsonl file (supports .bz2 compression).
         ts_key: The key in the JSONL records to extract the timestamp from.
         all_lines: If False, only the first timestamp is considered.
+        fallback_timestamp: Fallback timestamp to use if no valid timestamp is found in records.
 
     Returns:
         str: The latest timestamp in ISO 8601 format (e.g., '2023-01-01T12:00:00Z').
@@ -99,16 +113,32 @@ def get_last_timestamp(fileobj, ts_key: str, all_lines: bool) -> str:
         ValueError: If no valid timestamp is found or the key format is unknown.
     """
     latest_ts = None
+    # Known formats - treat all timestamps as UTC at face value
     known_formats = {
-        "ts": "%Y-%m-%dT%H:%M:%SZ",
-        "cdt": "%Y-%m-%d %H:%M:%S",
-        "timestamp": "%Y-%m-%dT%H:%M:%SZ",
+        "ts": ["%Y-%m-%dT%H:%M:%SZ", "%Y-%m-%dT%H:%M:%S", "%Y-%m-%dT%H:%M:%S%z"],
+        "cdt": ["%Y-%m-%d %H:%M:%S"],
+        "timestamp": ["%Y-%m-%dT%H:%M:%SZ", "%Y-%m-%dT%H:%M:%S", "%Y-%m-%dT%H:%M:%S%z"],
     }
     skipped_records = 0
 
+    def parse_timestamp(ts_str: str, formats: list) -> datetime:
+        """Parse timestamp treating all as UTC at face value."""
+        for fmt in formats:
+            try:
+                dt = datetime.strptime(ts_str, fmt)
+                # If the timestamp has timezone info, convert to UTC and remove tzinfo
+                if dt.tzinfo is not None:
+                    # Convert to UTC and make timezone-naive for consistent comparison
+                    dt = dt.utctimetuple()
+                    dt = datetime(*dt[:6])
+                return dt
+            except ValueError:
+                continue
+        return None
+
     try:
-        fmt = known_formats.get(ts_key)
-        if not fmt:
+        formats = known_formats.get(ts_key)
+        if not formats:
             raise ValueError(f"Unknown timestamp format for key: {ts_key}")
 
         log.debug("Processing file for timestamps with key '%s'", ts_key)
@@ -122,35 +152,37 @@ def get_last_timestamp(fileobj, ts_key: str, all_lines: bool) -> str:
                         record.get(ts_key)
                         or record.get("cdt")
                         or record.get("timestamp")
-                        or record.get("impresso_language_identifier_version").get()
+                        or record.get("impresso_language_identifier_version", {}).get("ts")
                     )
                     if ts_str:
-                        # Determine the correct format for parsing
-                        for key, format_str in known_formats.items():
-                            try:
-                                parsed = datetime.strptime(ts_str, format_str)
-                                ts_str = parsed.strftime("%Y-%m-%dT%H:%M:%SZ")
+                        # Try to parse with any of the known formats
+                        parsed = None
+                        for key, format_list in known_formats.items():
+                            parsed = parse_timestamp(ts_str, format_list)
+                            if parsed:
                                 break
-                            except ValueError:
-                                continue
-                        else:
+                        
+                        if not parsed:
                             raise ValueError(f"Timestamp format not recognized: {ts_str}")
-
+                        
                         if not all_lines:
-                            log.debug("Taking the first timestamp: %s", ts_str)
-                            return ts_str
+                            log.debug("Taking the first timestamp: %s", parsed.strftime("%Y-%m-%dT%H:%M:%SZ"))
+                            return parsed.strftime("%Y-%m-%dT%H:%M:%SZ")
                         if latest_ts is None or parsed > latest_ts:
                             latest_ts = parsed
-                            log.debug("Updated latest timestamp to: %s", latest_ts)
+                            log.debug("Updated latest timestamp to: %s", parsed.strftime("%Y-%m-%dT%H:%M:%SZ"))
                 except (ValueError, TypeError, json.JSONDecodeError) as e:
                     skipped_records += 1
                     log.warning("Skipping invalid record: %s. Line content: %s", e, line[:100])
                     continue
 
         if not latest_ts:
-            log.warning("No valid timestamp found in records. Using file modification date.")
-            mod_time = datetime.utcfromtimestamp(os.path.getmtime(fileobj))
-            return mod_time.strftime("%Y-%m-%dT%H:%M:%SZ")
+            if fallback_timestamp:
+                log.warning("No valid timestamp found in records. Using fallback timestamp: %s", fallback_timestamp)
+                return fallback_timestamp
+            else:
+                log.warning("No valid timestamp found in records and no fallback timestamp provided.")
+                raise ValueError("No valid timestamp found in records and no fallback timestamp provided.")
 
     except Exception as e:
         log.error("Error processing timestamps: %s", e)
@@ -205,13 +237,20 @@ def update_metadata_if_needed(
         log.info("[SKIP] Metadata key '%s' already exists.", metadata_key)
         raise ValueError("Metadata key already exists.")
 
+    # Get S3 object's last modified time as fallback
+    s3_last_modified = head.get("LastModified")
+    fallback_timestamp = None
+    if s3_last_modified:
+        fallback_timestamp = s3_last_modified.strftime("%Y-%m-%dT%H:%M:%SZ")
+        log.debug("S3 object last modified time: %s", fallback_timestamp)
+
     # Proceed with downloading the file only if the metadata key does not exist
     with tempfile.NamedTemporaryFile(mode="w+b", delete=True) as tmp:
         log.debug("Downloading S3 object to temporary file")
         s3.download_fileobj(bucket, key, tmp)
         tmp.seek(0)
         latest_ts = get_last_timestamp(
-            tmp.name, ts_key, all_lines
+            tmp.name, ts_key, all_lines, fallback_timestamp
         )  # Pass the file path to smart_open
 
     log.debug("Latest timestamp extracted: %s", latest_ts)
@@ -347,7 +386,7 @@ def update_metadata_for_prefix(
                         metadata_key,
                         ts_key,
                         all_lines,
-                        force,
+                        force=force,
                     )
                     processed += 1
                 except ValueError as e:
@@ -359,6 +398,132 @@ def update_metadata_for_prefix(
                         skipped += 1
 
     compute_statistics(skipped, processed)
+
+
+def report_missing_metadata(
+    s3_prefix: str,
+    metadata_key: str,
+):
+    """
+    Reports all S3 objects matching a given prefix that are missing the specified metadata key.
+
+    Args:
+        s3_prefix: The S3 prefix to search for .jsonl.bz2 files.
+        metadata_key: The metadata key to check for.
+
+    Returns:
+        None
+    """
+    parsed = urlparse(s3_prefix)
+    bucket = parsed.netloc
+    prefix = parsed.path.lstrip("/")
+
+    log.debug("Checking S3 objects with prefix: %s for missing metadata key: %s", s3_prefix, metadata_key)
+
+    s3 = get_s3_client()
+
+    # Use a paginator to handle S3 object listing with paging
+    paginator = s3.get_paginator("list_objects_v2")
+    page_iterator = paginator.paginate(Bucket=bucket, Prefix=prefix)
+
+    missing_files = []
+    total_files = 0
+
+    for page in page_iterator:
+        for obj in page.get("Contents", []):
+            key = obj["Key"]
+            if key.endswith(".jsonl.bz2"):
+                total_files += 1
+                s3_uri = f"s3://{bucket}/{key}"
+                try:
+                    head = s3.head_object(Bucket=bucket, Key=key)
+                    existing_metadata = head.get("Metadata", {})
+                    
+                    if metadata_key not in existing_metadata:
+                        missing_files.append(s3_uri)
+                        log.info("MISSING: %s", s3_uri)
+                    else:
+                        log.debug("HAS METADATA: %s", s3_uri)
+                        
+                except Exception as e:
+                    log.warning("Error checking metadata for %s: %s", s3_uri, e)
+                    missing_files.append(s3_uri)
+
+    log.info("Report Summary:")
+    log.info("Total .jsonl.bz2 files found: %d", total_files)
+    log.info("Files missing metadata key '%s': %d", metadata_key, len(missing_files))
+    
+    if missing_files:
+        log.info("Files missing metadata:")
+        for file_uri in missing_files:
+            print(file_uri)
+
+
+def report_missing_metadata_dirs(
+    s3_prefix: str,
+    metadata_key: str,
+):
+    """
+    Reports all directories matching a given prefix that contain .jsonl.bz2 files 
+    missing the specified metadata key.
+
+    Args:
+        s3_prefix: The S3 prefix to search for .jsonl.bz2 files.
+        metadata_key: The metadata key to check for.
+
+    Returns:
+        None
+    """
+    parsed = urlparse(s3_prefix)
+    bucket = parsed.netloc
+    prefix = parsed.path.lstrip("/")
+
+    log.debug("Checking S3 objects with prefix: %s for directories with missing metadata key: %s", s3_prefix, metadata_key)
+
+    s3 = get_s3_client()
+
+    # Use a paginator to handle S3 object listing with paging
+    paginator = s3.get_paginator("list_objects_v2")
+    page_iterator = paginator.paginate(Bucket=bucket, Prefix=prefix)
+
+    dirs_with_missing = set()
+    total_files = 0
+    total_dirs = set()
+
+    for page in page_iterator:
+        for obj in page.get("Contents", []):
+            key = obj["Key"]
+            if key.endswith(".jsonl.bz2"):
+                total_files += 1
+                # Extract directory path
+                dir_path = "/".join(key.split("/")[:-1])
+                if dir_path:
+                    total_dirs.add(dir_path)
+                
+                s3_uri = f"s3://{bucket}/{key}"
+                try:
+                    head = s3.head_object(Bucket=bucket, Key=key)
+                    existing_metadata = head.get("Metadata", {})
+                    
+                    if metadata_key not in existing_metadata:
+                        if dir_path:
+                            dirs_with_missing.add(dir_path)
+                            log.debug("Directory %s has missing metadata in file: %s", dir_path, key)
+                        
+                except Exception as e:
+                    log.warning("Error checking metadata for %s: %s", s3_uri, e)
+                    if dir_path:
+                        dirs_with_missing.add(dir_path)
+
+    log.info("Directory Report Summary:")
+    log.info("Total .jsonl.bz2 files found: %d", total_files)
+    log.info("Total directories: %d", len(total_dirs))
+    log.info("Directories with files missing metadata key '%s': %d", metadata_key, len(dirs_with_missing))
+    
+    if dirs_with_missing:
+        log.info("Directories with missing metadata:")
+        for dir_path in sorted(dirs_with_missing):
+            print(f"s3://{bucket}/{dir_path}/")
 
 
 def main():
@@ -374,6 +539,8 @@ def main():
         - --output: Optional S3 URI for the output file with updated metadata.
           Only valid with --s3-file.
         - --force: Force reprocessing even if metadata is already up-to-date.
+        - --report: Report all files missing the specified metadata key.
+        - --report-dirs: Report all directories containing files missing the specified metadata key.
 
     Returns:
         None
@@ -421,19 +588,49 @@ def main():
         action="store_true",
         help=("Force reprocessing even if metadata is already up-to-date " "(default: False)."),
     )
+    parser.add_argument(
+        "--report",
+        action="store_true",
+        help="Report all files missing the specified metadata key. Only valid with --s3-prefix.",
+    )
+    parser.add_argument(
+        "--report-dirs",
+        action="store_true",
+        help="Report all directories containing files missing the specified metadata key. Only valid with --s3-prefix.",
+    )
 
     args = parser.parse_args()
 
+    if (args.report or args.report_dirs) and not args.s3_prefix:
+        parser.error("The --report and --report-dirs options require --s3-prefix.")
+    
+    if args.report and args.report_dirs:
+        parser.error("Cannot use both --report and --report-dirs at the same time.")
+    
+    if args.output and not args.s3_file:
+        parser.error("The --output option is only valid with --s3-file.")
+
     if args.s3_prefix:
-        if args.output:
-            parser.error("The --output option is not allowed with --s3-prefix.")
-        update_metadata_for_prefix(
-            args.s3_prefix,
-            metadata_key=args.metadata_key,
-            ts_key=args.ts_key,
-            all_lines=args.all_lines,
-            force=args.force,
-        )
+        if args.report:
+            report_missing_metadata(
+                args.s3_prefix,
+                metadata_key=args.metadata_key,
+            )
+        elif args.report_dirs:
+            report_missing_metadata_dirs(
+                args.s3_prefix,
+                metadata_key=args.metadata_key,
+            )
+        else:
+            if args.output:
+                parser.error("The --output option is not allowed with --s3-prefix.")
+            update_metadata_for_prefix(
+                args.s3_prefix,
+                metadata_key=args.metadata_key,
+                ts_key=args.ts_key,
+                all_lines=args.all_lines,
+                force=args.force,
+            )
     elif args.s3_file:
         update_metadata_if_needed(
             args.s3_file,

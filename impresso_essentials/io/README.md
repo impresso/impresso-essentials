@@ -47,6 +47,15 @@ Arguments:
   - to all the files within a partition: using the `--s3-prefix` parameter
 - The most important parameter to ensure is correct is `--ts-key`. This should match the property name containing a timestamp in your data.
   - It defaults to `ts`, but other values previously encountered are `cdt`, and `timestamp`. We are aiming towards a unification of this field.
+- Supported Timestamp Formats:
+  - For `'ts'` and `'timestamp'` keys:
+    - `2024-04-05T18:14:47Z` (UTC with Z suffix)
+    - `2024-04-05T18:14:47` (no timezone info, treated as UTC)
+    - `2024-04-05T18:14:47+00:00` (UTC with timezone offset)
+    - `2024-04-05T18:14:47+02:00` (any timezone offset, converted to UTC)
+  - For `'cdt'` key:
+    - `2024-04-05 18:14:47` (space-separated format, treated as UTC)
+  - If no valid timestamp is found in the records, the S3 object's last modified time is used as a fallback.
 
 This script can be run from the CLI or as a module as long as you have the impresso-essentials package installed.
 
