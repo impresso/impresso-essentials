@@ -179,8 +179,12 @@ def add_provider_to_s3_partition(
                 logger.info(msg)
                 continue
 
-            # Only operate on bz2 files
-            if not key.endswith(".jsonl.bz2"):
+            # Only operate on bz2 and txt files
+            if (
+                not key.endswith(".jsonl.bz2")
+                and not key.endswith(".txt")
+                and not key.endswith(".jsonl.bz2.log.gz")
+            ) or "topic_description" in key:  # hotfix for topics
                 print(f"    -> Skipping non-jsonl.bz2 file: {key}")
                 continue
 
