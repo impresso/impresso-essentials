@@ -240,6 +240,7 @@ class MediaStatistics(DataStatistics):
         DataStage.LINGPROC: [],  # no additional keys
         DataStage.OCRQA: ["avg_ocrqa"],
         DataStage.CLASSIF_IMAGES: [
+            "images",
             "img_level0_class_fd",
             "img_level1_class_fd",
             "img_level2_class_fd",
