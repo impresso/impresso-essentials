@@ -291,6 +291,10 @@ def compute_stats_for_stage(
             return aggregators.compute_stats_in_canonical_bag(
                 files_bag, client=client, title=title, src_medium=src_medium
             )
+        # case DataStage.CAN_CONSOLIDATED:
+        #    return aggregators.compute_stats_in_can_consolidated_bag(
+        #        files_bag, client=client, title=title, src_medium=src_medium
+        #    )
         case DataStage.REBUILT:
             return aggregators.compute_stats_in_rebuilt_bag(
                 files_bag, include_alias=True, client=client, title=title
@@ -309,6 +313,10 @@ def compute_stats_for_stage(
             )
         case DataStage.LANGIDENT:
             return aggregators.compute_stats_in_langident_bag(files_bag, client=client, title=title)
+        # case DataStage.LANGIDENT_OCRQA:
+        #    return aggregators.compute_stats_in_langid_ocrqa_bag(
+        #        files_bag, client=client, title=title
+        #    )
         case DataStage.TEXT_REUSE:
             return aggregators.compute_stats_in_text_reuse_passage_bag(
                 files_bag, client=client, title=title
@@ -321,6 +329,10 @@ def compute_stats_for_stage(
             return aggregators.compute_stats_in_doc_emb_bag(files_bag, client=client, title=title)
         case DataStage.LINGPROC:
             return aggregators.compute_stats_in_lingproc_bag(files_bag, client=client, title=title)
+        case DataStage.CLASSIF_IMAGES:
+            return aggregators.compute_stats_in_classif_img_bag(
+                files_bag, client=client, title=title
+            )
         case DataStage.SOLR_TEXT:
             return aggregators.compute_stats_in_solr_text_ing_bag(
                 files_bag, client=client, title=title

@@ -1003,3 +1003,110 @@ def compute_stats_in_doc_emb_bag(
 
     # return as a list of dicts
     return aggregated_df.to_bag(format="dict").compute()
+
+
+def compute_stats_in_classif_img_bag(
+    s3_classif_images: Bag,
+    client: Client | None = None,
+    title: str | None = None,
+) -> list[dict[str, Any]]:
+    """Compute stats on a dask bag of topic modeling output content-items.
+
+    Args:
+        s3_classif_images (db.core.Bag): Bag with the contents of the image classification files.
+        client (Client | None, optional): Dask client. Defaults to None.
+        title (str, optional): Media title for which the stats are being computed.
+            Defaults to None.
+
+    Returns:
+        list[dict[str, Any]]: List of counts that match topics DataStatistics keys.
+    """
+    print(f"{title} - Fetched all files, gathering desired information.")
+    logger.info("%s - Fetched all files, gathering desired information.", title)
+
+    def freqs(
+        x,
+        cols=[
+            "img_level0_class_fd",
+            "img_level1_class_fd",
+            "img_level2_class_fd",
+            "img_level3_class_fd",
+        ],
+    ):
+        for col in cols:
+            if col in x:
+                x[col] = dict(Counter(literal_eval(x[col])))
+        print(f"x: {x}")
+        return x
+
+    count_df = s3_classif_images.map(
+        lambda ci: {
+            "media_alias": ci["ci_id"].split("-")[0],
+            "year": ci["ci_id"].split("-")[1],
+            "issues": ci["ci_id"].split("-i")[0],
+            "content_items_out": 1,
+            "images": 1,
+            "img_level0_class_fd": [
+                "image" if p["class"] != "not image" else "not image"
+                for p in ci["level3_predictions"]
+                if p["pred_number"] == 1
+            ][
+                0
+            ],  # identify the number of listed "images" which are actually predicted to be images
+            # not all CIs have level 1 and level 2 preds
+            "img_level1_class_fd": (
+                "None" if "level1_predictions" not in ci else ci["level1_predictions"][0]["class"]
+            ),
+            "img_level2_class_fd": (
+                "None" if "level2_predictions" not in ci else ci["level2_predictions"][0]["class"]
+            ),
+            "img_level3_class_fd": [
+                p["class"] if p["class"] != "not image" else "not image"
+                for p in ci["level3_predictions"]
+                if p["pred_number"] == 1
+            ][
+                0
+            ],  # identify the number of listed "images" which are actually predicted to be images
+        }
+    ).to_dataframe(
+        meta={
+            "media_alias": str,
+            "year": str,
+            "issues": str,
+            "content_items_out": int,
+            "images": int,
+            "img_level0_class_fd": object,
+            "img_level1_class_fd": object,
+            "img_level2_class_fd": object,
+            "img_level3_class_fd": object,
+        }
+    )
+
+    # cum the counts for all values collected
+    aggregated_df = (
+        count_df.groupby(by=["media_alias", "year"])
+        .agg(
+            {
+                "issues": tunique,
+                "content_items_out": sum,
+                "images": sum,
+                "img_level0_class_fd": list,
+                "img_level1_class_fd": list,
+                "img_level2_class_fd": list,
+                "img_level3_class_fd": list,
+            }
+        )
+        .reset_index()
+    ).persist()
+
+    # Dask dataframes did not support using literal_eval
+    agg_bag = aggregated_df.to_bag(format="dict").map(freqs)
+
+    print(f"{title} - Finished grouping and aggregating stats by title and year.")
+    logger.info("%s - Finished grouping and aggregating stats by title and year.", title)
+
+    if client is not None:
+        # only add the progress bar if the client is defined
+        progress(agg_bag)
+
+    return agg_bag.compute()

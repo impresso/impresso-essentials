@@ -217,6 +217,10 @@ class MediaStatistics(DataStatistics):
         "text_reuse_clusters",
         "text_reuse_passages",
         "avg_ocrqa",
+        "img_level0_class_fd",
+        "img_level1_class_fd",
+        "img_level2_class_fd",
+        "img_level3_class_fd",
     ]
 
     stage_extra_keys = {
@@ -234,7 +238,13 @@ class MediaStatistics(DataStatistics):
         DataStage.EMB_DOCS: [],  # no additional keys
         DataStage.SOLR_TEXT: ["ft_tokens"],
         DataStage.LINGPROC: [],  # no additional keys
-        DataStage.OCRQA: ["avg_ocrqa"],  # no additional keys
+        DataStage.OCRQA: ["avg_ocrqa"],
+        DataStage.CLASSIF_IMAGES: [
+            "img_level0_class_fd",
+            "img_level1_class_fd",
+            "img_level2_class_fd",
+            "img_level3_class_fd",
+        ],
     }
 
     def _define_count_keys(self) -> list[str]:

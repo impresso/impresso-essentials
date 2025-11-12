@@ -46,7 +46,7 @@ class DataStage(StrEnum):
     """
 
     CANONICAL = "canonical"
-    CONS_CANONICAL = "canonical-consolidated"
+    CAN_CONSOLIDATED = "canonical-consolidated"
     REBUILT = "rebuilt"
     PASSIM = "passim"
     EMB_WORDS = "emb-words"
@@ -62,7 +62,7 @@ class DataStage(StrEnum):
     LANGIDENT = "langident"
     LINGPROC = "lingproc"
     OCRQA = "ocrqa"
-    LLANGIDENT_OCR = "langid-ocrqa"  # new merged version of lingproc and ocrqa
+    LANGIDENT_OCRQA = "langid-ocrqa"  # new merged version of lingproc and ocrqa
     TEXT_REUSE = "textreuse"
     TOPICS = "topics"
     SOLR_TEXT = "solr-text-ingestion"
