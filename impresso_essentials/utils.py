@@ -46,6 +46,7 @@ class DataStage(StrEnum):
     """
 
     CANONICAL = "canonical"
+    CONS_CANONICAL = "canonical-consolidated"
     REBUILT = "rebuilt"
     PASSIM = "passim"
     EMB_WORDS = "emb-words"
@@ -54,12 +55,14 @@ class DataStage(StrEnum):
     EMB_ENTITIES = "emb-entities"
     EMB_PARAGRAPHS = "emb-paragraphs"
     EMB_IMAGES = "emb-images"
+    CLASSIF_IMAGES = "classif-images"
     # EMBED_ARTICLES = "embeddings-article"
     ENTITIES = "entities"
     NEWS_AGENCIES = "newsagencies"
     LANGIDENT = "langident"
     LINGPROC = "lingproc"
     OCRQA = "ocrqa"
+    LLANGIDENT_OCR = "langid-ocrqa"  # new merged version of lingproc and ocrqa
     TEXT_REUSE = "textreuse"
     TOPICS = "topics"
     SOLR_TEXT = "solr-text-ingestion"
@@ -223,7 +226,8 @@ PARTNER_TO_MEDIA = {
         "lepji",
         "lepetitparisien",
         "oecaen",
-        "oerennes",],
+        "oerennes",
+    ],
     # TODO add new titles
     "BCUL": [
         "ACI",
@@ -276,6 +280,42 @@ PARTNER_TO_MEDIA = {
         "NV2",
         # "RN1",  # (no OCR)
         # "RN2",  # (no OCR)
+        # BCUL2 ingestion batch - ABBYY format (more in text-embedded-pdf)
+        "ABal",
+        "AChal",
+        "ALT",
+        "CHU",
+        "GER",
+        "ARB",
+        "CREC",
+        "DETO",
+        "FDL",
+        "MARG",
+        "RLP",
+        "POM",
+        "RL",
+        "RLD",
+        "RLS",
+        "BIST",
+        "Rollan1",
+        "Rollan2",
+        "CLib",
+        "CLN",
+        "FRON",
+        "KANG",
+        "MOU2",
+        "PT",
+        "SEM",
+        "MEP",
+        "NRev",
+        "NRL",
+        "NRH",
+        "PL",
+        "PV",
+        "RPR",
+        "AS",
+        "DP",
+        "Rollan3",
     ],
     "BL": [
         "ANJO",
