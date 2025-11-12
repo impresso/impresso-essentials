@@ -699,6 +699,7 @@ PARTNER_TO_MEDIA = {
         "SOC_VS",
     ],
     "INA": ["CFCE", "RDN"],
+    "SUB": ["hamb_echo"],
 }
 
 PARTNER_TO_COUNTRY = {
@@ -715,13 +716,14 @@ PARTNER_TO_COUNTRY = {
     "SWISSINFO": "CH",
     "RTS": "CH",
     "INA": "FR",
+    "SUB": "DE",
 }
 # flatten the known journals into a sorted list
 ALL_MEDIA = sorted([j for part_j in PARTNER_TO_MEDIA.values() for j in part_j])
 MEDIA_TO_COUNTRY = {
     alias: PARTNER_TO_COUNTRY[p] for p, p_aliases in PARTNER_TO_MEDIA.items() for alias in p_aliases
 }
-PARTNERS_WITHOUT_OLR = ["NZZ", "SWA", "FedGaz", "BCUL", "SWISSINFO", "INA"]
+PARTNERS_WITHOUT_OLR = ["NZZ", "SWA", "FedGaz", "BCUL", "SWISSINFO", "INA", "SUB"]
 
 # values can either be a list of aliases or "all"
 SOURCE_MEDIUMS_TO_PARTNERS_TO_MEDIA = {
@@ -735,6 +737,7 @@ SOURCE_MEDIUMS_TO_PARTNERS_TO_MEDIA = {
         "BNF": "all",
         "BCUL": "all",
         "BL": "all",
+        "SUB": "all",
         # "KB": {# SourceMedium.PT: [], # all KB NP titles should be listed},
     },
     SourceMedium.TPS: {
@@ -765,6 +768,7 @@ PARTNERS_TO_SRC_MEDIUM_TO_MEDIA = {
     "SWISSINFO": {SourceMedium.TPS: "all"},
     "RTS": {SourceMedium.AO: "all"},
     "INA": {SourceMedium.AO: "all"},
+    "SUB": {SourceMedium.PT: "all"},
 }
 PARTNERS_TO_SRC_TYPE_TO_MEDIA = {
     "SNL": {SourceType.NP: "all"},
@@ -783,6 +787,7 @@ PARTNERS_TO_SRC_TYPE_TO_MEDIA = {
     "SWISSINFO": {SourceType.RB: "all"},
     "RTS": {SourceType.RB: "all"},
     "INA": {SourceType.RB: "all"},
+    "SUB": {SourceType.NP: "all"},
 }
 
 
