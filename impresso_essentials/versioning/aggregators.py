@@ -1053,7 +1053,7 @@ def compute_stats_in_classif_img_bag(
             "img_level1_class_fd": (
                 (
                     "not_image"
-                    if ci["level3_predictions"][0]["class"] != "not_image"
+                    if ci["level3_predictions"][0]["class"] == "not_image"
                     else "not_inferred"
                 )
                 if "level1_predictions" not in ci
@@ -1062,7 +1062,7 @@ def compute_stats_in_classif_img_bag(
             "img_level2_class_fd": (
                 (
                     "not_image"
-                    if ci["level3_predictions"][0]["class"] != "not_image"
+                    if ci["level3_predictions"][0]["class"] == "not_image"
                     else "not_inferred"
                 )
                 if "level2_predictions" not in ci
