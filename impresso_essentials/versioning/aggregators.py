@@ -1046,27 +1046,29 @@ def compute_stats_in_classif_img_bag(
             "issues": ci["ci_id"].split("-i")[0],
             "content_items_out": 1,
             "images": 1,
-            "img_level0_class_fd": [
-                "image" if p["class"] != "not image" else "not image"
-                for p in ci["level3_predictions"]
-                if p["pred_number"] == 1
-            ][
-                0
-            ],  # identify the number of listed "images" which are actually predicted to be images
+            "img_level0_class_fd": (
+                "image" if ci["level3_predictions"][0]["class"] != "not_image" else "not_image"
+            ),  # identify the number of listed "images" which are actually predicted to be images
             # not all CIs have level 1 and level 2 preds
             "img_level1_class_fd": (
-                "None" if "level1_predictions" not in ci else ci["level1_predictions"][0]["class"]
+                (
+                    "not_image"
+                    if ci["level3_predictions"][0]["class"] != "not_image"
+                    else "not_inferred"
+                )
+                if "level1_predictions" not in ci
+                else ci["level1_predictions"][0]["class"]
             ),
             "img_level2_class_fd": (
-                "None" if "level2_predictions" not in ci else ci["level2_predictions"][0]["class"]
+                (
+                    "not_image"
+                    if ci["level3_predictions"][0]["class"] != "not_image"
+                    else "not_inferred"
+                )
+                if "level2_predictions" not in ci
+                else ci["level2_predictions"][0]["class"]
             ),
-            "img_level3_class_fd": [
-                p["class"] if p["class"] != "not image" else "not image"
-                for p in ci["level3_predictions"]
-                if p["pred_number"] == 1
-            ][
-                0
-            ],  # identify the number of listed "images" which are actually predicted to be images
+            "img_level3_class_fd": ci["level3_predictions"][0]["class"],
         }
     ).to_dataframe(
         meta={
