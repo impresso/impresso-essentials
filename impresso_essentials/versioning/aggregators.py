@@ -233,43 +233,35 @@ def counts_for_can_cons_issue(
                 "reocred_cis": len(
                     [item for item in issue["i"] if item["m"]["consolidated_reocr_applied"]]
                 ),
-                """"avg_ocr": mean(
-                    [
-                        item["consolidated_ocrqa"]
-                        for item in issue["i"]
-                        if "consolidated_ocrqa" in item
-                    ]
-                ),"""
             }
         )
 
-    counts["lang_fd"] = ["None" if ci["consolidated_lg"] is None else ci["consolidated_lg"] for ci in issue["i"]]
-    """Counter(
+    counts["lang_fd"] = [
         "None" if ci["consolidated_lg"] is None else ci["consolidated_lg"] for ci in issue["i"]
-    )"""
+    ]
 
     return counts
 
 
 concat_lists = Aggregation(
     name="concat_lists",
-    chunk=lambda s: s.apply(list),       # ensure lists
-    agg=lambda s: s.sum(),               # Python list addition concatenates
-    finalize=lambda s: s
+    chunk=lambda s: s.apply(list),  # ensure lists
+    agg=lambda s: s.sum(),  # Python list addition concatenates
+    finalize=lambda s: s,
 )
 
 
 def compute_stats_in_can_consolidated_bag(
-    s3_canonical_issues: Bag,
+    s3_can_cons_issues: Bag,
     client: Client | None = None,
     title: str | None = None,
     src_medium: str | None = None,
 ) -> list[dict[str, Any]]:
-    """Computes number of issues and supports per alias from a Dask bag of canonical data.
+    """Computes number of issues and supports per alias from a Dask bag of consolidated canonical data.
 
     Args:
-        s3_canonical_issues (db.core.Bag): Bag with the contents of canonical files to
-            compute statistics on.
+        s3_can_cons_issues (db.core.Bag): Bag with the contents of consolidated canonical
+            files to compute statistics on.
         title (str, optional): Media title for which the stats are being computed.
             Defaults to None.
         src_medium (str, optional): The source medium of this issue. Defaults to None.
@@ -311,7 +303,7 @@ def compute_stats_in_can_consolidated_bag(
         df_agg["reocred_cis"] = sum
 
     count_df = (
-        s3_canonical_issues.map(lambda i: counts_for_can_cons_issue(i, src_medium=src_medium))
+        s3_can_cons_issues.map(lambda i: counts_for_can_cons_issue(i, src_medium=src_medium))
         .to_dataframe(meta=df_meta)
         .persist()
     )
@@ -1018,7 +1010,7 @@ def compute_stats_in_ocrqa_bag(
     """Compute stats on a dask bag of OCRQA outputs.
 
     Args:
-        s3_solr_ing_cis (db.core.Bag): Bag with the contents of the OCRQA files.
+        s3_ocrqas (db.core.Bag): Bag with the contents of the OCRQA files.
         client (Client | None, optional): Dask client. Defaults to None.
         title (str, optional): Media title for which the stats are being computed.
             Defaults to None.
@@ -1035,6 +1027,79 @@ def compute_stats_in_ocrqa_bag(
     # define the list of columns in the dataframe
     count_df = (
         s3_ocrqas.map(
+            lambda ci: {
+                "media_alias": ci["ci_id"].split("-")[0],
+                "year": ci["ci_id"].split("-")[1],
+                "issues": "-".join(ci["ci_id"].split("-")[:-1]),
+                "content_items_out": 1,
+                "avg_ocrqa": ci["ocrqa"],
+            }
+        )
+        .to_dataframe(
+            meta={
+                "media_alias": str,
+                "year": str,
+                "issues": str,
+                "content_items_out": int,
+                "avg_ocrqa": float,
+            }
+        )
+        .persist()
+    )
+
+    aggregated_df = (
+        count_df.groupby(by=["media_alias", "year"])
+        .agg(
+            {
+                "issues": tunique,
+                "content_items_out": sum,
+                "avg_ocrqa": "mean",
+            }
+        )
+        .reset_index()
+        .sort_values("year")
+    ).persist()
+
+    print(f"{title} - Finished grouping and aggregating stats by title and year.")
+    logger.info("%s - Finished grouping and aggregating stats by title and year.", title)
+
+    aggregated_df["avg_ocrqa"] = aggregated_df["avg_ocrqa"].apply(
+        lambda x: round(x, 3), meta=("avg_ocrqa", "float")
+    )
+
+    if client is not None:
+        # only add the progress bar if the client is defined
+        progress(aggregated_df)
+
+    # return as a list of dicts
+    return aggregated_df.to_bag(format="dict").compute()
+
+
+def compute_stats_in_langid_ocrqa_bag(
+    s3_langid_ocrqas: Bag,
+    client: Client | None = None,
+    title: str | None = None,
+) -> list[dict[str, int | str]]:
+    """Compute stats on a dask bag of OCRQA outputs.
+
+    Args:
+        s3_langid_ocrqas (db.core.Bag): Bag with the contents of the OCRQA files.
+        client (Client | None, optional): Dask client. Defaults to None.
+        title (str, optional): Media title for which the stats are being computed.
+            Defaults to None.
+
+    Returns:
+        list[dict[str, Union[int, str]]]: List of counts that match OCRQA output
+        DataStatistics keys.
+    """
+    # when called in the rebuilt, all the rebuilt articles in the bag
+    # are from the same newspaper and year
+    print(f"{title} - Fetched all files, gathering desired information.")
+    logger.info("%s - Fetched all files, gathering desired information.", title)
+
+    # define the list of columns in the dataframe
+    count_df = (
+        s3_langid_ocrqas.map(
             lambda ci: {
                 "media_alias": ci["ci_id"].split("-")[0],
                 "year": ci["ci_id"].split("-")[1],

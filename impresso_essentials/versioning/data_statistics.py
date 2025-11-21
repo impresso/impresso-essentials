@@ -233,7 +233,6 @@ class MediaStatistics(DataStatistics):
             "images",
             "reocred_cis",
             "lang_fd",
-            "avg_ocrqa",
         ],
         DataStage.REBUILT: ["ft_tokens"],
         DataStage.ENTITIES: ["ne_entities", "ne_mentions"],
@@ -255,6 +254,7 @@ class MediaStatistics(DataStatistics):
             "img_level2_class_fd",
             "img_level3_class_fd",
         ],
+        DataStage.LANGIDENT_OCRQA: ["lang_fd", "avg_ocrqa"],
     }
 
     def _define_count_keys(self) -> list[str]:

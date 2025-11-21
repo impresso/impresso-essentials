@@ -313,10 +313,10 @@ def compute_stats_for_stage(
             )
         case DataStage.LANGIDENT:
             return aggregators.compute_stats_in_langident_bag(files_bag, client=client, title=title)
-        # case DataStage.LANGIDENT_OCRQA:
-        #    return aggregators.compute_stats_in_langid_ocrqa_bag(
-        #        files_bag, client=client, title=title
-        #    )
+        case DataStage.LANGIDENT_OCRQA:
+            return aggregators.compute_stats_in_langid_ocrqa_bag(
+                files_bag, client=client, title=title
+            )
         case DataStage.TEXT_REUSE:
             return aggregators.compute_stats_in_text_reuse_passage_bag(
                 files_bag, client=client, title=title
