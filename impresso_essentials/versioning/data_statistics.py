@@ -254,7 +254,7 @@ class MediaStatistics(DataStatistics):
             "img_level2_class_fd",
             "img_level3_class_fd",
         ],
-        DataStage.LANGIDENT_OCRQA: ["lang_fd", "avg_ocrqa"],
+        DataStage.LANGIDENT_OCRQA: ["images", "lang_fd", "avg_ocrqa"],
     }
 
     def _define_count_keys(self) -> list[str]:

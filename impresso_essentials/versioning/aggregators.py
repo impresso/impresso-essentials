@@ -273,10 +273,6 @@ def compute_stats_in_can_consolidated_bag(
     print(f"{title} - Fetched all issues, gathering desired information.")
     logger.info("%s - Fetched all issues, gathering desired information.", title)
 
-    def freq(x, col="lang_fd"):
-        x[col] = dict(Counter(literal_eval(x[col])))
-        return x
-
     # prep the df's meta and aggregations based on the source medium
     df_meta = {
         "media_alias": str,
@@ -540,6 +536,13 @@ def compute_stats_in_entities_bag(
     return aggregated_df.to_bag(format="dict").compute()
 
 
+def freq(x, cols=["lang_fd"]):
+    for col in cols:
+        if col in x:
+            x[col] = dict(Counter(literal_eval(x[col])))
+    return x
+
+
 def compute_stats_in_langident_bag(
     s3_langident: Bag,
     client: Client | None = None,
@@ -558,10 +561,6 @@ def compute_stats_in_langident_bag(
     """
     print(f"{title} - Fetched all files, gathering desired information.")
     logger.info("%s - Fetched all files, gathering desired information.", title)
-
-    def freq(x, col="lang_fd"):
-        x[col] = dict(Counter(literal_eval(x[col])))
-        return x
 
     count_df = (
         s3_langident.map(
@@ -715,11 +714,6 @@ def compute_stats_in_topics_bag(
 
         return final_list
 
-    def freq(x, col="topics_fd"):
-        if col in x:
-            x[col] = dict(Counter(literal_eval(x[col])))
-        return x
-
     try:
         test = s3_topics.take(1, npartitions=-1)
     except Exception as e:
@@ -795,7 +789,7 @@ def compute_stats_in_topics_bag(
         return {}
 
     # return as a list of dicts
-    return aggregated_df.to_bag(format="dict").map(freq).compute()
+    return aggregated_df.to_bag(format="dict").map(freq, col=["topics_fd"]).compute()
 
 
 def compute_stats_in_img_emb_bag(
@@ -1105,6 +1099,8 @@ def compute_stats_in_langid_ocrqa_bag(
                 "year": ci["ci_id"].split("-")[1],
                 "issues": "-".join(ci["ci_id"].split("-")[:-1]),
                 "content_items_out": 1,
+                "images": 1 if ci["tp"] == "img" else 0,
+                "lang_fd": "None" if ci["lg"] is None else ci["lg"],
                 "avg_ocrqa": ci["ocrqa"],
             }
         )
@@ -1114,6 +1110,8 @@ def compute_stats_in_langid_ocrqa_bag(
                 "year": str,
                 "issues": str,
                 "content_items_out": int,
+                "images": int,
+                "lang_fd": object,
                 "avg_ocrqa": float,
             }
         )
@@ -1126,6 +1124,8 @@ def compute_stats_in_langid_ocrqa_bag(
             {
                 "issues": tunique,
                 "content_items_out": sum,
+                "images": sum,
+                "lang_fd": list,
                 "avg_ocrqa": "mean",
             }
         )
@@ -1145,7 +1145,7 @@ def compute_stats_in_langid_ocrqa_bag(
         progress(aggregated_df)
 
     # return as a list of dicts
-    return aggregated_df.to_bag(format="dict").compute()
+    return aggregated_df.to_bag(format="dict").map(freq).compute()
 
 
 def compute_stats_in_doc_emb_bag(
@@ -1233,21 +1233,6 @@ def compute_stats_in_classif_img_bag(
     print(f"{title} - Fetched all files, gathering desired information.")
     logger.info("%s - Fetched all files, gathering desired information.", title)
 
-    def freqs(
-        x,
-        cols=[
-            "img_level0_class_fd",
-            "img_level1_class_fd",
-            "img_level2_class_fd",
-            "img_level3_class_fd",
-        ],
-    ):
-        for col in cols:
-            if col in x:
-                x[col] = dict(Counter(literal_eval(x[col])))
-        print(f"x: {x}")
-        return x
-
     count_df = s3_classif_images.map(
         lambda ci: {
             "media_alias": ci["ci_id"].split("-")[0],
@@ -1311,7 +1296,15 @@ def compute_stats_in_classif_img_bag(
     ).persist()
 
     # Dask dataframes did not support using literal_eval
-    agg_bag = aggregated_df.to_bag(format="dict").map(freqs)
+    agg_bag = aggregated_df.to_bag(format="dict").map(
+        freq,
+        cols=[
+            "img_level0_class_fd",
+            "img_level1_class_fd",
+            "img_level2_class_fd",
+            "img_level3_class_fd",
+        ],
+    )
 
     print(f"{title} - Finished grouping and aggregating stats by title and year.")
     logger.info("%s - Finished grouping and aggregating stats by title and year.", title)
