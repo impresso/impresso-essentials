@@ -4,7 +4,9 @@ import logging
 from ast import literal_eval
 from collections import Counter
 from typing import Any
+from numpy import mean
 from dask import dataframe as dd
+from dask.dataframe import Aggregation
 from dask.bag.core import Bag
 from dask.distributed import progress, Client
 
@@ -186,6 +188,148 @@ def compute_stats_in_canonical_bag(
 
     # return as a list of dicts
     return aggregated_df.to_bag(format="dict").compute()
+
+
+def counts_for_can_cons_issue(
+    issue: dict[str, Any],
+    src_medium: str | None = None,
+) -> dict[str, int]:
+    """Given the canonical representation of an issue, get its counts.
+
+    Args:
+        issue (dict[str, Any]): Canonical JSON representation of an issue.
+        incl_alias_yr (bool, optional): Whether the newspaper title and year should
+            be included in the returned dict for later aggregation. Defaults to False.
+        src_medium (str, optional): The source medium of this issue. Defaults to None.
+
+    Returns:
+        dict[str, int]: Dict listing the counts for this issue, ready to be aggregated.
+    """
+
+    counts = {
+        "media_alias": issue["id"].split("-")[0],
+        "year": issue["id"].split("-")[1],
+        "issues": 1,
+        "content_items_out": len(issue["i"]),
+    }
+
+    if src_medium and src_medium == "audio":
+        if "sm" not in issue or issue["sm"] != src_medium:
+            # the source medium should always be defined for radio data
+            log_src_medium_mismatch(issue["id"], "canonical", src_medium, issue["sm"])
+
+        # case of audio
+        counts["audios"] = len(set(issue["rr"]))
+
+    else:
+        if "sm" in issue and issue["sm"] != src_medium:
+            log_src_medium_mismatch(issue["id"], "canonical", src_medium, issue["sm"])
+
+        # case of paper (print and typescripts)
+        counts.update(
+            {
+                "pages": len(set(issue["pp"])),
+                "images": len([item for item in issue["i"] if item["m"]["tp"] == "image"]),
+                "reocred_cis": len(
+                    [item for item in issue["i"] if item["m"]["consolidated_reocr_applied"]]
+                ),
+                """"avg_ocr": mean(
+                    [
+                        item["consolidated_ocrqa"]
+                        for item in issue["i"]
+                        if "consolidated_ocrqa" in item
+                    ]
+                ),"""
+            }
+        )
+
+    counts["lang_fd"] = ["None" if ci["consolidated_lg"] is None else ci["consolidated_lg"] for ci in issue["i"]]
+    """Counter(
+        "None" if ci["consolidated_lg"] is None else ci["consolidated_lg"] for ci in issue["i"]
+    )"""
+
+    return counts
+
+
+concat_lists = Aggregation(
+    name="concat_lists",
+    chunk=lambda s: s.apply(list),       # ensure lists
+    agg=lambda s: s.sum(),               # Python list addition concatenates
+    finalize=lambda s: s
+)
+
+
+def compute_stats_in_can_consolidated_bag(
+    s3_canonical_issues: Bag,
+    client: Client | None = None,
+    title: str | None = None,
+    src_medium: str | None = None,
+) -> list[dict[str, Any]]:
+    """Computes number of issues and supports per alias from a Dask bag of canonical data.
+
+    Args:
+        s3_canonical_issues (db.core.Bag): Bag with the contents of canonical files to
+            compute statistics on.
+        title (str, optional): Media title for which the stats are being computed.
+            Defaults to None.
+        src_medium (str, optional): The source medium of this issue. Defaults to None.
+
+    Returns:
+        list[dict[str, Any]]: List of counts that match canonical DataStatistics keys.
+    """
+
+    print(f"{title} - Fetched all issues, gathering desired information.")
+    logger.info("%s - Fetched all issues, gathering desired information.", title)
+
+    def freq(x, col="lang_fd"):
+        x[col] = dict(Counter(literal_eval(x[col])))
+        return x
+
+    # prep the df's meta and aggregations based on the source medium
+    df_meta = {
+        "media_alias": str,
+        "year": str,
+        "issues": int,
+        "content_items_out": int,
+        "lang_fd": object,
+    }
+    df_agg = {
+        "issues": sum,
+        "content_items_out": sum,
+        "lang_fd": concat_lists,
+    }
+
+    if src_medium and src_medium == "audio":
+        df_meta["audios"] = int
+        df_agg["audios"] = sum
+    else:
+        df_meta["pages"] = int
+        df_meta["images"] = int
+        df_meta["reocred_cis"] = int
+        df_agg["pages"] = sum
+        df_agg["images"] = sum
+        df_agg["reocred_cis"] = sum
+
+    count_df = (
+        s3_canonical_issues.map(lambda i: counts_for_can_cons_issue(i, src_medium=src_medium))
+        .to_dataframe(meta=df_meta)
+        .persist()
+    )
+
+    # cum the counts for all values collected
+    aggregated_df = (
+        count_df.groupby(by=["media_alias", "year"]).agg(df_agg).reset_index()
+    ).persist()
+
+    if client is not None:
+        # only add the progress bar if the client is defined
+        progress(aggregated_df)
+
+    print(f"{title} - Finished grouping and aggregating stats by title and year.")
+    logger.info("%s - Finished grouping and aggregating stats by title and year.", title)
+
+    # return as a list of dicts
+    return aggregated_df.to_bag(format="dict").map(freq).compute()
 
 
 ### DEFINITION of tunique ###

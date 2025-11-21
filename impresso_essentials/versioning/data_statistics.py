@@ -206,6 +206,7 @@ class MediaStatistics(DataStatistics):
         "pages",
         "audios",
         "content_items_out",
+        "reocred_cis",
         "ft_tokens",
         "images",
         "ne_mentions",
@@ -226,6 +227,14 @@ class MediaStatistics(DataStatistics):
     stage_extra_keys = {
         # audios and pages don't need to be defined for the same mediums
         DataStage.CANONICAL: ["pages", "audios", "images"],
+        DataStage.CAN_CONSOLIDATED: [
+            "pages",
+            "audios",
+            "images",
+            "reocred_cis",
+            "lang_fd",
+            "avg_ocrqa",
+        ],
         DataStage.REBUILT: ["ft_tokens"],
         DataStage.ENTITIES: ["ne_entities", "ne_mentions"],
         DataStage.NEWS_AGENCIES: ["ne_entities", "ne_mentions"],

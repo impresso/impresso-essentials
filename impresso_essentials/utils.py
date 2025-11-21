@@ -228,7 +228,7 @@ PARTNER_TO_MEDIA = {
         "oecaen",
         "oerennes",
     ],
-    # TODO add new titles
+    # TODO add OCR-Embedded PDF titles
     "BCUL": [
         "ACI",
         "Castigat",

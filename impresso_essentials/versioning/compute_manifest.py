@@ -291,10 +291,10 @@ def compute_stats_for_stage(
             return aggregators.compute_stats_in_canonical_bag(
                 files_bag, client=client, title=title, src_medium=src_medium
             )
-        # case DataStage.CAN_CONSOLIDATED:
-        #    return aggregators.compute_stats_in_can_consolidated_bag(
-        #        files_bag, client=client, title=title, src_medium=src_medium
-        #    )
+        case DataStage.CAN_CONSOLIDATED:
+            return aggregators.compute_stats_in_can_consolidated_bag(
+                files_bag, client=client, title=title, src_medium=src_medium
+            )
         case DataStage.REBUILT:
             return aggregators.compute_stats_in_rebuilt_bag(
                 files_bag, include_alias=True, client=client, title=title
