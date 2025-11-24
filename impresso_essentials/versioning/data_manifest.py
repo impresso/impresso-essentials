@@ -134,14 +134,21 @@ class DataManifest:
             DataStage: The input DataStage.
         """
         if self.stage in [
-            DataStage.REBUILT,
+            # DataStage.REBUILT, # now rebuilt uses canonical consolidated as input
             DataStage.CANONICAL,
-            DataStage.PASSIM,
+            # DataStage.PASSIM,
             DataStage.MYSQL_CIS,
             DataStage.EMB_IMAGES,
+            DataStage.LANGIDENT_OCRQA,
         ]:
             # datastages that directly follow or use canonical data
             return DataStage.CANONICAL
+        if self.stage in [DataStage.CAN_CONSOLIDATED]:
+            # canonical consolidated uses the output of langid-ocrqa
+            return DataStage.LANGIDENT_OCRQA
+        if self.stage in [DataStage.REBUILT, DataStage.PASSIM]:
+            # canonical consolidated is now the input to rebuilt formats
+            return DataStage.CAN_CONSOLIDATED
         if self.stage in [DataStage.TEXT_REUSE]:
             # text reuse uses passim rebuilt text
             return DataStage.PASSIM

@@ -536,7 +536,18 @@ def compute_stats_in_entities_bag(
     return aggregated_df.to_bag(format="dict").compute()
 
 
-def freq(x, cols=["lang_fd"]):
+def freq(x: dict, cols: list[str] = ["lang_fd"]) -> dict:
+    """Compute the frequency dict of the given column or columns
+
+    Args:
+        x (dict): Dict corresponding to aggregated values for one title-year,
+            which contains lists of values to count.
+        cols (list[str], optional): List of keys (columns) with lists of values to count.
+            Defaults to ["lang_fd"].
+
+    Returns:
+        dict: The statistics for the given title-year, with the value counts of the required columns.
+    """
     for col in cols:
         if col in x:
             x[col] = dict(Counter(literal_eval(x[col])))
@@ -1095,9 +1106,9 @@ def compute_stats_in_langid_ocrqa_bag(
     count_df = (
         s3_langid_ocrqas.map(
             lambda ci: {
-                "media_alias": ci["ci_id"].split("-")[0],
-                "year": ci["ci_id"].split("-")[1],
-                "issues": "-".join(ci["ci_id"].split("-")[:-1]),
+                "media_alias": ci["id"].split("-")[0],
+                "year": ci["id"].split("-")[1],
+                "issues": "-".join(ci["id"].split("-")[:-1]),
                 "content_items_out": 1,
                 "images": 1 if ci["tp"] == "img" else 0,
                 "lang_fd": "None" if ci["lg"] is None else ci["lg"],
@@ -1130,7 +1141,6 @@ def compute_stats_in_langid_ocrqa_bag(
             }
         )
         .reset_index()
-        .sort_values("year")
     ).persist()
 
     print(f"{title} - Finished grouping and aggregating stats by title and year.")

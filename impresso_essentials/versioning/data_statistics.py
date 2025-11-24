@@ -120,7 +120,8 @@ class DataStatistics(ABC):
                             self.counts[k][v_k] = (
                                 v_f if v_k not in self.counts[k] else self.counts[k][v_k] + v_f
                             )
-                    else:
+                    elif not (k.startswith("avg_") and self.granularity == "title"):
+                        # summing averages does not make sense, so they are not included at title level.
                         self.counts[k] += v
             return True
 
