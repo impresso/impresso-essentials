@@ -15,7 +15,7 @@ from impresso_essentials.utils import (
     get_provider_for_alias,
     get_src_info_for_alias,
     DataStage,
-    validate_stage
+    validate_stage,
 )
 from impresso_essentials.io.s3 import (
     fixed_s3fs_glob,
@@ -171,6 +171,7 @@ def find_s3_data_manifest_path(
 
     if partition is None and stage_value in [
         DataStage.CANONICAL.value,  # "canonical"
+        DataStage.CAN_CONSOLIDATED.value,  # "consolidated-canonical"
         DataStage.REBUILT.value,  # "rebuilt"
         DataStage.PASSIM.value,  # "passim"
         DataStage.SOLR_TEXT.value,  # "solr-ingestion-text"
@@ -237,9 +238,7 @@ def read_manifest_from_s3_path(manifest_s3_path: str) -> Optional[dict[str, Any]
         Optional[dict[str, Any]]: Contents of manifest if found on S3, None otherwise.
     """
     try:
-        raw_text = alternative_read_text(
-            manifest_s3_path, IMPRESSO_STORAGEOPT, line_by_line=False
-        )
+        raw_text = alternative_read_text(manifest_s3_path, IMPRESSO_STORAGEOPT, line_by_line=False)
         return json.loads(raw_text)
     except FileNotFoundError as e:
         logger.error("No manifest found at s3 path %s. %s", manifest_s3_path, e)
@@ -508,8 +507,7 @@ def filter_new_or_modified_media(
             filtered_media_list.append(rebuilt_media_item)
 
     logger.info(
-        "\n*** Getting new or modified items:"
-        "\nInput (rebuilt) manifest has %s media items.",
+        "\n*** Getting new or modified items:" "\nInput (rebuilt) manifest has %s media items.",
         len(get_media_titles(rebuilt_mft_json)),
     )
     logger.info("Resulting filtered manifest has %s media items.", len(filtered_media_list))
@@ -573,9 +571,7 @@ def get_media_item_years(mnf_json: dict[str, Any]) -> dict[str, dict[str, float]
             year_key = title + "/" + media_year["element"] + ".jsonl.bz2"
             s3_key = bucket_name + "/" + year_key
             year_size_b = get_s3_object_size(bucket_name.split("//")[1], year_key)
-            year_size_m = (
-                round(bytes_to(year_size_b, "m"), 2) if year_size_b is not None else None
-            )
+            year_size_m = round(bytes_to(year_size_b, "m"), 2) if year_size_b is not None else None
             # print(f"Size in b: {year_size_b}, in mb: {year_size_m}")
 
             years[s3_key] = year_size_m

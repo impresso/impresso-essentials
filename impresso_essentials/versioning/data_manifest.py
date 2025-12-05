@@ -133,10 +133,20 @@ class DataManifest:
         Returns:
             DataStage: The input DataStage.
         """
+        # by default now, rebuilt uses canonical consolidated as input,
+        # except when the input bucket is provided corresponds to a
+        # "canonical" bucket which isn't consolidated
+        if self.stage in [DataStage.REBUILT, DataStage.PASSIM]:
+            # check whether the input data is canonical or consolidated
+            if "canonical-consolidated" in self.input_bucket_name and all(
+                x not in self.input_bucket_name for x in ["110", "111", "112"]
+            ):
+                # canonical consolidated is now the input to rebuilt formats
+                return DataStage.CAN_CONSOLIDATED
         if self.stage in [
-            # DataStage.REBUILT, # now rebuilt uses canonical consolidated as input
+            DataStage.REBUILT,  # if input isn't consolidated, use canonical
             DataStage.CANONICAL,
-            # DataStage.PASSIM,
+            DataStage.PASSIM,  # if input isn't consolidated, use canonical
             DataStage.MYSQL_CIS,
             DataStage.EMB_IMAGES,
             DataStage.LANGIDENT_OCRQA,
@@ -146,9 +156,6 @@ class DataManifest:
         if self.stage in [DataStage.CAN_CONSOLIDATED]:
             # canonical consolidated uses the output of langid-ocrqa
             return DataStage.LANGIDENT_OCRQA
-        if self.stage in [DataStage.REBUILT, DataStage.PASSIM]:
-            # canonical consolidated is now the input to rebuilt formats
-            return DataStage.CAN_CONSOLIDATED
         if self.stage in [DataStage.TEXT_REUSE]:
             # text reuse uses passim rebuilt text
             return DataStage.PASSIM
