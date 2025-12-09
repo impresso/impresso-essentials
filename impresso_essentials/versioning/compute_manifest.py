@@ -184,8 +184,8 @@ def get_files_to_consider(config: dict[str, Any]) -> Optional[dict[str, dict[str
         raise ValueError("Config file's `file_extensions` should not be empty or None.")
 
     ext = config["file_extensions"]
-    if config["data_stage"] == "canonical":
-        # for canonical data, we only select issues, override the value provided
+    if "canonical" in config["data_stage"]:
+        # for canonical and consolidated-canonical data, we only select issues, override the value provided
         ext = "issues.jsonl.bz2"
     # change "." in ext with `ext.startswith('.')`?
     extension_filter = f"*{ext}" if "." in ext else f"*.{ext}"

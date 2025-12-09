@@ -9,6 +9,7 @@ from dask import dataframe as dd
 from dask.dataframe import Aggregation
 from dask.bag.core import Bag
 from dask.distributed import progress, Client
+from itertools import chain
 
 logger = logging.getLogger(__name__)
 
@@ -231,24 +232,127 @@ def counts_for_can_cons_issue(
                 "pages": len(set(issue["pp"])),
                 "images": len([item for item in issue["i"] if item["m"]["tp"] == "image"]),
                 "reocred_cis": len(
-                    [item for item in issue["i"] if item["m"]["consolidated_reocr_applied"]]
+                    [
+                        item
+                        for item in issue["i"]
+                        if "consolidated_reocr_applied" in item["m"]
+                        and item["m"]["consolidated_reocr_applied"]
+                    ]
                 ),
             }
         )
 
-    counts["lang_fd"] = [
-        "None" if ci["consolidated_lg"] is None else ci["consolidated_lg"] for ci in issue["i"]
-    ]
+    # defin the counts as string to preven problems when concatenating
+    counts["lang_fd"] = ", ".join(
+        [
+            (
+                "'Not defined'"
+                if "consolidated_lg" not in ci["m"]
+                else (
+                    "'None'"
+                    if ci["m"]["consolidated_lg"] is None
+                    else "'" + ci["m"]["consolidated_lg"] + "'"
+                )
+            )
+            for ci in issue["i"]
+        ]
+    )
+    counts["lang_fd"] = counts["lang_fd"] + ", "
 
     return counts
 
 
+def debug_chunk(s):
+    print(f"CHUNK input type: {type(s)}, s: {s}")
+
+    result = s.apply(lambda x: x if isinstance(x, list) else literal_eval(x))
+    print(f"CHUNK output type: {type(result)}, len(result):{len(result)}, result[:3]={result[:3]}")
+    """print(
+        f"CHUNK output value (first 100 chars): {str(result)[:100] if hasattr(result, '__len__') else result}"
+    )"""
+    return result
+
+
+def debug_agg(s):
+    print(
+        f"AGG 1 input type: {type(s)}, len(s): {len(s)}, type(s.iloc[0]):{type(s.iloc[0])}, s: {s.head()}"
+    )
+    print(
+        f"AGG 2 input value (first 200 chars out of ({len(s.iloc[0])})): {str(s.iloc[0])[:200] if len(s) > 0 else 'empty'}, (last 200 chars): {str(s.iloc[0])[-200:] if len(s) > 0 else 'empty'}"
+    )
+    as_list = literal_eval(s.iloc[0])
+    print(
+        f"AGG 3 type(literal_eval(s.iloc[0])): {type(as_list)}, literal_eval(s.iloc[0])[:10]: {literal_eval(as_list)[:10]}"
+    )
+    if hasattr(s, "obj"):
+        print(f"AGG is GroupBy")
+        result = s.sum()
+    else:
+        print(f"AGG is Series, length: {len(s)}")
+        if len(s) > 0:
+            print(f"AGG first elem type: {type(s.iloc[0])}")
+        result = s.sum()
+    print(f"AGG output type: {type(result)}")
+    return result
+
+
+def debug_finalize(s):
+    print(f"FINALIZE 1 input type: {type(s)}, len(s): {len(s)}, s: {s.head()}")
+    print(
+        f"FINALIZE 2 input value (first 200 chars out of ({len(s.iloc[0])})): {str(s.iloc[0])[:200] if len(s) > 0 else 'empty'}, (last 200 chars): {str(s.iloc[0])[-200:] if len(s) > 0 else 'empty'}"
+    )
+    print(
+        f"FINALIZE 3 '...' present in s.iloc[0]: {'...' in s.iloc[0]}, type(s.iloc[0]): {type(s.iloc[0])}"
+    )
+    if len(s.iloc[0]) > 1:
+        print(
+            f"s.iloc[0][0]={s.iloc[0][0]}, s.iloc[0][:10]={s.iloc[0][:10]}, '][' in s.iloc[0]: {'][' in s.iloc[0]}"
+        )
+        # as_list =
+        as_list = literal_eval(s.iloc[0])
+        print(
+            f"FINALIZE 4a type(literal_eval(s.iloc[0])): {type(as_list)}, literal_eval(s.iloc[0])[:10]: {literal_eval(s.iloc[0])[:10]}"
+        )
+    else:
+        print(f"FINALIZE 4b s.iloc[0]: {s.iloc[0]}, list(s): {list(s)}")
+    # Return the actual list, not the Series
+    return s.iloc[0] if len(s) > 0 else []  # s.iloc[0]  # if len(s) == 1 else list(s)
+
+
 concat_lists = Aggregation(
     name="concat_lists",
-    chunk=lambda s: s.apply(list),  # ensure lists
-    agg=lambda s: s.sum(),  # Python list addition concatenates
-    finalize=lambda s: s,
+    chunk=lambda s: s.sum(),  # debug_chunk,  # lambda s: s.apply(lambda x: x if isinstance(x, list) else [x]),
+    agg=debug_agg,  # lambda s: s.sum(),  # sum(s, []),
+    finalize=debug_finalize,  # lambda s: s.iloc[0] if len(s) > 0 else [],
 )
+concat_str = Aggregation(
+    name="concat_str",
+    chunk=lambda s: s.sum(),  # sum strings within each partition
+    agg=lambda s: s.sum(),  # merge partitions
+    finalize=lambda s: s.iloc[0] if len(s) > 0 else [],  # single final string
+)
+
+
+def freq_debug(x: dict, cols: list[str] = ["lang_fd"]) -> dict:
+    """Compute the frequency dict of the given column or columns
+
+    Args:
+        x (dict): Dict corresponding to aggregated values for one title-year,
+            which contains lists of values to count.
+        cols (list[str], optional): List of keys (columns) with lists of values to count.
+            Defaults to ["lang_fd"].
+
+    Returns:
+        dict: The statistics for the given title-year, with the value counts of the required columns.
+    """
+    for col in cols:
+        if col in x:
+            # lang_fd is already a list after aggregation, not a string
+            literal = literal_eval("[" + x[col][:-2] + "]")
+
+            # If it's already a list, use it directly
+            x[col] = dict(Counter(literal))
+    return x
 
 
 def compute_stats_in_can_consolidated_bag(
@@ -279,12 +383,12 @@ def compute_stats_in_can_consolidated_bag(
         "year": str,
         "issues": int,
         "content_items_out": int,
-        "lang_fd": object,
+        "lang_fd": str,
     }
     df_agg = {
         "issues": sum,
         "content_items_out": sum,
-        "lang_fd": concat_lists,
+        "lang_fd": concat_str,  # concat_lists,
     }
 
     if src_medium and src_medium == "audio":
@@ -299,8 +403,10 @@ def compute_stats_in_can_consolidated_bag(
         df_agg["reocred_cis"] = sum
 
     count_df = (
-        s3_can_cons_issues.map(lambda i: counts_for_can_cons_issue(i, src_medium=src_medium))
-        .to_dataframe(meta=df_meta)
+        s3_can_cons_issues.map(
+            lambda i: counts_for_can_cons_issue(i, src_medium=src_medium)
+        ).to_dataframe(meta=df_meta)
+        # .astype({"media_alias": "object", "year": "object"})  # Convert Arrow strings
         .persist()
     )
 
@@ -316,7 +422,31 @@ def compute_stats_in_can_consolidated_bag(
     print(f"{title} - Finished grouping and aggregating stats by title and year.")
     logger.info("%s - Finished grouping and aggregating stats by title and year.", title)
 
+    return aggregated_df.to_bag(format="dict").map(freq_debug).compute()
+
     # return as a list of dicts
+    aggregated_computed = aggregated_df.compute()
+    # Convert lang_fd to plain lists (not pandas objects)
+    print(
+        f"aggregated_computed.iloc[0]: {aggregated_computed.iloc[0]}, type(aggregated_computed['lang_fd'][0])={type(aggregated_computed['lang_fd'][0])}"
+    )
+    aggregated_computed["lang_fd"] = aggregated_computed["lang_fd"].apply(
+        lambda x: x if isinstance(x, list) else literal_eval(x)
+    )
+
+    """# Convert lang_fd column to plain lists
+    for idx in aggregated_computed.index:
+        val = aggregated_computed.at[idx, "lang_fd"]
+        if hasattr(val, "tolist"):
+            aggregated_computed.at[idx, "lang_fd"] = val.tolist()
+        elif not isinstance(val, list):
+            aggregated_computed.at[idx, "lang_fd"] = list(val) if hasattr(val, "__iter__") else []
+    """
+    # Convert to list of dicts and apply freq
+    results = aggregated_computed.to_dict("records")  # like to_bag -> dict rows
+    results = [freq(record) for record in results]
+    print(f"results[:1]: {results[:1]}")
+    return results
     return aggregated_df.to_bag(format="dict").map(freq).compute()
 
 
@@ -550,7 +680,18 @@ def freq(x: dict, cols: list[str] = ["lang_fd"]) -> dict:
     """
     for col in cols:
         if col in x:
-            x[col] = dict(Counter(literal_eval(x[col])))
+            # lang_fd is already a list after aggregation, not a string
+            val = x[col]
+            print(f"FREQ: col={col}, type={type(val)}, value preview={str(val)[:100]}")
+
+            # If it's already a list, use it directly
+            if isinstance(val, list):
+                x[col] = dict(Counter(val))
+            # Try to parse as literal
+            elif isinstance(val, str):
+                x[col] = dict(Counter(literal_eval(val)))
+            else:
+                x[col] = dict(Counter(val))
     return x
 
 
