@@ -4,9 +4,12 @@ import logging
 from ast import literal_eval
 from collections import Counter
 from typing import Any
+from numpy import mean
 from dask import dataframe as dd
+from dask.dataframe import Aggregation
 from dask.bag.core import Bag
 from dask.distributed import progress, Client
+from itertools import chain
 
 logger = logging.getLogger(__name__)
 
@@ -186,6 +189,207 @@ def compute_stats_in_canonical_bag(
 
     # return as a list of dicts
     return aggregated_df.to_bag(format="dict").compute()
+
+
+def counts_for_can_cons_issue(
+    issue: dict[str, Any],
+    src_medium: str | None = None,
+) -> dict[str, int]:
+    """Given the canonical representation of an issue, get its counts.
+
+    Args:
+        issue (dict[str, Any]): Canonical JSON representation of an issue.
+        incl_alias_yr (bool, optional): Whether the newspaper title and year should
+            be included in the returned dict for later aggregation. Defaults to False.
+        src_medium (str, optional): The source medium of this issue. Defaults to None.
+
+    Returns:
+        dict[str, int]: Dict listing the counts for this issue, ready to be aggregated.
+    """
+
+    counts = {
+        "media_alias": issue["id"].split("-")[0],
+        "year": issue["id"].split("-")[1],
+        "issues": 1,
+        "content_items_out": len(issue["i"]),
+    }
+
+    if src_medium and src_medium == "audio":
+        if "sm" not in issue or issue["sm"] != src_medium:
+            # the source medium should always be defined for radio data
+            log_src_medium_mismatch(issue["id"], "canonical", src_medium, issue["sm"])
+
+        # case of audio
+        counts["audios"] = len(set(issue["rr"]))
+
+    else:
+        if "sm" in issue and issue["sm"] != src_medium:
+            log_src_medium_mismatch(issue["id"], "canonical", src_medium, issue["sm"])
+
+        # case of paper (print and typescripts)
+        counts.update(
+            {
+                "pages": len(set(issue["pp"])),
+                "images": len([item for item in issue["i"] if item["m"]["tp"] == "image"]),
+                "reocred_cis": len(
+                    [
+                        item
+                        for item in issue["i"]
+                        if "consolidated_reocr_applied" in item["m"]
+                        and item["m"]["consolidated_reocr_applied"]
+                    ]
+                ),
+            }
+        )
+
+    # defin the counts as string to prevent problems when concatenating
+    counts["lang_fd"] = ", ".join(
+        [
+            (
+                "'Not defined'"
+                if "consolidated_lg" not in ci["m"]
+                else (
+                    "'None'"
+                    if ci["m"]["consolidated_lg"] is None
+                    else "'" + ci["m"]["consolidated_lg"] + "'"
+                )
+            )
+            for ci in issue["i"]
+        ]
+    )
+    counts["lang_fd"] = counts["lang_fd"] + ", "
+
+    return counts
+
+
+concat_str = Aggregation(
+    name="concat_str",
+    chunk=lambda s: s.sum(),  # sum strings within each partition
+    agg=lambda s: s.sum(),  # merge partitions
+    finalize=lambda s: s.iloc[0] if len(s) > 0 else [],  # single final string
+)
+
+
+def freq_debug(x: dict, cols: list[str] = ["lang_fd"]) -> dict:
+    """Compute the frequency dict of the given column or columns
+
+    Args:
+        x (dict): Dict corresponding to aggregated values for one title-year,
+            which contains lists of values to count.
+        cols (list[str], optional): List of keys (columns) with lists of values to count.
+            Defaults to ["lang_fd"].
+
+    Returns:
+        dict: The statistics for the given title-year, with the value counts of the required columns.
+    """
+    for col in cols:
+        if col in x:
+            # lang_fd is already a list after aggregation, not a string
+            literal = literal_eval("[" + x[col][:-2] + "]")
+
+            # If it's already a list, use it directly
+            x[col] = dict(Counter(literal))
+    return x
+
+
+def freq(x: dict, cols: list[str] = ["lang_fd"], for_can_cons: bool = False) -> dict:
+    """Compute the frequency dict of the given column or columns
+
+    Args:
+        x (dict): Dict corresponding to aggregated values for one title-year,
+            which contains lists of values to count.
+        cols (list[str], optional): List of keys (columns) with lists of values to count.
+            Defaults to ["lang_fd"].
+
+    Returns:
+        dict: The statistics for the given title-year, with the value counts of the required columns.
+    """
+    for col in cols:
+        if col in x:
+            # lang_fd is already a list after aggregation, not a string
+            val = x[col]
+
+            # If it's already a list, use it directly
+            if isinstance(val, list):
+                x[col] = dict(Counter(val))
+            # Try to parse as literal
+            elif isinstance(val, str) and not for_can_cons:
+                x[col] = dict(Counter(literal_eval(val)))
+            else:
+                literal = literal_eval("[" + val[:-2] + "]")
+                x[col] = dict(Counter(literal))
+    return x
+
+
+def compute_stats_in_can_consolidated_bag(
+    s3_can_cons_issues: Bag,
+    client: Client | None = None,
+    title: str | None = None,
+    src_medium: str | None = None,
+) -> list[dict[str, Any]]:
+    """Computes number of issues and supports per alias from a Dask bag of consolidated canonical data.
+
+    Args:
+        s3_can_cons_issues (db.core.Bag): Bag with the contents of consolidated canonical
+            files to compute statistics on.
+        title (str, optional): Media title for which the stats are being computed.
+            Defaults to None.
+        src_medium (str, optional): The source medium of this issue. Defaults to None.
+
+    Returns:
+        list[dict[str, Any]]: List of counts that match canonical DataStatistics keys.
+    """
+
+    print(f"{title} - Fetched all issues, gathering desired information.")
+    logger.info("%s - Fetched all issues, gathering desired information.", title)
+
+    # prep the df's meta and aggregations based on the source medium
+    df_meta = {
+        "media_alias": str,
+        "year": str,
+        "issues": int,
+        "content_items_out": int,
+        "lang_fd": str,
+    }
+    df_agg = {
+        "issues": sum,
+        "content_items_out": sum,
+        "lang_fd": concat_str,  # concat_lists,
+    }
+
+    if src_medium and src_medium == "audio":
+        df_meta["audios"] = int
+        df_agg["audios"] = sum
+    else:
+        df_meta["pages"] = int
+        df_meta["images"] = int
+        df_meta["reocred_cis"] = int
+        df_agg["pages"] = sum
+        df_agg["images"] = sum
+        df_agg["reocred_cis"] = sum
+
+    count_df = (
+        s3_can_cons_issues.map(
+            lambda i: counts_for_can_cons_issue(i, src_medium=src_medium)
+        ).to_dataframe(meta=df_meta)
+        # .astype({"media_alias": "object", "year": "object"})  # Convert Arrow strings
+        .persist()
+    )
+
+    # cum the counts for all values collected
+    aggregated_df = (
+        count_df.groupby(by=["media_alias", "year"]).agg(df_agg).reset_index()
+    ).persist()
+
+    if client is not None:
+        # only add the progress bar if the client is defined
+        progress(aggregated_df)
+
+    print(f"{title} - Finished grouping and aggregating stats by title and year.")
+    logger.info("%s - Finished grouping and aggregating stats by title and year.", title)
+
+    # return as a list of dicts
+    return aggregated_df.to_bag(format="dict").map(freq, for_can_cons=True).compute()
 
 
 ### DEFINITION of tunique ###
@@ -423,10 +627,6 @@ def compute_stats_in_langident_bag(
     print(f"{title} - Fetched all files, gathering desired information.")
     logger.info("%s - Fetched all files, gathering desired information.", title)
 
-    def freq(x, col="lang_fd"):
-        x[col] = dict(Counter(literal_eval(x[col])))
-        return x
-
     count_df = (
         s3_langident.map(
             lambda ci: {
@@ -579,11 +779,6 @@ def compute_stats_in_topics_bag(
 
         return final_list
 
-    def freq(x, col="topics_fd"):
-        if col in x:
-            x[col] = dict(Counter(literal_eval(x[col])))
-        return x
-
     try:
         test = s3_topics.take(1, npartitions=-1)
     except Exception as e:
@@ -659,7 +854,7 @@ def compute_stats_in_topics_bag(
         return {}
 
     # return as a list of dicts
-    return aggregated_df.to_bag(format="dict").map(freq).compute()
+    return aggregated_df.to_bag(format="dict").map(freq, col=["topics_fd"]).compute()
 
 
 def compute_stats_in_img_emb_bag(
@@ -874,7 +1069,7 @@ def compute_stats_in_ocrqa_bag(
     """Compute stats on a dask bag of OCRQA outputs.
 
     Args:
-        s3_solr_ing_cis (db.core.Bag): Bag with the contents of the OCRQA files.
+        s3_ocrqas (db.core.Bag): Bag with the contents of the OCRQA files.
         client (Client | None, optional): Dask client. Defaults to None.
         title (str, optional): Media title for which the stats are being computed.
             Defaults to None.
@@ -937,6 +1132,84 @@ def compute_stats_in_ocrqa_bag(
 
     # return as a list of dicts
     return aggregated_df.to_bag(format="dict").compute()
+
+
+def compute_stats_in_langid_ocrqa_bag(
+    s3_langid_ocrqas: Bag,
+    client: Client | None = None,
+    title: str | None = None,
+) -> list[dict[str, int | str]]:
+    """Compute stats on a dask bag of OCRQA outputs.
+
+    Args:
+        s3_langid_ocrqas (db.core.Bag): Bag with the contents of the OCRQA files.
+        client (Client | None, optional): Dask client. Defaults to None.
+        title (str, optional): Media title for which the stats are being computed.
+            Defaults to None.
+
+    Returns:
+        list[dict[str, Union[int, str]]]: List of counts that match OCRQA output
+        DataStatistics keys.
+    """
+    # when called in the rebuilt, all the rebuilt articles in the bag
+    # are from the same newspaper and year
+    print(f"{title} - Fetched all files, gathering desired information.")
+    logger.info("%s - Fetched all files, gathering desired information.", title)
+
+    # define the list of columns in the dataframe
+    count_df = (
+        s3_langid_ocrqas.map(
+            lambda ci: {
+                "media_alias": ci["id"].split("-")[0],
+                "year": ci["id"].split("-")[1],
+                "issues": "-".join(ci["id"].split("-")[:-1]),
+                "content_items_out": 1,
+                "images": 1 if ci["tp"] == "img" else 0,
+                "lang_fd": "None" if ci["lg"] is None else ci["lg"],
+                "avg_ocrqa": ci["ocrqa"],
+            }
+        )
+        .to_dataframe(
+            meta={
+                "media_alias": str,
+                "year": str,
+                "issues": str,
+                "content_items_out": int,
+                "images": int,
+                "lang_fd": object,
+                "avg_ocrqa": float,
+            }
+        )
+        .persist()
+    )
+
+    aggregated_df = (
+        count_df.groupby(by=["media_alias", "year"])
+        .agg(
+            {
+                "issues": tunique,
+                "content_items_out": sum,
+                "images": sum,
+                "lang_fd": list,
+                "avg_ocrqa": "mean",
+            }
+        )
+        .reset_index()
+    ).persist()
+
+    print(f"{title} - Finished grouping and aggregating stats by title and year.")
+    logger.info("%s - Finished grouping and aggregating stats by title and year.", title)
+
+    aggregated_df["avg_ocrqa"] = aggregated_df["avg_ocrqa"].apply(
+        lambda x: round(x, 3), meta=("avg_ocrqa", "float")
+    )
+
+    if client is not None:
+        # only add the progress bar if the client is defined
+        progress(aggregated_df)
+
+    # return as a list of dicts
+    return aggregated_df.to_bag(format="dict").map(freq).compute()
 
 
 def compute_stats_in_doc_emb_bag(
@@ -1003,3 +1276,105 @@ def compute_stats_in_doc_emb_bag(
 
     # return as a list of dicts
     return aggregated_df.to_bag(format="dict").compute()
+
+
+def compute_stats_in_classif_img_bag(
+    s3_classif_images: Bag,
+    client: Client | None = None,
+    title: str | None = None,
+) -> list[dict[str, Any]]:
+    """Compute stats on a dask bag of topic modeling output content-items.
+
+    Args:
+        s3_classif_images (db.core.Bag): Bag with the contents of the image classification files.
+        client (Client | None, optional): Dask client. Defaults to None.
+        title (str, optional): Media title for which the stats are being computed.
+            Defaults to None.
+
+    Returns:
+        list[dict[str, Any]]: List of counts that match topics DataStatistics keys.
+    """
+    print(f"{title} - Fetched all files, gathering desired information.")
+    logger.info("%s - Fetched all files, gathering desired information.", title)
+
+    count_df = s3_classif_images.map(
+        lambda ci: {
+            "media_alias": ci["ci_id"].split("-")[0],
+            "year": ci["ci_id"].split("-")[1],
+            "issues": ci["ci_id"].split("-i")[0],
+            "content_items_out": 1,
+            "images": 1,
+            "img_level0_class_fd": (
+                "image" if ci["level3_predictions"][0]["class"] != "not_image" else "not_image"
+            ),  # identify the number of listed "images" which are actually predicted to be images
+            # not all CIs have level 1 and level 2 preds
+            "img_level1_class_fd": (
+                (
+                    "not_image"
+                    if ci["level3_predictions"][0]["class"] == "not_image"
+                    else "not_inferred"
+                )
+                if "level1_predictions" not in ci
+                else ci["level1_predictions"][0]["class"]
+            ),
+            "img_level2_class_fd": (
+                (
+                    "not_image"
+                    if ci["level3_predictions"][0]["class"] == "not_image"
+                    else "not_inferred"
+                )
+                if "level2_predictions" not in ci
+                else ci["level2_predictions"][0]["class"]
+            ),
+            "img_level3_class_fd": ci["level3_predictions"][0]["class"],
+        }
+    ).to_dataframe(
+        meta={
+            "media_alias": str,
+            "year": str,
+            "issues": str,
+            "content_items_out": int,
+            "images": int,
+            "img_level0_class_fd": object,
+            "img_level1_class_fd": object,
+            "img_level2_class_fd": object,
+            "img_level3_class_fd": object,
+        }
+    )
+
+    # cum the counts for all values collected
+    aggregated_df = (
+        count_df.groupby(by=["media_alias", "year"])
+        .agg(
+            {
+                "issues": tunique,
+                "content_items_out": sum,
+                "images": sum,
+                "img_level0_class_fd": list,
+                "img_level1_class_fd": list,
+                "img_level2_class_fd": list,
+                "img_level3_class_fd": list,
+            }
+        )
+        .reset_index()
+    ).persist()
+
+    # Dask dataframes did not support using literal_eval
+    agg_bag = aggregated_df.to_bag(format="dict").map(
+        freq,
+        cols=[
+            "img_level0_class_fd",
+            "img_level1_class_fd",
+            "img_level2_class_fd",
+            "img_level3_class_fd",
+        ],
+    )
+
+    print(f"{title} - Finished grouping and aggregating stats by title and year.")
+    logger.info("%s - Finished grouping and aggregating stats by title and year.", title)
+
+    if client is not None:
+        # only add the progress bar if the client is defined
+        progress(agg_bag)
+
+    return agg_bag.compute()

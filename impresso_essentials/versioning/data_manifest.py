@@ -18,7 +18,7 @@ from impresso_essentials.utils import (
     PARTNER_TO_MEDIA,
     timestamp,
     DataStage,
-    validate_stage
+    validate_stage,
 )
 from impresso_essentials.versioning.data_statistics import MediaStatistics
 from impresso_essentials.versioning.helpers import (
@@ -133,15 +133,29 @@ class DataManifest:
         Returns:
             DataStage: The input DataStage.
         """
+        # by default now, rebuilt uses canonical consolidated as input,
+        # except when the input bucket is provided corresponds to a
+        # "canonical" bucket which isn't consolidated
+        if self.stage in [DataStage.REBUILT, DataStage.PASSIM]:
+            # check whether the input data is canonical or consolidated
+            if "canonical-consolidated" in self.input_bucket_name and all(
+                x not in self.input_bucket_name for x in ["110", "111", "112"]
+            ):
+                # canonical consolidated is now the input to rebuilt formats
+                return DataStage.CAN_CONSOLIDATED
         if self.stage in [
-            DataStage.REBUILT,
+            DataStage.REBUILT,  # if input isn't consolidated, use canonical
             DataStage.CANONICAL,
-            DataStage.PASSIM,
+            DataStage.PASSIM,  # if input isn't consolidated, use canonical
             DataStage.MYSQL_CIS,
             DataStage.EMB_IMAGES,
+            DataStage.LANGIDENT_OCRQA,
         ]:
             # datastages that directly follow or use canonical data
             return DataStage.CANONICAL
+        if self.stage in [DataStage.CAN_CONSOLIDATED]:
+            # canonical consolidated uses the output of langid-ocrqa
+            return DataStage.LANGIDENT_OCRQA
         if self.stage in [DataStage.TEXT_REUSE]:
             # text reuse uses passim rebuilt text
             return DataStage.PASSIM
@@ -186,10 +200,7 @@ class DataManifest:
         full_s3_path = os.path.join("s3://", self.output_bucket_name, s3_path)
 
         # sanity check
-        if (
-            self._prev_mft_s3_path is not None
-            and self.output_bucket_name in self._prev_mft_s3_path
-        ):
+        if self._prev_mft_s3_path is not None and self.output_bucket_name in self._prev_mft_s3_path:
             assert (
                 self._prev_mft_s3_path.split(f"/{self.stage.value}_v")[0]
                 == full_s3_path.split(f"/{self.stage.value}_v")[0]
@@ -229,9 +240,7 @@ class DataManifest:
             prev_v_mft = read_manifest_from_s3_path(self._prev_mft_s3_path)
 
         if self._prev_mft_s3_path is None or prev_v_mft is None:
-            logger.info(
-                "No existing previous version of this manifest. Version will be v0.0.1"
-            )
+            logger.info("No existing previous version of this manifest. Version will be v0.0.1")
             return None
 
         self.prev_version = prev_v_mft["mft_version"]
@@ -532,9 +541,7 @@ class DataManifest:
         if self.has_title_year_key(title, year):
             # if title in self._processing_stats:
             #    if year in self._processing_stats[title]:
-            success = self._processing_stats[title][year].add_counts(
-                counts, replace=(not adding)
-            )
+            success = self._processing_stats[title][year].add_counts(counts, replace=(not adding))
             if not success:
                 action = "adding" if adding else "replacing with"
                 self._log_failed_action(title, year, action)
@@ -835,8 +842,8 @@ class DataManifest:
 
             # newly added title
             if year not in old_media_list[title]["stats_as_dict"]:
-                logger.info("update_media_stats - Adding new key %s-%s.", year, title)
-                print(f"update_media_stats - Adding new key {year}-{title}.")
+                logger.info("update_media_stats - Adding new key %s-%s.", title, year)
+                print(f"update_media_stats - Adding new key {title}-{year}.")
                 modified_years.append(year)
                 logger.debug("Setting stats for %s-%s", title, year)
                 old_media_list[title]["stats_as_dict"][year] = stats
@@ -885,9 +892,7 @@ class DataManifest:
                 addition = True
 
                 # set the statistics
-                old_media_list, _ = self.update_media_stats(
-                    title, yearly_stats, old_media_list
-                )
+                old_media_list, _ = self.update_media_stats(title, yearly_stats, old_media_list)
             else:
                 # add provider, source type and medium if not already present
                 old_media_list[title] = add_media_source_metadata(
@@ -960,9 +965,7 @@ class DataManifest:
                 # newly added titles will be MediaStatistics objects -> needs pretty print
                 title_cumm_stats.add_counts(np_year_stat.counts)
                 # include the modification date at the year level
-                pretty_counts.append(
-                    np_year_stat.pretty_print(modif_date=self._generation_date)
-                )
+                pretty_counts.append(np_year_stat.pretty_print(modif_date=self._generation_date))
             else:
                 # non-modified stats will be in pretty-print dict format -> can be added directly
                 if "media_stats" in np_year_stat:
@@ -999,9 +1002,7 @@ class DataManifest:
         full_title_stats = []
         for title, media_as_dict in media_list.items():
             # update the canonical_media_list with the new media_dict
-            media_as_dict, title_cumm_stats = self.aggregate_stats_for_title(
-                title, media_as_dict
-            )
+            media_as_dict, title_cumm_stats = self.aggregate_stats_for_title(title, media_as_dict)
             # remove the stats in dict format
             del media_as_dict["stats_as_dict"]
             # save the title level statistics for the overall statistics
@@ -1031,9 +1032,7 @@ class DataManifest:
 
         return overall_stats
 
-    def compute(
-        self, export_to_git_and_s3: bool = True, commit_msg: Optional[str] = None
-    ) -> None:
+    def compute(self, export_to_git_and_s3: bool = True, commit_msg: Optional[str] = None) -> None:
         """Perform all necessary logic to compute and construct the resulting manifest.
 
         This lazy behavior ensures all necessary information is ready and accessible

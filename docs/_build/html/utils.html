@@ -1,3 +1,5 @@
+
+
 <!DOCTYPE html>
 <html class="writer-html5" lang="en" data-content_root="./">
 <head>
@@ -5,19 +7,15 @@
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Utilities &mdash; Impresso Essentials  documentation</title>
-      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=80d5e7a1" />
-      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=19f00094" />
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=e59714d7" />
 
   
-  <!--[if lt IE 9]>
-    <script src="_static/js/html5shiv.min.js"></script>
-  <![endif]-->
-  
-        <script src="_static/jquery.js?v=5d32c60e"></script>
-        <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-        <script src="_static/documentation_options.js?v=5929fcd5"></script>
-        <script src="_static/doctools.js?v=9a2dae69"></script>
-        <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+      <script src="_static/jquery.js?v=5d32c60e"></script>
+      <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="_static/documentation_options.js?v=5929fcd5"></script>
+      <script src="_static/doctools.js?v=fd6eb6e6"></script>
+      <script src="_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="_static/js/theme.js"></script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
@@ -52,6 +50,8 @@
 <li class="toctree-l2"><a class="reference internal" href="#module-impresso_essentials.utils">Basic and General Utils Functions</a><ul>
 <li class="toctree-l3"><a class="reference internal" href="#impresso_essentials.utils.DataStage"><code class="docutils literal notranslate"><span class="pre">DataStage</span></code></a><ul>
 <li class="toctree-l4"><a class="reference internal" href="#impresso_essentials.utils.DataStage.CANONICAL"><code class="docutils literal notranslate"><span class="pre">DataStage.CANONICAL</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#impresso_essentials.utils.DataStage.CAN_CONSOLIDATED"><code class="docutils literal notranslate"><span class="pre">DataStage.CAN_CONSOLIDATED</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#impresso_essentials.utils.DataStage.CLASSIF_IMAGES"><code class="docutils literal notranslate"><span class="pre">DataStage.CLASSIF_IMAGES</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="#impresso_essentials.utils.DataStage.EMB_DOCS"><code class="docutils literal notranslate"><span class="pre">DataStage.EMB_DOCS</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="#impresso_essentials.utils.DataStage.EMB_ENTITIES"><code class="docutils literal notranslate"><span class="pre">DataStage.EMB_ENTITIES</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="#impresso_essentials.utils.DataStage.EMB_IMAGES"><code class="docutils literal notranslate"><span class="pre">DataStage.EMB_IMAGES</span></code></a></li>
@@ -60,6 +60,7 @@
 <li class="toctree-l4"><a class="reference internal" href="#impresso_essentials.utils.DataStage.EMB_WORDS"><code class="docutils literal notranslate"><span class="pre">DataStage.EMB_WORDS</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="#impresso_essentials.utils.DataStage.ENTITIES"><code class="docutils literal notranslate"><span class="pre">DataStage.ENTITIES</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="#impresso_essentials.utils.DataStage.LANGIDENT"><code class="docutils literal notranslate"><span class="pre">DataStage.LANGIDENT</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#impresso_essentials.utils.DataStage.LANGIDENT_OCRQA"><code class="docutils literal notranslate"><span class="pre">DataStage.LANGIDENT_OCRQA</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="#impresso_essentials.utils.DataStage.LINGPROC"><code class="docutils literal notranslate"><span class="pre">DataStage.LINGPROC</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="#impresso_essentials.utils.DataStage.MYSQL_CIS"><code class="docutils literal notranslate"><span class="pre">DataStage.MYSQL_CIS</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="#impresso_essentials.utils.DataStage.NEWS_AGENCIES"><code class="docutils literal notranslate"><span class="pre">DataStage.NEWS_AGENCIES</span></code></a></li>
@@ -165,104 +166,119 @@
 <span id="basic-and-general-utils-functions"></span><h2>Basic and General Utils Functions<a class="headerlink" href="#module-impresso_essentials.utils" title="Link to this heading"></a></h2>
 <dl class="py class">
 <dt class="sig sig-object py" id="impresso_essentials.utils.DataStage">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">impresso_essentials.utils.</span></span><span class="sig-name descname"><span class="pre">DataStage</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">names</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">values</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">module</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">qualname</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">type</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">start</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">boundary</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#impresso_essentials.utils.DataStage" title="Link to this definition"></a></dt>
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">impresso_essentials.utils.</span></span><span class="sig-name descname"><span class="pre">DataStage</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">values</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#impresso_essentials.utils.DataStage" title="Link to this definition"></a></dt>
 <dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">StrEnum</span></code></p>
 <p>Enum all stages requiring a versioning manifest.</p>
 <p>Each member corresponds to a data stage and the associated string is used to name
 each generated manifest accordingly.</p>
 <dl class="py attribute">
 <dt class="sig sig-object py" id="impresso_essentials.utils.DataStage.CANONICAL">
-<span class="sig-name descname"><span class="pre">CANONICAL</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'canonical'</span></em><a class="headerlink" href="#impresso_essentials.utils.DataStage.CANONICAL" title="Link to this definition"></a></dt>
+<span class="sig-name descname"><span class="pre">CANONICAL</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'canonical'</span></span><a class="headerlink" href="#impresso_essentials.utils.DataStage.CANONICAL" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="impresso_essentials.utils.DataStage.CAN_CONSOLIDATED">
+<span class="sig-name descname"><span class="pre">CAN_CONSOLIDATED</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'canonical-consolidated'</span></span><a class="headerlink" href="#impresso_essentials.utils.DataStage.CAN_CONSOLIDATED" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="impresso_essentials.utils.DataStage.CLASSIF_IMAGES">
+<span class="sig-name descname"><span class="pre">CLASSIF_IMAGES</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'classif-images'</span></span><a class="headerlink" href="#impresso_essentials.utils.DataStage.CLASSIF_IMAGES" title="Link to this definition"></a></dt>
 <dd></dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="impresso_essentials.utils.DataStage.EMB_DOCS">
-<span class="sig-name descname"><span class="pre">EMB_DOCS</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'emb-docs'</span></em><a class="headerlink" href="#impresso_essentials.utils.DataStage.EMB_DOCS" title="Link to this definition"></a></dt>
+<span class="sig-name descname"><span class="pre">EMB_DOCS</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'emb-docs'</span></span><a class="headerlink" href="#impresso_essentials.utils.DataStage.EMB_DOCS" title="Link to this definition"></a></dt>
 <dd></dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="impresso_essentials.utils.DataStage.EMB_ENTITIES">
-<span class="sig-name descname"><span class="pre">EMB_ENTITIES</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'emb-entities'</span></em><a class="headerlink" href="#impresso_essentials.utils.DataStage.EMB_ENTITIES" title="Link to this definition"></a></dt>
+<span class="sig-name descname"><span class="pre">EMB_ENTITIES</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'emb-entities'</span></span><a class="headerlink" href="#impresso_essentials.utils.DataStage.EMB_ENTITIES" title="Link to this definition"></a></dt>
 <dd></dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="impresso_essentials.utils.DataStage.EMB_IMAGES">
-<span class="sig-name descname"><span class="pre">EMB_IMAGES</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'emb-images'</span></em><a class="headerlink" href="#impresso_essentials.utils.DataStage.EMB_IMAGES" title="Link to this definition"></a></dt>
+<span class="sig-name descname"><span class="pre">EMB_IMAGES</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'emb-images'</span></span><a class="headerlink" href="#impresso_essentials.utils.DataStage.EMB_IMAGES" title="Link to this definition"></a></dt>
 <dd></dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="impresso_essentials.utils.DataStage.EMB_PARAGRAPHS">
-<span class="sig-name descname"><span class="pre">EMB_PARAGRAPHS</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'emb-paragraphs'</span></em><a class="headerlink" href="#impresso_essentials.utils.DataStage.EMB_PARAGRAPHS" title="Link to this definition"></a></dt>
+<span class="sig-name descname"><span class="pre">EMB_PARAGRAPHS</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'emb-paragraphs'</span></span><a class="headerlink" href="#impresso_essentials.utils.DataStage.EMB_PARAGRAPHS" title="Link to this definition"></a></dt>
 <dd></dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="impresso_essentials.utils.DataStage.EMB_SENTS">
-<span class="sig-name descname"><span class="pre">EMB_SENTS</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'emb-sents'</span></em><a class="headerlink" href="#impresso_essentials.utils.DataStage.EMB_SENTS" title="Link to this definition"></a></dt>
+<span class="sig-name descname"><span class="pre">EMB_SENTS</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'emb-sents'</span></span><a class="headerlink" href="#impresso_essentials.utils.DataStage.EMB_SENTS" title="Link to this definition"></a></dt>
 <dd></dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="impresso_essentials.utils.DataStage.EMB_WORDS">
-<span class="sig-name descname"><span class="pre">EMB_WORDS</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'emb-words'</span></em><a class="headerlink" href="#impresso_essentials.utils.DataStage.EMB_WORDS" title="Link to this definition"></a></dt>
+<span class="sig-name descname"><span class="pre">EMB_WORDS</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'emb-words'</span></span><a class="headerlink" href="#impresso_essentials.utils.DataStage.EMB_WORDS" title="Link to this definition"></a></dt>
 <dd></dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="impresso_essentials.utils.DataStage.ENTITIES">
-<span class="sig-name descname"><span class="pre">ENTITIES</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'entities'</span></em><a class="headerlink" href="#impresso_essentials.utils.DataStage.ENTITIES" title="Link to this definition"></a></dt>
+<span class="sig-name descname"><span class="pre">ENTITIES</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'entities'</span></span><a class="headerlink" href="#impresso_essentials.utils.DataStage.ENTITIES" title="Link to this definition"></a></dt>
 <dd></dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="impresso_essentials.utils.DataStage.LANGIDENT">
-<span class="sig-name descname"><span class="pre">LANGIDENT</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'langident'</span></em><a class="headerlink" href="#impresso_essentials.utils.DataStage.LANGIDENT" title="Link to this definition"></a></dt>
+<span class="sig-name descname"><span class="pre">LANGIDENT</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'langident'</span></span><a class="headerlink" href="#impresso_essentials.utils.DataStage.LANGIDENT" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="impresso_essentials.utils.DataStage.LANGIDENT_OCRQA">
+<span class="sig-name descname"><span class="pre">LANGIDENT_OCRQA</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'langid-ocrqa'</span></span><a class="headerlink" href="#impresso_essentials.utils.DataStage.LANGIDENT_OCRQA" title="Link to this definition"></a></dt>
 <dd></dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="impresso_essentials.utils.DataStage.LINGPROC">
-<span class="sig-name descname"><span class="pre">LINGPROC</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'lingproc'</span></em><a class="headerlink" href="#impresso_essentials.utils.DataStage.LINGPROC" title="Link to this definition"></a></dt>
+<span class="sig-name descname"><span class="pre">LINGPROC</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'lingproc'</span></span><a class="headerlink" href="#impresso_essentials.utils.DataStage.LINGPROC" title="Link to this definition"></a></dt>
 <dd></dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="impresso_essentials.utils.DataStage.MYSQL_CIS">
-<span class="sig-name descname"><span class="pre">MYSQL_CIS</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'mysql-ingestion'</span></em><a class="headerlink" href="#impresso_essentials.utils.DataStage.MYSQL_CIS" title="Link to this definition"></a></dt>
+<span class="sig-name descname"><span class="pre">MYSQL_CIS</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'mysql-ingestion'</span></span><a class="headerlink" href="#impresso_essentials.utils.DataStage.MYSQL_CIS" title="Link to this definition"></a></dt>
 <dd></dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="impresso_essentials.utils.DataStage.NEWS_AGENCIES">
-<span class="sig-name descname"><span class="pre">NEWS_AGENCIES</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'newsagencies'</span></em><a class="headerlink" href="#impresso_essentials.utils.DataStage.NEWS_AGENCIES" title="Link to this definition"></a></dt>
+<span class="sig-name descname"><span class="pre">NEWS_AGENCIES</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'newsagencies'</span></span><a class="headerlink" href="#impresso_essentials.utils.DataStage.NEWS_AGENCIES" title="Link to this definition"></a></dt>
 <dd></dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="impresso_essentials.utils.DataStage.OCRQA">
-<span class="sig-name descname"><span class="pre">OCRQA</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'ocrqa'</span></em><a class="headerlink" href="#impresso_essentials.utils.DataStage.OCRQA" title="Link to this definition"></a></dt>
+<span class="sig-name descname"><span class="pre">OCRQA</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'ocrqa'</span></span><a class="headerlink" href="#impresso_essentials.utils.DataStage.OCRQA" title="Link to this definition"></a></dt>
 <dd></dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="impresso_essentials.utils.DataStage.PASSIM">
-<span class="sig-name descname"><span class="pre">PASSIM</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'passim'</span></em><a class="headerlink" href="#impresso_essentials.utils.DataStage.PASSIM" title="Link to this definition"></a></dt>
+<span class="sig-name descname"><span class="pre">PASSIM</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'passim'</span></span><a class="headerlink" href="#impresso_essentials.utils.DataStage.PASSIM" title="Link to this definition"></a></dt>
 <dd></dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="impresso_essentials.utils.DataStage.REBUILT">
-<span class="sig-name descname"><span class="pre">REBUILT</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'rebuilt'</span></em><a class="headerlink" href="#impresso_essentials.utils.DataStage.REBUILT" title="Link to this definition"></a></dt>
+<span class="sig-name descname"><span class="pre">REBUILT</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'rebuilt'</span></span><a class="headerlink" href="#impresso_essentials.utils.DataStage.REBUILT" title="Link to this definition"></a></dt>
 <dd></dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="impresso_essentials.utils.DataStage.SOLR_TEXT">
-<span class="sig-name descname"><span class="pre">SOLR_TEXT</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'solr-text-ingestion'</span></em><a class="headerlink" href="#impresso_essentials.utils.DataStage.SOLR_TEXT" title="Link to this definition"></a></dt>
+<span class="sig-name descname"><span class="pre">SOLR_TEXT</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'solr-text-ingestion'</span></span><a class="headerlink" href="#impresso_essentials.utils.DataStage.SOLR_TEXT" title="Link to this definition"></a></dt>
 <dd></dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="impresso_essentials.utils.DataStage.TEXT_REUSE">
-<span class="sig-name descname"><span class="pre">TEXT_REUSE</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'textreuse'</span></em><a class="headerlink" href="#impresso_essentials.utils.DataStage.TEXT_REUSE" title="Link to this definition"></a></dt>
+<span class="sig-name descname"><span class="pre">TEXT_REUSE</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'textreuse'</span></span><a class="headerlink" href="#impresso_essentials.utils.DataStage.TEXT_REUSE" title="Link to this definition"></a></dt>
 <dd></dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="impresso_essentials.utils.DataStage.TOPICS">
-<span class="sig-name descname"><span class="pre">TOPICS</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'topics'</span></em><a class="headerlink" href="#impresso_essentials.utils.DataStage.TOPICS" title="Link to this definition"></a></dt>
+<span class="sig-name descname"><span class="pre">TOPICS</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'topics'</span></span><a class="headerlink" href="#impresso_essentials.utils.DataStage.TOPICS" title="Link to this definition"></a></dt>
 <dd></dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="impresso_essentials.utils.DataStage.has_value">
-<em class="property"><span class="pre">classmethod</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">has_value</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">bool</span></span></span><a class="headerlink" href="#impresso_essentials.utils.DataStage.has_value" title="Link to this definition"></a></dt>
+<span class="property"><span class="k"><span class="pre">classmethod</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">has_value</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">bool</span></span></span><a class="headerlink" href="#impresso_essentials.utils.DataStage.has_value" title="Link to this definition"></a></dt>
 <dd><p>Check if enum contains given value</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
@@ -284,7 +300,7 @@ each generated manifest accordingly.</p>
 
 <dl class="py class">
 <dt class="sig sig-object py" id="impresso_essentials.utils.IssueDir">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">impresso_essentials.utils.</span></span><span class="sig-name descname"><span class="pre">IssueDir</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">provider</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">alias</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">date</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">edition</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">path</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#impresso_essentials.utils.IssueDir" title="Link to this definition"></a></dt>
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">impresso_essentials.utils.</span></span><span class="sig-name descname"><span class="pre">IssueDir</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">provider</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">alias</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">date</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">edition</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">path</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#impresso_essentials.utils.IssueDir" title="Link to this definition"></a></dt>
 <dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">tuple</span></code></p>
 <p>Create new instance of IssueDir(provider, alias, date, edition, path)</p>
 <dl class="py attribute">
@@ -321,27 +337,27 @@ each generated manifest accordingly.</p>
 
 <dl class="py class">
 <dt class="sig sig-object py" id="impresso_essentials.utils.SourceMedium">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">impresso_essentials.utils.</span></span><span class="sig-name descname"><span class="pre">SourceMedium</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">names</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">values</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">module</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">qualname</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">type</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">start</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">boundary</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#impresso_essentials.utils.SourceMedium" title="Link to this definition"></a></dt>
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">impresso_essentials.utils.</span></span><span class="sig-name descname"><span class="pre">SourceMedium</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">values</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#impresso_essentials.utils.SourceMedium" title="Link to this definition"></a></dt>
 <dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">StrEnum</span></code></p>
 <p>Enum all mediums of media sources in Impresso.</p>
 <dl class="py attribute">
 <dt class="sig sig-object py" id="impresso_essentials.utils.SourceMedium.AO">
-<span class="sig-name descname"><span class="pre">AO</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'audio'</span></em><a class="headerlink" href="#impresso_essentials.utils.SourceMedium.AO" title="Link to this definition"></a></dt>
+<span class="sig-name descname"><span class="pre">AO</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'audio'</span></span><a class="headerlink" href="#impresso_essentials.utils.SourceMedium.AO" title="Link to this definition"></a></dt>
 <dd></dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="impresso_essentials.utils.SourceMedium.PT">
-<span class="sig-name descname"><span class="pre">PT</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'print'</span></em><a class="headerlink" href="#impresso_essentials.utils.SourceMedium.PT" title="Link to this definition"></a></dt>
+<span class="sig-name descname"><span class="pre">PT</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'print'</span></span><a class="headerlink" href="#impresso_essentials.utils.SourceMedium.PT" title="Link to this definition"></a></dt>
 <dd></dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="impresso_essentials.utils.SourceMedium.TPS">
-<span class="sig-name descname"><span class="pre">TPS</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'typescript'</span></em><a class="headerlink" href="#impresso_essentials.utils.SourceMedium.TPS" title="Link to this definition"></a></dt>
+<span class="sig-name descname"><span class="pre">TPS</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'typescript'</span></span><a class="headerlink" href="#impresso_essentials.utils.SourceMedium.TPS" title="Link to this definition"></a></dt>
 <dd></dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="impresso_essentials.utils.SourceMedium.has_value">
-<em class="property"><span class="pre">classmethod</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">has_value</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">bool</span></span></span><a class="headerlink" href="#impresso_essentials.utils.SourceMedium.has_value" title="Link to this definition"></a></dt>
+<span class="property"><span class="k"><span class="pre">classmethod</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">has_value</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">bool</span></span></span><a class="headerlink" href="#impresso_essentials.utils.SourceMedium.has_value" title="Link to this definition"></a></dt>
 <dd><p>Check if enum contains given value</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
@@ -363,42 +379,42 @@ each generated manifest accordingly.</p>
 
 <dl class="py class">
 <dt class="sig sig-object py" id="impresso_essentials.utils.SourceType">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">impresso_essentials.utils.</span></span><span class="sig-name descname"><span class="pre">SourceType</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">names</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">values</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">module</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">qualname</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">type</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">start</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">boundary</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#impresso_essentials.utils.SourceType" title="Link to this definition"></a></dt>
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">impresso_essentials.utils.</span></span><span class="sig-name descname"><span class="pre">SourceType</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">values</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#impresso_essentials.utils.SourceType" title="Link to this definition"></a></dt>
 <dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">StrEnum</span></code></p>
 <p>Enum all types of media sources in Impresso.</p>
 <dl class="py attribute">
 <dt class="sig sig-object py" id="impresso_essentials.utils.SourceType.EC">
-<span class="sig-name descname"><span class="pre">EC</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'encyclopedia'</span></em><a class="headerlink" href="#impresso_essentials.utils.SourceType.EC" title="Link to this definition"></a></dt>
+<span class="sig-name descname"><span class="pre">EC</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'encyclopedia'</span></span><a class="headerlink" href="#impresso_essentials.utils.SourceType.EC" title="Link to this definition"></a></dt>
 <dd></dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="impresso_essentials.utils.SourceType.MG">
-<span class="sig-name descname"><span class="pre">MG</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'monograph'</span></em><a class="headerlink" href="#impresso_essentials.utils.SourceType.MG" title="Link to this definition"></a></dt>
+<span class="sig-name descname"><span class="pre">MG</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'monograph'</span></span><a class="headerlink" href="#impresso_essentials.utils.SourceType.MG" title="Link to this definition"></a></dt>
 <dd></dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="impresso_essentials.utils.SourceType.NP">
-<span class="sig-name descname"><span class="pre">NP</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'newspaper'</span></em><a class="headerlink" href="#impresso_essentials.utils.SourceType.NP" title="Link to this definition"></a></dt>
+<span class="sig-name descname"><span class="pre">NP</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'newspaper'</span></span><a class="headerlink" href="#impresso_essentials.utils.SourceType.NP" title="Link to this definition"></a></dt>
 <dd></dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="impresso_essentials.utils.SourceType.RB">
-<span class="sig-name descname"><span class="pre">RB</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'radio_broadcast'</span></em><a class="headerlink" href="#impresso_essentials.utils.SourceType.RB" title="Link to this definition"></a></dt>
+<span class="sig-name descname"><span class="pre">RB</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'radio_broadcast'</span></span><a class="headerlink" href="#impresso_essentials.utils.SourceType.RB" title="Link to this definition"></a></dt>
 <dd></dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="impresso_essentials.utils.SourceType.RM">
-<span class="sig-name descname"><span class="pre">RM</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'radio_magazine'</span></em><a class="headerlink" href="#impresso_essentials.utils.SourceType.RM" title="Link to this definition"></a></dt>
+<span class="sig-name descname"><span class="pre">RM</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'radio_magazine'</span></span><a class="headerlink" href="#impresso_essentials.utils.SourceType.RM" title="Link to this definition"></a></dt>
 <dd></dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="impresso_essentials.utils.SourceType.RS">
-<span class="sig-name descname"><span class="pre">RS</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'radio_schedule'</span></em><a class="headerlink" href="#impresso_essentials.utils.SourceType.RS" title="Link to this definition"></a></dt>
+<span class="sig-name descname"><span class="pre">RS</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'radio_schedule'</span></span><a class="headerlink" href="#impresso_essentials.utils.SourceType.RS" title="Link to this definition"></a></dt>
 <dd></dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="impresso_essentials.utils.SourceType.has_value">
-<em class="property"><span class="pre">classmethod</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">has_value</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">bool</span></span></span><a class="headerlink" href="#impresso_essentials.utils.SourceType.has_value" title="Link to this definition"></a></dt>
+<span class="property"><span class="k"><span class="pre">classmethod</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">has_value</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">bool</span></span></span><a class="headerlink" href="#impresso_essentials.utils.SourceType.has_value" title="Link to this definition"></a></dt>
 <dd><p>Check if enum contains given value</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
@@ -420,7 +436,7 @@ each generated manifest accordingly.</p>
 
 <dl class="py class">
 <dt class="sig sig-object py" id="impresso_essentials.utils.Timer">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">impresso_essentials.utils.</span></span><span class="sig-name descname"><span class="pre">Timer</span></span><a class="headerlink" href="#impresso_essentials.utils.Timer" title="Link to this definition"></a></dt>
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">impresso_essentials.utils.</span></span><span class="sig-name descname"><span class="pre">Timer</span></span><a class="headerlink" href="#impresso_essentials.utils.Timer" title="Link to this definition"></a></dt>
 <dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
 <p>Basic timer</p>
 <dl class="py method">
@@ -940,7 +956,7 @@ If not defined, will be set to [“french”, “german”]. Defaults to None.</
   <hr/>
 
   <div role="contentinfo">
-    <p>&#169; Copyright 2024, Impresso - Media Monitoring of the Past - EPFL-DHLAB, UZH-ICL, UNILU-C2DH, UNIL-History..</p>
+    <p>&#169; Copyright 2025, Impresso - Media Monitoring of the Past - EPFL-DHLAB, UZH-ICL, UNILU-C2DH, UNIL-History..</p>
   </div>
 
   Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a

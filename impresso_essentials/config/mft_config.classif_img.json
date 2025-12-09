@@ -1,0 +1,22 @@
+{
+    "data_stage": "classif-images",
+    "output_bucket": "142-processed-data-final/classif-images/classif-images_dinov2_v1-0-0/",
+    "input_bucket": "112-canonical-final/",
+    "git_repository": "/rcp-scratch/iccluster040_scratch/piconti/impresso-dataset-newspaper-images",
+    "providers": [],
+    "media_aliases": [],
+    "alias_blacklist": [],
+    "temp_directory": "/home/piconti/git_temp_folder_debug",
+    "previous_mft_s3_path": "s3://141-processed-data-staging/classif-images/classif-images_dinov2_v1-0-0/classif-images_v0-0-1.json",
+    "is_staging": false,
+    "is_patch": false,
+    "patched_fields": [],
+    "push_to_git": true,
+    "relative_git_path": "",
+    "only_counting": true,
+    "model_id": "class-images_dinov2_v0.0.1",
+    "run_id": "classif-images_dinov2_v1-0-0",
+    "notes": "Manifest computation for classif-image data_stage.",
+    "file_extensions": "jsonl.bz2",
+    "compute_altogether": false
+}

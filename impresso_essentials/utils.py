@@ -46,6 +46,7 @@ class DataStage(StrEnum):
     """
 
     CANONICAL = "canonical"
+    CAN_CONSOLIDATED = "canonical-consolidated"
     REBUILT = "rebuilt"
     PASSIM = "passim"
     EMB_WORDS = "emb-words"
@@ -54,12 +55,14 @@ class DataStage(StrEnum):
     EMB_ENTITIES = "emb-entities"
     EMB_PARAGRAPHS = "emb-paragraphs"
     EMB_IMAGES = "emb-images"
+    CLASSIF_IMAGES = "classif-images"
     # EMBED_ARTICLES = "embeddings-article"
     ENTITIES = "entities"
     NEWS_AGENCIES = "newsagencies"
     LANGIDENT = "langident"
     LINGPROC = "lingproc"
     OCRQA = "ocrqa"
+    LANGIDENT_OCRQA = "langid-ocrqa"  # new merged version of lingproc and ocrqa
     TEXT_REUSE = "textreuse"
     TOPICS = "topics"
     SOLR_TEXT = "solr-text-ingestion"
@@ -223,8 +226,9 @@ PARTNER_TO_MEDIA = {
         "lepji",
         "lepetitparisien",
         "oecaen",
-        "oerennes",],
-    # TODO add new titles
+        "oerennes",
+    ],
+    # TODO add OCR-Embedded PDF titles
     "BCUL": [
         "ACI",
         "Castigat",
@@ -276,6 +280,42 @@ PARTNER_TO_MEDIA = {
         "NV2",
         # "RN1",  # (no OCR)
         # "RN2",  # (no OCR)
+        # BCUL2 ingestion batch - ABBYY format (more in text-embedded-pdf)
+        "ABal",
+        "AChal",
+        "ALT",
+        "CHU",
+        "GER",
+        "ARB",
+        "CREC",
+        "DETO",
+        "FDL",
+        "MARG",
+        "RLP",
+        "POM",
+        "RL",
+        "RLD",
+        "RLS",
+        "BIST",
+        "Rollan1",
+        "Rollan2",
+        "CLib",
+        "CLN",
+        "FRON",
+        "KANG",
+        "MOU2",
+        "PT",
+        "SEM",
+        "MEP",
+        "NRev",
+        "NRL",
+        "NRH",
+        "PL",
+        "PV",
+        "RPR",
+        "AS",
+        "DP",
+        "Rollan3",
     ],
     "BL": [
         "ANJO",
@@ -659,6 +699,7 @@ PARTNER_TO_MEDIA = {
         "SOC_VS",
     ],
     "INA": ["CFCE", "RDN"],
+    "SUB": ["hamb_echo"],
 }
 
 PARTNER_TO_COUNTRY = {
@@ -675,13 +716,14 @@ PARTNER_TO_COUNTRY = {
     "SWISSINFO": "CH",
     "RTS": "CH",
     "INA": "FR",
+    "SUB": "DE",
 }
 # flatten the known journals into a sorted list
 ALL_MEDIA = sorted([j for part_j in PARTNER_TO_MEDIA.values() for j in part_j])
 MEDIA_TO_COUNTRY = {
     alias: PARTNER_TO_COUNTRY[p] for p, p_aliases in PARTNER_TO_MEDIA.items() for alias in p_aliases
 }
-PARTNERS_WITHOUT_OLR = ["NZZ", "SWA", "FedGaz", "BCUL", "SWISSINFO", "INA"]
+PARTNERS_WITHOUT_OLR = ["NZZ", "SWA", "FedGaz", "BCUL", "SWISSINFO", "INA", "SUB"]
 
 # values can either be a list of aliases or "all"
 SOURCE_MEDIUMS_TO_PARTNERS_TO_MEDIA = {
@@ -695,6 +737,7 @@ SOURCE_MEDIUMS_TO_PARTNERS_TO_MEDIA = {
         "BNF": "all",
         "BCUL": "all",
         "BL": "all",
+        "SUB": "all",
         # "KB": {# SourceMedium.PT: [], # all KB NP titles should be listed},
     },
     SourceMedium.TPS: {
@@ -725,6 +768,7 @@ PARTNERS_TO_SRC_MEDIUM_TO_MEDIA = {
     "SWISSINFO": {SourceMedium.TPS: "all"},
     "RTS": {SourceMedium.AO: "all"},
     "INA": {SourceMedium.AO: "all"},
+    "SUB": {SourceMedium.PT: "all"},
 }
 PARTNERS_TO_SRC_TYPE_TO_MEDIA = {
     "SNL": {SourceType.NP: "all"},
@@ -743,6 +787,7 @@ PARTNERS_TO_SRC_TYPE_TO_MEDIA = {
     "SWISSINFO": {SourceType.RB: "all"},
     "RTS": {SourceType.RB: "all"},
     "INA": {SourceType.RB: "all"},
+    "SUB": {SourceType.NP: "all"},
 }
 
 

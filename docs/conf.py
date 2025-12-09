@@ -19,7 +19,9 @@ sys.path.insert(0, os.path.abspath("../"))
 # -- Project information -----------------------------------------------------
 
 project = "Impresso Essentials"
-copyright = "2024, Impresso - Media Monitoring of the Past - EPFL-DHLAB, UZH-ICL, UNILU-C2DH, UNIL-History."
+copyright = (
+    "2025, Impresso - Media Monitoring of the Past - EPFL-DHLAB, UZH-ICL, UNILU-C2DH, UNIL-History."
+)
 author = "Pauline Conti & Impresso team"
 
 
@@ -35,6 +37,7 @@ extensions = [
     "sphinx.ext.autodoc",
     "sphinx.ext.autosectionlabel",
     "sphinx.ext.todo",
+    "sphinx_rtd_theme",
 ]
 
 autoclass_content = "both"

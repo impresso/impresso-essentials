@@ -47,11 +47,11 @@ The main goal of this approach is to version the data and track information at e
 Impresso's data processing pipeline is organised in three main data "meta-stages", mirroring the main processing steps. During each of those meta-stages, different formats of data are created as output of processes and in turn used as inputs to other downstream tasks.
 
 1. **[Data Preparation]**: Conversion of the original media collections to unified base formats which will serve as input to the various data enrichment tasks and processes. Produces **prepared data**.
-    - Includes the data stages: _canonical_, _rebuilt_, _evenized-rebuilt_ and _passim_ (rebuilt format adapted to the passim algorithm).
+    - Includes the data stages: _canonical_, _langid-ocrqa_, _canonical-consolidated_, _rebuilt_, and _passim_ (rebuilt format adapted to the passim algorithm).
 2. **[Data Enrichment]**: All processes and tasks performing **text and media mining** on the prepared data, through which media collections are enriched with various annotations at different levels, and turned into vector representations.
-    - Includes the data stages: _entities_, _langident_, _text-reuse_, _topics_, _ocrqa_, _embeddings_, (and _lingproc_).
+    - Includes the data stages: _lingproc_, _entities_, _newsagencies_, _text-reuse_, _topics_, _classif-images_, and all relative to embeddings - _emb-docs_, _emb-entities_, _emb-images_, (as well as _langident_ and _ocrqa_ also but now merged into a preparation step).
 3. **[Data Indexation]**: All processes of **data ingestion** of the prepared and enriched data into the backend servers: Solr and MySQL.
-    - Includes the data stages: _solr-ingestion-text_, _solr-ingestion-entities_, _solr-ingestion-emb_, _mysql-ingestion_.
+    - Includes the data stages: _solr-text-ingestion_, _mysql-ingestion_.
 4. **[Data Releases]**: Packages of **Impresso released data**, composed of the datasets of all previously mentioned data stages, along with their corresponding versioned manifests, to be cited on the interface.
     - They will be accessible on the [impresso-data-release](https://github.com/impresso/impresso-data-release) GitHub repository.
 

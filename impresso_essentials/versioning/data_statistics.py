@@ -120,7 +120,8 @@ class DataStatistics(ABC):
                             self.counts[k][v_k] = (
                                 v_f if v_k not in self.counts[k] else self.counts[k][v_k] + v_f
                             )
-                    else:
+                    elif not (k.startswith("avg_") and self.granularity == "title"):
+                        # summing averages does not make sense, so they are not included at title level.
                         self.counts[k] += v
             return True
 
@@ -206,6 +207,7 @@ class MediaStatistics(DataStatistics):
         "pages",
         "audios",
         "content_items_out",
+        "reocred_cis",
         "ft_tokens",
         "images",
         "ne_mentions",
@@ -217,11 +219,22 @@ class MediaStatistics(DataStatistics):
         "text_reuse_clusters",
         "text_reuse_passages",
         "avg_ocrqa",
+        "img_level0_class_fd",
+        "img_level1_class_fd",
+        "img_level2_class_fd",
+        "img_level3_class_fd",
     ]
 
     stage_extra_keys = {
         # audios and pages don't need to be defined for the same mediums
         DataStage.CANONICAL: ["pages", "audios", "images"],
+        DataStage.CAN_CONSOLIDATED: [
+            "pages",
+            "audios",
+            "images",
+            "reocred_cis",
+            "lang_fd",
+        ],
         DataStage.REBUILT: ["ft_tokens"],
         DataStage.ENTITIES: ["ne_entities", "ne_mentions"],
         DataStage.NEWS_AGENCIES: ["ne_entities", "ne_mentions"],
@@ -234,7 +247,15 @@ class MediaStatistics(DataStatistics):
         DataStage.EMB_DOCS: [],  # no additional keys
         DataStage.SOLR_TEXT: ["ft_tokens"],
         DataStage.LINGPROC: [],  # no additional keys
-        DataStage.OCRQA: ["avg_ocrqa"],  # no additional keys
+        DataStage.OCRQA: ["avg_ocrqa"],
+        DataStage.CLASSIF_IMAGES: [
+            "images",
+            "img_level0_class_fd",
+            "img_level1_class_fd",
+            "img_level2_class_fd",
+            "img_level3_class_fd",
+        ],
+        DataStage.LANGIDENT_OCRQA: ["images", "lang_fd", "avg_ocrqa"],
     }
 
     def _define_count_keys(self) -> list[str]:
