@@ -4,7 +4,8 @@ import logging
 from ast import literal_eval
 from collections import Counter
 from typing import Any
-from numpy import mean
+import numpy as np
+import pandas as pd
 from dask import dataframe as dd
 from dask.dataframe import Aggregation
 from dask.bag.core import Bag
@@ -270,28 +271,6 @@ concat_str = Aggregation(
 )
 
 
-def freq_debug(x: dict, cols: list[str] = ["lang_fd"]) -> dict:
-    """Compute the frequency dict of the given column or columns
-
-    Args:
-        x (dict): Dict corresponding to aggregated values for one title-year,
-            which contains lists of values to count.
-        cols (list[str], optional): List of keys (columns) with lists of values to count.
-            Defaults to ["lang_fd"].
-
-    Returns:
-        dict: The statistics for the given title-year, with the value counts of the required columns.
-    """
-    for col in cols:
-        if col in x:
-            # lang_fd is already a list after aggregation, not a string
-            literal = literal_eval("[" + x[col][:-2] + "]")
-
-            # If it's already a list, use it directly
-            x[col] = dict(Counter(literal))
-    return x
-
-
 def freq(x: dict, cols: list[str] = ["lang_fd"], for_can_cons: bool = False) -> dict:
     """Compute the frequency dict of the given column or columns
 
@@ -306,18 +285,16 @@ def freq(x: dict, cols: list[str] = ["lang_fd"], for_can_cons: bool = False) -> 
     """
     for col in cols:
         if col in x:
-            # lang_fd is already a list after aggregation, not a string
-            val = x[col]
-
-            # If it's already a list, use it directly
-            if isinstance(val, list):
-                x[col] = dict(Counter(val))
-            # Try to parse as literal
-            elif isinstance(val, str) and not for_can_cons:
-                x[col] = dict(Counter(literal_eval(val)))
+            # Try to parse as literal, for canonical-consolidated,
+            # the data needs slight modifications to have a list format
+            if for_can_cons:
+                literal = literal_eval("[" + x[col][:-2] + "]")
             else:
-                literal = literal_eval("[" + val[:-2] + "]")
-                x[col] = dict(Counter(literal))
+                literal = literal_eval(x[col])
+
+            x[col] = dict(Counter(literal))
+
+    print(f"in FREQ: x={x}")
     return x
 
 
@@ -1166,7 +1143,7 @@ def compute_stats_in_langid_ocrqa_bag(
                 "content_items_out": 1,
                 "images": 1 if ci["tp"] == "img" else 0,
                 "lang_fd": "None" if ci["lg"] is None else ci["lg"],
-                "avg_ocrqa": ci["ocrqa"],
+                "avg_ocrqa": (None if ci["ocrqa"] is None else float(ci["ocrqa"])),
             }
         )
         .to_dataframe(

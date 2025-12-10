@@ -190,7 +190,15 @@ def get_files_to_consider(config: dict[str, Any]) -> Optional[dict[str, dict[str
     # change "." in ext with `ext.startswith('.')`?
     extension_filter = f"*{ext}" if "." in ext else f"*.{ext}"
     # check if bucket has provider level while some buckets have providers and others not
-    incl_provider = provider_in_path(config["output_bucket"])
+    try:
+        incl_provider = provider_in_path(config["output_bucket"])
+    except AttributeError:
+        # there can be problems if the path is provided without tailing /
+        msg = f'"output_bucket" parameter {config["output_bucket"]} was provided without tailing "/", adding it'
+        logger.debug(msg)
+        print(msg)
+        config["output_bucket"] = config["output_bucket"] + "/"
+        incl_provider = provider_in_path(config["output_bucket"])
 
     if config["prov_alias_pairs"] is None:
         # if media_aliases is empty, include all media_aliases

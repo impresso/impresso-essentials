@@ -494,6 +494,7 @@ class DataManifest:
         # if the created stats don't have the initialized values
         if np_stats.counts != counts:
             success = False
+            print(f"np_stats.counts != counts: np_stats.counts={np_stats.counts}, counts={counts}")
             self._log_failed_action(title, year, "initializing with")
 
         return np_stats, success

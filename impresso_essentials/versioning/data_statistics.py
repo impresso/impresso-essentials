@@ -9,6 +9,7 @@ import sys
 import logging
 from abc import ABC, abstractmethod
 from typing import Any, Union, Optional
+import numpy as np
 
 from impresso_essentials.utils import (
     SourceMedium,
@@ -325,9 +326,24 @@ class MediaStatistics(DataStatistics):
                 return False
 
         if not all(
-            v >= 0 if "fd" not in k else all(fv > 0 for fv in v.values())
+            (v is not None and v >= 0) if "fd" not in k else all(fv > 0 for fv in v.values())
             for k, v in new_counts.items()
         ):
+            # some avg_ocrqa counts can be nan.
+            if "avg_ocrqa" in new_counts.keys() and (
+                new_counts["avg_ocrqa"] is None or np.isnan(new_counts["avg_ocrqa"])
+            ):
+                new_counts["avg_ocrqa"] = None
+                # ensure no other values are None
+                if all(
+                    v >= 0 for k, v in new_counts.items() if "fd" not in k and "avg_ocrqa" not in k
+                ) and all(
+                    all(fv > 0 for fv in v.values()) for k, v in new_counts.items() if "fd" in k
+                ):
+                    msg = f"{self.element}: counts for 'avg_ocrqa' are null!"
+                    logger.warning(msg)
+                    return True
+
             logger.error("Provided count values are not all integers and will not be used.")
             return False
 
@@ -354,7 +370,7 @@ class MediaStatistics(DataStatistics):
             stats_dict["media_stats"] = {
                 k: (v if "_fd" not in k else {v_k: v_f for v_k, v_f in v.items() if v_f > 0})
                 for k, v in self.counts.items()
-                if "_fd" in k or v > 0
+                if "_fd" in k or (k == "avg_ocrqa" and v is None) or v > 0
             }
 
         return stats_dict
