@@ -1,0 +1,22 @@
+{
+    "data_stage": "canonical-consolidated",
+    "output_bucket": "116-canonical-consolidated-sandbox/v2025-12-04_initial/",
+    "input_bucket": "115-canonical-processed-final/langident/langident-lid-ensemble_multilingual_v2-0-2/",
+    "git_repository": "FILL ME",
+    "providers": [],
+    "media_aliases": [],
+    "alias_blacklist": [],
+    "temp_directory": "FILL ME",
+    "previous_mft_s3_path": "",
+    "is_patch": false,
+    "patched_fields": [],
+    "push_to_git": true,
+    "relative_git_path": "",
+    "only_counting": true,
+    "model_id": "",
+    "run_id": "",
+    "notes": "Manifest for canonical-consolidated",
+    "file_extensions": "jsonl.bz2",
+    "compute_altogether": false,
+    "check_s3_archives": false
+}
