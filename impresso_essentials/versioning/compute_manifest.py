@@ -206,12 +206,19 @@ def get_files_to_consider(config: dict[str, Any]) -> Optional[dict[str, dict[str
         print("Fetching the files to consider for all titles...")
         # return all filenames in the given bucket partition with the correct extension
         files = fixed_s3fs_glob(os.path.join(config["output_bucket"], extension_filter))
+
+        ## HOTFIX FOR NOW, LATER INCLUDE AS PARAMETER OR CONFIG
+        if "entities" in config["data_stage"]:
+            # entities processing includes other files which are not desired
+            files = list(filter(lambda x: "local_tracking" not in x and "rejected_entities" not in x))
+
         # Ensure blacklist is defined and a list in the case there is any alias to exclude
         blacklist = blacklist = (
             config["alias_blacklist"] if config["alias_blacklist"] is not None else []
         )
         s3_files = {}
         for s3_key in files:
+            
             provider, alias = extract_provider_alias_key(
                 s3_key, config["output_bucket"], prov_included=incl_provider
             )
