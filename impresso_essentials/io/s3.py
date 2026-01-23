@@ -549,7 +549,11 @@ def read_s3_issues(
         list[tuple[IssueDir, dict]]: List of IssueDirs and the issues' contents.
     """
     # construct the various elements of the s3 path for canonical issues
-    path_parts = [f"s3://{input_bucket}", alias, "issues", f"{alias}-{year}-issues.jsonl.bz2"]
+    input_bucket = input_bucket if "s3://" in input_bucket else f"s3://{input_bucket}"
+    # remove any possible tailing "/"
+    input_bucket = input_bucket[:-1] if input_bucket.endswith('/') else input_bucket
+
+    path_parts = [input_bucket, alias, "issues", f"{alias}-{year}-issues.jsonl.bz2"]
 
     if not provider:
         provider = get_provider_for_alias(alias)
