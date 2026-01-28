@@ -495,6 +495,17 @@ def compute_stats_in_entities_bag(
 ) -> list[dict[str, Any]]:
     """Compute stats on a dask bag of entities output content-items.
 
+    A problem with the initial approach to explode and then sum the values of
+    `content_items_out` and `ne_mentions` was found: the summmed counts were
+    multiplied by the length of `ne_entities`:
+    - when len(`ne_entities`)=0, the row was omitted altogether
+    - when len(`ne_entities`)>1, there was an overcounting of the number of CIs.
+
+    The fix is in two parts:
+    - using tunique for the number of CIs (same logic as the Issue Ids).
+    - aggregating separately the sum of `ne_mentions` BEFORE the explode to
+    prevent duplication and ensure CIs with zero entities are still counted.
+
     Args:
         s3_entities (db.core.Bag): Bag with the contents of entity files.
         client (Client | None, optional): Dask client. Defaults to None.
@@ -507,64 +518,74 @@ def compute_stats_in_entities_bag(
     print(f"{title} - Fetched all files, gathering desired information.")
     logger.info("%s - Fetched all files, gathering desired information.", title)
 
-    count_df = (
-        s3_entities.map(
-            lambda ci: {
-                "media_alias": (
-                    ci["id"].split("-")[0] if "id" in ci else ci["ci_id"].split("-")[0]
-                ),
-                "year": (ci["id"].split("-")[1] if "id" in ci else ci["ci_id"].split("-")[1]),
-                "issues": (
-                    "-".join(ci["id"].split("-")[:-1])
-                    if "id" in ci
-                    else "-".join(ci["ci_id"].split("-")[:-1])
-                ),
-                "content_items_out": 1,
-                "ne_mentions": len(ci.get("nes", [])),
-                "ne_entities": sorted(
-                    list(
-                        set(
-                            [
-                                m["wkd_id"]
-                                for m in ci.get("nes", [])
-                                if "wkd_id" in m and m["wkd_id"] not in ["NIL", None]
-                            ]
-                        )
+    count_df = s3_entities.map(
+        lambda ci: {
+            "media_alias": (ci["id"].split("-")[0] if "id" in ci else ci["ci_id"].split("-")[0]),
+            "year": (ci["id"].split("-")[1] if "id" in ci else ci["ci_id"].split("-")[1]),
+            "issues": (
+                "-".join(ci["id"].split("-")[:-1])
+                if "id" in ci
+                else "-".join(ci["ci_id"].split("-")[:-1])
+            ),
+            "content_items_out": ci["id"] if "id" in ci else ci["ci_id"],
+            # identified a problem
+            "ne_mentions": len(ci.get("nes", [])),
+            "ne_entities": sorted(
+                list(
+                    set(
+                        [
+                            m["wkd_id"]
+                            for m in ci.get("nes", [])
+                            if "wkd_id" in m and m["wkd_id"] not in ["NIL", None]
+                        ]
                     )
-                ),  # sorted list to ensure all are the same
-            }
-        ).to_dataframe(
-            meta={
-                "media_alias": str,
-                "year": str,
-                "issues": str,
-                "content_items_out": int,
-                "ne_mentions": int,
-                "ne_entities": object,
-            }
-        )
-        # .explode("ne_entities")
-        # .persist()
+                )
+            ),  # sorted list to ensure all are the same
+        }
+    ).to_dataframe(
+        meta={
+            "media_alias": str,
+            "year": str,
+            "issues": str,
+            "content_items_out": str,
+            "ne_mentions": int,
+            "ne_entities": object,
+        }
     )
 
     count_df["ne_entities"] = count_df["ne_entities"].apply(
         lambda x: x if isinstance(x, list) else [x], meta=("ne_entities", "object")
     )
+
+    # CREATE mentions_df BEFORE explode - while each row is still a unique CI
+    count_df["ci_id"] = count_df["content_items_out"]  # add CI identifier
+    mentions_df = count_df[["media_alias", "year", "ci_id", "ne_mentions"]].drop_duplicates(
+        subset=["ci_id"]
+    )
+
+    # NOW explode for entity counting
     count_df = count_df.explode("ne_entities").persist()
 
-    # cum the counts for all values collected
+    # Aggregate entities, issues, and CI counts (without mentions)
     aggregated_df = (
         count_df.groupby(by=["media_alias", "year"])
         .agg(
             {
                 "issues": tunique,
-                "content_items_out": sum,
-                "ne_mentions": sum,
+                "content_items_out": tunique,
                 "ne_entities": tunique,
             }
         )
         .reset_index()
     ).persist()
+
+    # Separately aggregate mentions from the pre-explode dataframe
+    mentions_agg = (
+        mentions_df.groupby(by=["media_alias", "year"]).agg({"ne_mentions": sum}).reset_index()
+    ).persist()
+
+    # Merge them together
+    aggregated_df = aggregated_df.merge(mentions_agg, on=["media_alias", "year"])
 
     print(f"{title} - Finished grouping and aggregating stats by title and year.")
     logger.info("%s - Finished grouping and aggregating stats by title and year.", title)
@@ -573,13 +594,13 @@ def compute_stats_in_entities_bag(
         # only add the progress bar if the client is defined
         progress(aggregated_df)
 
-    try:
+    """try:
         test = aggregated_df.head()
     except Exception as e:
         msg = f"{title} - Warning! the aggregated_df was empty!! {e}"
         print(msg)
         logger.warning(msg)
-        return {}
+        return {}"""
 
     # return as a list of dicts
     return aggregated_df.to_bag(format="dict").compute()
@@ -769,7 +790,7 @@ def compute_stats_in_topics_bag(
             "media_alias": ci["ci_id"].split("-")[0],
             "year": ci["ci_id"].split("-")[1],
             "issues": ci["ci_id"].split("-i")[0],
-            "content_items_out": 1,
+            "content_items_out": ci["ci_id"],
             "topics": sorted(
                 [t["t"] for t in ci["topics"] if "t" in t]
             ),  # sorted list to ensure all are the same
@@ -779,7 +800,7 @@ def compute_stats_in_topics_bag(
             "media_alias": str,
             "year": str,
             "issues": str,
-            "content_items_out": int,
+            "content_items_out": str,
             "topics": object,
         }
     )
@@ -789,10 +810,11 @@ def compute_stats_in_topics_bag(
     )
 
     # cum the counts for all values collected
+    # same fix as for entities - exploring on topics mean we need tunique to count CIs
     aggregated_df = (
         count_df.explode("topics")
         .groupby(by=["media_alias", "year"])
-        .agg({"issues": tunique, "content_items_out": sum, "topics": [tunique, list]})
+        .agg({"issues": tunique, "content_items_out": tunique, "topics": [tunique, list]})
     )
 
     aggregated_df.columns = aggregated_df.columns.to_flat_index()
