@@ -885,7 +885,7 @@ def compute_stats_in_img_emb_bag(
                 "media_alias": ci["ci_id"].split("-")[0],
                 "year": ci["ci_id"].split("-")[1],
                 "issues": "-".join(ci["ci_id"].split("-")[:-1]),
-                "content_items_out": 1,
+                "content_items_out": ci["ci_id"],
                 "images": 1,
             }
         )
@@ -894,7 +894,7 @@ def compute_stats_in_img_emb_bag(
                 "media_alias": str,
                 "year": str,
                 "issues": str,
-                "content_items_out": int,
+                "content_items_out": str,
                 "images": int,
             }
         )
@@ -906,7 +906,7 @@ def compute_stats_in_img_emb_bag(
         .agg(
             {
                 "issues": tunique,
-                "content_items_out": sum,
+                "content_items_out": tunique,
                 "images": sum,
             }
         )

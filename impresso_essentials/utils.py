@@ -713,7 +713,6 @@ PARTNER_TO_COUNTRY = {
     "BNF": "FR",
     "BCUL": "CH",
     "BL": "UK",
-    "BL_ordered": "UK",
     "KB": "NL",
     "SWISSINFO": "CH",
     "RTS": "CH",
