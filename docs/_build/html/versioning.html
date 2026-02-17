@@ -1452,6 +1452,15 @@ DataStatistics keys.</p>
 <dt class="sig sig-object py" id="impresso_essentials.versioning.aggregators.compute_stats_in_entities_bag">
 <span class="sig-prename descclassname"><span class="pre">impresso_essentials.versioning.aggregators.</span></span><span class="sig-name descname"><span class="pre">compute_stats_in_entities_bag</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">s3_entities</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Bag</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">client</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Client</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">title</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Any</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#impresso_essentials.versioning.aggregators.compute_stats_in_entities_bag" title="Link to this definition"></a></dt>
 <dd><p>Compute stats on a dask bag of entities output content-items.</p>
+<p>A problem with the initial approach to explode and then sum the values of
+<cite>content_items_out</cite> and <cite>ne_mentions</cite> was found: the summmed counts were
+multiplied by the length of <cite>ne_entities</cite>:
+- when len(<cite>ne_entities</cite>)=0, the row was omitted altogether
+- when len(<cite>ne_entities</cite>)&gt;1, there was an overcounting of the number of CIs.</p>
+<p>The fix is in two parts:
+- using tunique for the number of CIs (same logic as the Issue Ids).
+- aggregating separately the sum of <cite>ne_mentions</cite> BEFORE the explode to
+prevent duplication and ensure CIs with zero entities are still counted.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">

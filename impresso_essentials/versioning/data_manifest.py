@@ -136,7 +136,12 @@ class DataManifest:
         # by default now, rebuilt uses canonical consolidated as input,
         # except when the input bucket is provided corresponds to a
         # "canonical" bucket which isn't consolidated
-        if self.stage in [DataStage.REBUILT, DataStage.PASSIM]:
+        if self.stage in [
+            DataStage.REBUILT,
+            DataStage.PASSIM,
+            DataStage.MYSQL_CIS,
+            DataStage.EMB_IMAGES,
+        ]:
             # check whether the input data is canonical or consolidated
             if "canonical-consolidated" in self.input_bucket_name and all(
                 x not in self.input_bucket_name for x in ["110", "111", "112"]
@@ -356,7 +361,7 @@ class DataManifest:
         """
         stage = stage if stage is not None else self.stage
         # if stage in ["canonical", "rebuilt", "passim", "evenized-rebuilt"]: --> TODO remove evenized
-        if stage in ["canonical", "rebuilt", "passim"]:
+        if stage in ["canonical", "rebuilt", "passim", "canonical-consolidated"]:
             sub_folder = "data-preparation"
         elif "solr" in stage or "mysql" in stage:
             sub_folder = "data-ingestion"
