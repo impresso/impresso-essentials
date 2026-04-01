@@ -28,7 +28,7 @@ else:
 logger = logging.getLogger(__name__)
 
 POSSIBLE_ACTIONS = ["addition", "modification"]
-POSSIBLE_GRANULARITIES = ["corpus", "title", "year"]
+POSSIBLE_GRANULARITIES = ["corpus", "provider", "title", "year"]
 
 
 class DataStatistics(ABC):
@@ -267,7 +267,7 @@ class MediaStatistics(DataStatistics):
         Returns:
             list[str]: The count keys for this specific stage and granularity.
         """
-        start_index = int(self.granularity != "corpus")
+        start_index = int(self.granularity not in ["corpus", "provider"])
         # all counts should have 'content_items_out'
         count_keys = [self.possible_count_keys[4]]
         # add 'issues' and 'titles' (only if corpus granularity)

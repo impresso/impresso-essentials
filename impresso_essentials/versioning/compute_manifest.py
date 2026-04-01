@@ -498,6 +498,9 @@ def add_stats_to_mft(
             del stats["media_alias"]
             del stats["year"]
             logger.debug("Adding %s to %s-%s (%s)", stats, title, year, provider)
+            if int(stats['content_items_out']) == 0:
+                print(f"There is a problem with these stats!! Adding {stats} to {title}-{year} ({provider})")
+                logger.warning("There is a problem with these stats!! Adding %s to %s-%s (%s)", stats, title, year, provider)
             manifest.add_by_title_year(title, year, stats, src_medium=src_medium, provider=provider)
 
     logger.info("%s - Finished adding stats, going to the next title...", media_alias)
