@@ -310,7 +310,7 @@ class DataManifest:
         print("No additional keys or patch, but modified info, minor version increase.")
         return increment_version(self.prev_version, "minor")
 
-    def _get_input_data_overall_stats(self) -> list[dict[str, Any]]:
+    def _get_input_data_overall_stats(self, prov_granularity:bool=False) -> list[dict[str, Any]]:
         """Return the `"overall_statistics"` of the input manifest or an empty list.
 
         The input manifest is the manifest versioning the data used as input to the
@@ -325,6 +325,8 @@ class DataManifest:
         Returns:
             list[dict[str, Any]]: Input manifest's `"overall_statistics"` or empty list.
         """
+        # by default it's overall_statistics
+        #mft_key = "provider_statistics" if prov_granularity else "overall_statistics"
         # reading the input manifest only if the input s3 bucket is defined
         if self.input_bucket_name is not None:
             logger.debug("Reading the input data's manifest from S3.")
@@ -336,11 +338,11 @@ class DataManifest:
                 split_path[0], self._input_stage, "/".join(split_path[1:])
             )
 
-            if input_v_mft is not None:
+            if input_v_mft is not None:# and mft_key in input_v_mft:
                 # assert self.input_manifest_s3_path == input_v_mft["mft_s3_path"]
                 # fetch the overall statistics from the input data (it's a list!)
                 if self.stage != DataStage.CANONICAL:
-                    return input_v_mft["overall_statistics"]
+                    return input_v_mft[mft_key]
         return []
 
     def _get_out_path_within_repo(
@@ -1016,6 +1018,38 @@ class DataManifest:
 
         return full_title_stats, media_list
 
+    def provider_level_stats(self, title_stats: list[MediaStatistics]) -> list[dict]:
+        """Generate the provider-level stats and append the ones from the input manifest.
+
+        Args:
+            title_stats (list[MediaStatistics]): List of all provider-level statistics
+                used to compute the provider-level stats.
+
+        Returns:
+            list[dict]: This manifest's provider-level stats with the ones of previous stages.
+        """
+        full_provider_stats = {}
+
+        for np_stats in title_stats:
+            if not np_stats.provider:
+                # ensure the provider is define, or add it
+                np_stats.provider = get_provider_for_alias(np_stats.element)
+            if np_stats.provider not in full_provider_stats:
+                # if it's a new provider, define a new MediaStatistics object and initialize the title count
+                full_provider_stats[np_stats.provider] = MediaStatistics(self.stage, "provider", np_stats.provider)
+
+            # add the title stats for the provider, counting the number of titles
+            np_stats.counts.update({"titles": 1})
+            print(f"{np_stats.element}-{np_stats.provider} - np_stats.count={np_stats.counts}")
+            full_provider_stats[np_stats.provider].add_counts(np_stats.counts)
+
+        # add these overall counts to the ones of previous stages
+        #all_prov_stats = self._get_input_data_overall_stats(prov_granularity=True)
+        #if 
+        #overall_stats.append(corpus_stats.pretty_print())
+
+        return [s.pretty_print() for s in full_provider_stats.values()]
+
     def overall_stats(self, title_stats: list[MediaStatistics]) -> list[dict]:
         """Generate the overall stats and append the ones from the input manifest.
 
@@ -1030,7 +1064,7 @@ class DataManifest:
         for np_stats in title_stats:
             corpus_stats.add_counts(np_stats.counts)
         # add the number of titles present in corpus
-        corpus_stats.add_counts({"titles": len(title_stats)})
+        #corpus_stats.add_counts({"titles": len(title_stats)})
 
         # add these overall counts to the ones of previous stages
         overall_stats = self._get_input_data_overall_stats()
@@ -1101,6 +1135,9 @@ class DataManifest:
             logger.info("Computing the title-level statistics...")
             full_title_stats, updated_media = self.title_level_stats(updated_media)
 
+            logger.info("Computing the provider-level statistics...")
+            full_provider_stats = self.provider_level_stats(full_title_stats)
+
             logger.info("Computing the overall statistics...")
             overall_stats = self.overall_stats(full_title_stats)
 
@@ -1130,6 +1167,7 @@ class DataManifest:
                 "model_id": self.model_id,
                 "run_id": self.run_id,
                 "media_list": list(updated_media.values()),
+                "provider_statistics": full_provider_stats,
                 "overall_statistics": overall_stats,
                 "notes": self.notes,
             }
