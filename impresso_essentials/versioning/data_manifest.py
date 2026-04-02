@@ -342,7 +342,7 @@ class DataManifest:
                 # assert self.input_manifest_s3_path == input_v_mft["mft_s3_path"]
                 # fetch the overall statistics from the input data (it's a list!)
                 if self.stage != DataStage.CANONICAL:
-                    return input_v_mft[mft_key]
+                    return input_v_mft["overall_statistics"]
         return []
 
     def _get_out_path_within_repo(
