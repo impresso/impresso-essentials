@@ -533,8 +533,17 @@ def process_by_title(
 
     for provider, provider_alias_files in s3_files.items():
         for alias, s3_files_for_alias in provider_alias_files.items():
+            if provider not in PARTNER_TO_MEDIA:
+                inferred_provider = get_provider_for_alias(alias) if alias in ALL_MEDIA else None
+                msg = (
+                    f"Found invalid provider key {provider!r} for alias {alias!r}; "
+                    f"using inferred provider {inferred_provider!r} instead."
+                )
+                logger.warning(msg)
+                print(msg)
+                provider = inferred_provider
 
-            if alias in PARTNER_TO_MEDIA[provider]:
+            if provider and alias in PARTNER_TO_MEDIA[provider]:
                 logger.info("---------- %s (%s) ----------", alias, provider)
                 msg = f"The list of files selected for {alias} is: {s3_files_for_alias}"
                 logger.info(msg)

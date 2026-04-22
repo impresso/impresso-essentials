@@ -271,7 +271,12 @@ concat_str = Aggregation(
 )
 
 
-def freq(x: dict, cols: list[str] = ["lang_fd"], for_can_cons: bool = False) -> dict:
+def freq(
+    x: dict,
+    cols: list[str] | None = None,
+    for_can_cons: bool = False,
+    col: list[str] | None = None,
+) -> dict:
     """Compute the frequency dict of the given column or columns
 
     Args:
@@ -283,14 +288,25 @@ def freq(x: dict, cols: list[str] = ["lang_fd"], for_can_cons: bool = False) -> 
     Returns:
         dict: The statistics for the given title-year, with the value counts of the required columns.
     """
+    if cols is None:
+        cols = col if col is not None else ["lang_fd"]
+
     for col in cols:
         if col in x:
+            value = x[col]
+
             # Try to parse as literal, for canonical-consolidated,
             # the data needs slight modifications to have a list format
             if for_can_cons:
-                literal = literal_eval("[" + x[col][:-2] + "]")
+                literal = literal_eval("[" + value[:-2] + "]")
+            elif isinstance(value, list):
+                literal = value
+            elif value in (None, ""):
+                literal = []
+            elif isinstance(value, str):
+                literal = literal_eval(value)
             else:
-                literal = literal_eval(x[col])
+                literal = [value]
 
             x[col] = dict(Counter(literal))
 
@@ -763,97 +779,92 @@ def compute_stats_in_topics_bag(
     print(f"{title} - Fetched all files, gathering desired information.")
     logger.info("%s - Fetched all files, gathering desired information.", title)
 
-    def flatten_lists(list_elem):
-        final_list = []
-        for str_list in list_elem:
-            assert isinstance(
-                str_list, str
-            ), "Inside topic aggregator flatten_list, and provided list is not str!"
-            if str_list == "[]":
-                final_list.append("no-topic")
-            else:
-                for elem in literal_eval(str_list):
-                    final_list.append(elem)
+    def _new_topic_stats(alias: str, year: str) -> dict[str, Any]:
+        return {
+            "media_alias": alias,
+            "year": year,
+            "issues": set(),
+            "content_items_out": set(),
+            "topics": set(),
+            "topics_fd": Counter(),
+        }
 
-        return final_list
+    def _update_topic_stats(acc: dict[tuple[str, str], dict[str, Any]], ci: dict[str, Any]):
+        ci_id = ci["ci_id"]
+        alias, year = ci_id.split("-")[:2]
+        key = (alias, year)
+        entry = acc.setdefault(key, _new_topic_stats(alias, year))
+
+        topics = [topic["t"] for topic in ci.get("topics", []) if "t" in topic]
+        if not topics:
+            topics = ["no-topic"]
+
+        entry["issues"].add(ci_id.split("-i")[0])
+        entry["content_items_out"].add(ci_id)
+        entry["topics"].update(topics)
+        entry["topics_fd"].update(topics)
+        return acc
+
+    def _partition_topic_stats(records):
+        aggregated = {}
+        for ci in records:
+            _update_topic_stats(aggregated, ci)
+        return aggregated
+
+    def _merge_topic_stats(partials):
+        merged = {}
+        for partial in partials:
+            for key, values in partial.items():
+                entry = merged.setdefault(
+                    key, _new_topic_stats(values["media_alias"], values["year"])
+                )
+                entry["issues"].update(values["issues"])
+                entry["content_items_out"].update(values["content_items_out"])
+                entry["topics"].update(values["topics"])
+                entry["topics_fd"].update(values["topics_fd"])
+        return merged
+
+    aggregated = s3_topics.reduction(
+        perpartition=_partition_topic_stats,
+        aggregate=_merge_topic_stats,
+        split_every=8,
+    )
+
+    if client is not None:
+        # only add the progress bar if the client is defined
+        progress(aggregated)
 
     try:
-        test = s3_topics.take(1, npartitions=-1)
+        aggregated_result = aggregated.compute()
     except Exception as e:
-        msg = f"Warning! the contents of the topics files were empty!! {e}"
+        msg = f"{title} - Warning! the aggregated topics stats were empty!! {e}"
         print(msg)
         logger.warning(msg)
         return {}
 
-    count_df = s3_topics.map(
-        lambda ci: {
-            "media_alias": ci["ci_id"].split("-")[0],
-            "year": ci["ci_id"].split("-")[1],
-            "issues": ci["ci_id"].split("-i")[0],
-            "content_items_out": ci["ci_id"],
-            "topics": sorted(
-                [t["t"] for t in ci["topics"] if "t" in t]
-            ),  # sorted list to ensure all are the same
-        }
-    ).to_dataframe(
-        meta={
-            "media_alias": str,
-            "year": str,
-            "issues": str,
-            "content_items_out": str,
-            "topics": object,
-        }
-    )
-
-    count_df["topics"] = count_df["topics"].apply(
-        lambda x: x if isinstance(x, list) else [x], meta=("topics", "object")
-    )
-
-    # cum the counts for all values collected
-    # same fix as for entities - exploring on topics mean we need tunique to count CIs
-    aggregated_df = (
-        count_df.explode("topics")
-        .groupby(by=["media_alias", "year"])
-        .agg({"issues": tunique, "content_items_out": tunique, "topics": [tunique, list]})
-    )
-
-    aggregated_df.columns = aggregated_df.columns.to_flat_index()
-    aggregated_df = (
-        aggregated_df.reset_index()
-        .rename(
-            columns={
-                ("media_alias", ""): "media_alias",
-                ("year", ""): "year",
-                ("issues", "tunique"): "issues",
-                ("content_items_out", "sum"): "content_items_out",
-                ("topics", "tunique"): "topics",
-                ("topics", "list"): "topics_fd",
-            }
-        )
-        .sort_values("year")
-    )
-
-    aggregated_df["topics_fd"] = aggregated_df["topics_fd"].apply(
-        flatten_lists, meta=("topics_fd", "object")
-    )
+    if not aggregated_result:
+        msg = f"{title} - Warning! the aggregated topics stats were empty!!"
+        print(msg)
+        logger.warning(msg)
+        return {}
 
     print(f"{title} - Finished grouping and aggregating stats by title and year.")
     logger.info("%s - Finished grouping and aggregating stats by title and year.", title)
 
-    if client is not None:
-        # only add the progress bar if the client is defined
-        progress(aggregated_df)
-
-    try:
-        test = aggregated_df.head()
-    except Exception as e:
-        msg = f"{title} - Warning! the aggregated_df was empty!! {e}"
-        print(msg)
-        logger.warning(msg)
-        return {}
-
-    # return as a list of dicts
-    return aggregated_df.to_bag(format="dict").map(freq, col=["topics_fd"]).compute()
+    return sorted(
+        [
+            {
+                "media_alias": values["media_alias"],
+                "year": values["year"],
+                "issues": len(values["issues"]),
+                "content_items_out": len(values["content_items_out"]),
+                "topics": len(values["topics"]),
+                "topics_fd": dict(values["topics_fd"]),
+            }
+            for values in aggregated_result.values()
+        ],
+        key=lambda row: (row["media_alias"], row["year"]),
+    )
 
 
 def compute_stats_in_img_emb_bag(
