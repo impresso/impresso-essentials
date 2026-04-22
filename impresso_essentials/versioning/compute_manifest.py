@@ -22,7 +22,7 @@ from docopt import docopt
 from tqdm import tqdm
 
 import dask.bag as db
-from dask.distributed import Client
+from dask.distributed import Client, LocalCluster
 from impresso_essentials.io.s3 import (
     fixed_s3fs_glob,
     IMPRESSO_STORAGEOPT,
@@ -758,9 +758,16 @@ def main():
     logging.getLogger("botocore").setLevel(logging.WARNING)
     logging.getLogger("smart_open").setLevel(logging.WARNING)
 
-    # start the dask local cluster
+    # For local runs, prefer a single in-process threaded worker. This avoids
+    # nanny restarts and per-worker memory partitioning on one machine while
+    # still allowing concurrent IO-bound work.
     if scheduler is None:
-        client = Client(n_workers=nworkers, threads_per_worker=1)
+        cluster = LocalCluster(
+            n_workers=1,
+            threads_per_worker=max(1, nworkers),
+            processes=False,
+        )
+        client = Client(cluster)
     else:
         client = Client(scheduler)
 

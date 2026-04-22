@@ -442,11 +442,22 @@ class DataManifest:
             # for debug purposes, write in temp dir and not in git repo
             out_file_path = write_dump_to_fs(manifest_dump, self.temp_dir, mft_filename)
 
+        msg = f"Manifest written locally to: {out_file_path}"
+        logger.info(msg)
+        print(msg)
+
         if self.output_s3_partition is not None:
             # add the path within the bucket (partition) to the manifest file
             mft_filename = os.path.join(self.output_s3_partition, mft_filename)
 
-        return upload_to_s3(out_file_path, mft_filename, self.output_bucket_name)
+        uploaded = upload_to_s3(out_file_path, mft_filename, self.output_bucket_name)
+        if uploaded:
+            s3_path = f"s3://{self.output_bucket_name}/{mft_filename}"
+            msg = f"Manifest uploaded to: {s3_path}"
+            logger.info(msg)
+            print(msg)
+
+        return uploaded
 
     def get_count_keys(self) -> list[str]:
         """Get the list of count keys for this manifest's media dict.

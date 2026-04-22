@@ -641,55 +641,77 @@ def compute_stats_in_langident_bag(
     print(f"{title} - Fetched all files, gathering desired information.")
     logger.info("%s - Fetched all files, gathering desired information.", title)
 
-    count_df = (
-        s3_langident.map(
-            lambda ci: {
-                "media_alias": ci["id"].split("-")[0],
-                "year": ci["id"].split("-")[1],
-                "issues": "-".join(ci["id"].split("-")[:-1]),
-                "content_items_out": 1,
-                "images": 1 if ci["tp"] == "img" else 0,
-                "lang_fd": "None" if ci["lg"] is None else ci["lg"],
-            }
-        )
-        .to_dataframe(
-            meta={
-                "media_alias": str,
-                "year": str,
-                "issues": str,
-                "content_items_out": int,
-                "images": int,
-                "lang_fd": object,
-            }
-        )
-        .persist()
+    def _new_langident_stats(alias: str, year: str) -> dict[str, Any]:
+        return {
+            "media_alias": alias,
+            "year": year,
+            "issues": set(),
+            "content_items_out": 0,
+            "images": 0,
+            "lang_fd": Counter(),
+        }
+
+    def _update_langident_stats(
+        acc: dict[tuple[str, str], dict[str, Any]], ci: dict[str, Any]
+    ) -> dict[tuple[str, str], dict[str, Any]]:
+        ci_id = ci["id"]
+        alias, year = ci_id.split("-")[:2]
+        key = (alias, year)
+        entry = acc.setdefault(key, _new_langident_stats(alias, year))
+
+        entry["issues"].add("-".join(ci_id.split("-")[:-1]))
+        entry["content_items_out"] += 1
+        entry["images"] += 1 if ci["tp"] == "img" else 0
+        entry["lang_fd"].update(["None" if ci["lg"] is None else ci["lg"]])
+        return acc
+
+    def _partition_langident_stats(records):
+        aggregated = {}
+        for ci in records:
+            _update_langident_stats(aggregated, ci)
+        return aggregated
+
+    def _merge_langident_stats(partials):
+        merged = {}
+        for partial in partials:
+            for key, values in partial.items():
+                entry = merged.setdefault(
+                    key, _new_langident_stats(values["media_alias"], values["year"])
+                )
+                entry["issues"].update(values["issues"])
+                entry["content_items_out"] += values["content_items_out"]
+                entry["images"] += values["images"]
+                entry["lang_fd"].update(values["lang_fd"])
+        return merged
+
+    aggregated = s3_langident.reduction(
+        perpartition=_partition_langident_stats,
+        aggregate=_merge_langident_stats,
+        split_every=8,
     )
 
-    # cum the counts for all values collected
-    aggregated_df = (
-        count_df.groupby(by=["media_alias", "year"])
-        .agg(
-            {
-                "issues": tunique,
-                "content_items_out": sum,
-                "images": sum,
-                "lang_fd": list,
-            }
-        )
-        .reset_index()
-    ).persist()
+    if client is not None:
+        progress(aggregated)
 
-    # Dask dataframes did not support using literal_eval
-    agg_bag = aggregated_df.to_bag(format="dict").map(freq)
+    aggregated_result = aggregated.compute()
 
     print(f"{title} - Finished grouping and aggregating stats by title and year.")
     logger.info("%s - Finished grouping and aggregating stats by title and year.", title)
 
-    if client is not None:
-        # only add the progress bar if the client is defined
-        progress(agg_bag)
-
-    return agg_bag.compute()
+    return sorted(
+        [
+            {
+                "media_alias": values["media_alias"],
+                "year": values["year"],
+                "issues": len(values["issues"]),
+                "content_items_out": values["content_items_out"],
+                "images": values["images"],
+                "lang_fd": dict(values["lang_fd"]),
+            }
+            for values in aggregated_result.values()
+        ],
+        key=lambda row: (row["media_alias"], row["year"]),
+    )
 
 
 def compute_stats_in_text_reuse_passage_bag(
@@ -1166,60 +1188,90 @@ def compute_stats_in_langid_ocrqa_bag(
     print(f"{title} - Fetched all files, gathering desired information.")
     logger.info("%s - Fetched all files, gathering desired information.", title)
 
-    # define the list of columns in the dataframe
-    count_df = (
-        s3_langid_ocrqas.map(
-            lambda ci: {
-                "media_alias": ci["id"].split("-")[0],
-                "year": ci["id"].split("-")[1],
-                "issues": "-".join(ci["id"].split("-")[:-1]),
-                "content_items_out": 1,
-                "images": 1 if ci["tp"] == "img" else 0,
-                "lang_fd": "None" if ci["lg"] is None else ci["lg"],
-                "avg_ocrqa": (None if ci["ocrqa"] is None else float(ci["ocrqa"])),
-            }
-        )
-        .to_dataframe(
-            meta={
-                "media_alias": str,
-                "year": str,
-                "issues": str,
-                "content_items_out": int,
-                "images": int,
-                "lang_fd": object,
-                "avg_ocrqa": float,
-            }
-        )
-        .persist()
+    def _new_langid_ocrqa_stats(alias: str, year: str) -> dict[str, Any]:
+        return {
+            "media_alias": alias,
+            "year": year,
+            "issues": set(),
+            "content_items_out": 0,
+            "images": 0,
+            "lang_fd": Counter(),
+            "avg_ocrqa_sum": 0.0,
+            "avg_ocrqa_count": 0,
+        }
+
+    def _update_langid_ocrqa_stats(
+        acc: dict[tuple[str, str], dict[str, Any]], ci: dict[str, Any]
+    ) -> dict[tuple[str, str], dict[str, Any]]:
+        ci_id = ci["id"]
+        alias, year = ci_id.split("-")[:2]
+        key = (alias, year)
+        entry = acc.setdefault(key, _new_langid_ocrqa_stats(alias, year))
+
+        entry["issues"].add("-".join(ci_id.split("-")[:-1]))
+        entry["content_items_out"] += 1
+        entry["images"] += 1 if ci["tp"] == "img" else 0
+        entry["lang_fd"].update(["None" if ci["lg"] is None else ci["lg"]])
+
+        if ci["ocrqa"] is not None:
+            entry["avg_ocrqa_sum"] += float(ci["ocrqa"])
+            entry["avg_ocrqa_count"] += 1
+        return acc
+
+    def _partition_langid_ocrqa_stats(records):
+        aggregated = {}
+        for ci in records:
+            _update_langid_ocrqa_stats(aggregated, ci)
+        return aggregated
+
+    def _merge_langid_ocrqa_stats(partials):
+        merged = {}
+        for partial in partials:
+            for key, values in partial.items():
+                entry = merged.setdefault(
+                    key, _new_langid_ocrqa_stats(values["media_alias"], values["year"])
+                )
+                entry["issues"].update(values["issues"])
+                entry["content_items_out"] += values["content_items_out"]
+                entry["images"] += values["images"]
+                entry["lang_fd"].update(values["lang_fd"])
+                entry["avg_ocrqa_sum"] += values["avg_ocrqa_sum"]
+                entry["avg_ocrqa_count"] += values["avg_ocrqa_count"]
+        return merged
+
+    aggregated = s3_langid_ocrqas.reduction(
+        perpartition=_partition_langid_ocrqa_stats,
+        aggregate=_merge_langid_ocrqa_stats,
+        split_every=8,
     )
 
-    aggregated_df = (
-        count_df.groupby(by=["media_alias", "year"])
-        .agg(
-            {
-                "issues": tunique,
-                "content_items_out": sum,
-                "images": sum,
-                "lang_fd": list,
-                "avg_ocrqa": "mean",
-            }
-        )
-        .reset_index()
-    ).persist()
+    if client is not None:
+        progress(aggregated)
+
+    aggregated_result = aggregated.compute()
 
     print(f"{title} - Finished grouping and aggregating stats by title and year.")
     logger.info("%s - Finished grouping and aggregating stats by title and year.", title)
 
-    aggregated_df["avg_ocrqa"] = aggregated_df["avg_ocrqa"].apply(
-        lambda x: round(x, 3), meta=("avg_ocrqa", "float")
+    return sorted(
+        [
+            {
+                "media_alias": values["media_alias"],
+                "year": values["year"],
+                "issues": len(values["issues"]),
+                "content_items_out": values["content_items_out"],
+                "images": values["images"],
+                "lang_fd": dict(values["lang_fd"]),
+                "avg_ocrqa": (
+                    round(values["avg_ocrqa_sum"] / values["avg_ocrqa_count"], 3)
+                    if values["avg_ocrqa_count"] > 0
+                    else None
+                ),
+            }
+            for values in aggregated_result.values()
+        ],
+        key=lambda row: (row["media_alias"], row["year"]),
     )
-
-    if client is not None:
-        # only add the progress bar if the client is defined
-        progress(aggregated_df)
-
-    # return as a list of dicts
-    return aggregated_df.to_bag(format="dict").map(freq).compute()
 
 
 def compute_stats_in_doc_emb_bag(
