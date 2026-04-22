@@ -597,92 +597,85 @@ def compute_stats_in_entities_bag(
     print(f"{title} - Fetched all files, gathering desired information.")
     logger.info("%s - Fetched all files, gathering desired information.", title)
 
-    count_df = s3_entities.map(
-        lambda ci: {
-            "media_alias": (ci["id"].split("-")[0] if "id" in ci else ci["ci_id"].split("-")[0]),
-            "year": (ci["id"].split("-")[1] if "id" in ci else ci["ci_id"].split("-")[1]),
-            "issues": (
-                "-".join(ci["id"].split("-")[:-1])
-                if "id" in ci
-                else "-".join(ci["ci_id"].split("-")[:-1])
-            ),
-            "content_items_out": ci["id"] if "id" in ci else ci["ci_id"],
-            # identified a problem
-            "ne_mentions": len(ci.get("nes", [])),
-            "ne_entities": sorted(
-                list(
-                    set(
-                        [
-                            m["wkd_id"]
-                            for m in ci.get("nes", [])
-                            if "wkd_id" in m and m["wkd_id"] not in ["NIL", None]
-                        ]
-                    )
+    def _new_entities_stats(alias: str, year: str) -> dict[str, Any]:
+        return {
+            "media_alias": alias,
+            "year": year,
+            "issues": set(),
+            "content_items_out": set(),
+            "ne_mentions": 0,
+            "ne_entities": set(),
+        }
+
+    def _extract_entity_ids(ci: dict[str, Any]) -> set[str]:
+        return {
+            mention["wkd_id"]
+            for mention in ci.get("nes", [])
+            if "wkd_id" in mention and mention["wkd_id"] not in ["NIL", None]
+        }
+
+    def _update_entities_stats(
+        acc: dict[tuple[str, str], dict[str, Any]], ci: dict[str, Any]
+    ) -> dict[tuple[str, str], dict[str, Any]]:
+        ci_id = ci["id"] if "id" in ci else ci["ci_id"]
+        alias, year = ci_id.split("-")[:2]
+        key = (alias, year)
+        entry = acc.setdefault(key, _new_entities_stats(alias, year))
+
+        entry["issues"].add("-".join(ci_id.split("-")[:-1]))
+        entry["content_items_out"].add(ci_id)
+        entry["ne_mentions"] += len(ci.get("nes", []))
+        entry["ne_entities"].update(_extract_entity_ids(ci))
+        return acc
+
+    def _partition_entities_stats(records):
+        aggregated = {}
+        for ci in records:
+            _update_entities_stats(aggregated, ci)
+        return aggregated
+
+    def _merge_entities_stats(partials):
+        merged = {}
+        for partial in partials:
+            for key, values in partial.items():
+                entry = merged.setdefault(
+                    key, _new_entities_stats(values["media_alias"], values["year"])
                 )
-            ),  # sorted list to ensure all are the same
-        }
-    ).to_dataframe(
-        meta={
-            "media_alias": str,
-            "year": str,
-            "issues": str,
-            "content_items_out": str,
-            "ne_mentions": int,
-            "ne_entities": object,
-        }
+                entry["issues"].update(values["issues"])
+                entry["content_items_out"].update(values["content_items_out"])
+                entry["ne_mentions"] += values["ne_mentions"]
+                entry["ne_entities"].update(values["ne_entities"])
+        return merged
+
+    aggregated = s3_entities.reduction(
+        perpartition=_partition_entities_stats,
+        aggregate=_merge_entities_stats,
+        split_every=8,
     )
-
-    count_df["ne_entities"] = count_df["ne_entities"].apply(
-        lambda x: x if isinstance(x, list) else [x], meta=("ne_entities", "object")
-    )
-
-    # CREATE mentions_df BEFORE explode - while each row is still a unique CI
-    count_df["ci_id"] = count_df["content_items_out"]  # add CI identifier
-    mentions_df = count_df[["media_alias", "year", "ci_id", "ne_mentions"]].drop_duplicates(
-        subset=["ci_id"]
-    )
-
-    # NOW explode for entity counting
-    count_df = count_df.explode("ne_entities").persist()
-
-    # Aggregate entities, issues, and CI counts (without mentions)
-    aggregated_df = (
-        count_df.groupby(by=["media_alias", "year"])
-        .agg(
-            {
-                "issues": tunique,
-                "content_items_out": tunique,
-                "ne_entities": tunique,
-            }
-        )
-        .reset_index()
-    ).persist()
-
-    # Separately aggregate mentions from the pre-explode dataframe
-    mentions_agg = (
-        mentions_df.groupby(by=["media_alias", "year"]).agg({"ne_mentions": sum}).reset_index()
-    ).persist()
-
-    # Merge them together
-    aggregated_df = aggregated_df.merge(mentions_agg, on=["media_alias", "year"])
 
     print(f"{title} - Finished grouping and aggregating stats by title and year.")
     logger.info("%s - Finished grouping and aggregating stats by title and year.", title)
 
     if client is not None:
         # only add the progress bar if the client is defined
-        progress(aggregated_df)
+        progress(aggregated)
 
-    """try:
-        test = aggregated_df.head()
-    except Exception as e:
-        msg = f"{title} - Warning! the aggregated_df was empty!! {e}"
-        print(msg)
-        logger.warning(msg)
-        return {}"""
+    aggregated_result = aggregated.compute()
 
-    # return as a list of dicts
-    return aggregated_df.to_bag(format="dict").compute()
+    return sorted(
+        [
+            {
+                "media_alias": values["media_alias"],
+                "year": values["year"],
+                "issues": len(values["issues"]),
+                "content_items_out": len(values["content_items_out"]),
+                "ne_mentions": values["ne_mentions"],
+                "ne_entities": len(values["ne_entities"]),
+            }
+            for values in aggregated_result.values()
+        ],
+        key=lambda row: (row["media_alias"], row["year"]),
+    )
 
 
 def compute_stats_in_langident_bag(
@@ -1109,51 +1102,73 @@ def compute_stats_in_solr_text_ing_bag(
     print(f"{title} - Fetched all files, gathering desired information.")
     logger.info("%s - Fetched all files, gathering desired information.", title)
 
-    # define the list of columns in the dataframe
-    count_df = (
-        s3_solr_ing_cis.map(
-            lambda ci: {
-                "media_alias": ci["id"].split("-")[0],
-                "year": ci["id"].split("-")[1],
-                "issues": "-".join(ci["id"].split("-")[:-1]),
-                "content_items_out": 1,
-                "ft_tokens": ci["content_length_i"],
-            }
-        )
-        .to_dataframe(
-            meta={
-                "media_alias": str,
-                "year": str,
-                "issues": str,
-                "content_items_out": int,
-                "ft_tokens": int,
-            }
-        )
-        .persist()
+    def _new_solr_stats(alias: str, year: str) -> dict[str, Any]:
+        return {
+            "media_alias": alias,
+            "year": year,
+            "issues": set(),
+            "content_items_out": 0,
+            "ft_tokens": 0,
+        }
+
+    def _update_solr_stats(
+        acc: dict[tuple[str, str], dict[str, Any]], ci: dict[str, Any]
+    ) -> dict[tuple[str, str], dict[str, Any]]:
+        ci_id = ci["id"]
+        alias, year = ci_id.split("-")[:2]
+        key = (alias, year)
+        entry = acc.setdefault(key, _new_solr_stats(alias, year))
+
+        entry["issues"].add("-".join(ci_id.split("-")[:-1]))
+        entry["content_items_out"] += 1
+        entry["ft_tokens"] += ci["content_length_i"]
+        return acc
+
+    def _partition_solr_stats(records):
+        aggregated = {}
+        for ci in records:
+            _update_solr_stats(aggregated, ci)
+        return aggregated
+
+    def _merge_solr_stats(partials):
+        merged = {}
+        for partial in partials:
+            for key, values in partial.items():
+                entry = merged.setdefault(
+                    key, _new_solr_stats(values["media_alias"], values["year"])
+                )
+                entry["issues"].update(values["issues"])
+                entry["content_items_out"] += values["content_items_out"]
+                entry["ft_tokens"] += values["ft_tokens"]
+        return merged
+
+    aggregated = s3_solr_ing_cis.reduction(
+        perpartition=_partition_solr_stats,
+        aggregate=_merge_solr_stats,
+        split_every=8,
     )
 
-    aggregated_df = (
-        count_df.groupby(by=["media_alias", "year"])
-        .agg(
-            {
-                "issues": tunique,
-                "content_items_out": sum,
-                "ft_tokens": sum,
-            }
-        )
-        .reset_index()
-        .sort_values("year")
-    ).persist()
+    if client is not None:
+        progress(aggregated)
+
+    aggregated_result = aggregated.compute()
 
     print(f"{title} - Finished grouping and aggregating stats by title and year.")
     logger.info("%s - Finished grouping and aggregating stats by title and year.", title)
 
-    if client is not None:
-        # only add the progress bar if the client is defined
-        progress(aggregated_df)
-
-    # return as a list of dicts
-    return aggregated_df.to_bag(format="dict").compute()
+    return sorted(
+        [
+            {
+                "media_alias": values["media_alias"],
+                "year": values["year"],
+                "issues": len(values["issues"]),
+                "content_items_out": values["content_items_out"],
+                "ft_tokens": values["ft_tokens"],
+            }
+            for values in aggregated_result.values()
+        ],
+        key=lambda row: (row["media_alias"], row["year"]),
+    )
 
 
 def compute_stats_in_ocrqa_bag(
