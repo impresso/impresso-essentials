@@ -336,53 +336,116 @@ def compute_stats_in_can_consolidated_bag(
     print(f"{title} - Fetched all issues, gathering desired information.")
     logger.info("%s - Fetched all issues, gathering desired information.", title)
 
-    # prep the df's meta and aggregations based on the source medium
-    df_meta = {
-        "media_alias": str,
-        "year": str,
-        "issues": int,
-        "content_items_out": int,
-        "lang_fd": str,
-    }
-    df_agg = {
-        "issues": sum,
-        "content_items_out": sum,
-        "lang_fd": concat_str,  # concat_lists,
-    }
+    def _new_can_cons_stats(alias: str, year: str) -> dict[str, Any]:
+        counts = {
+            "media_alias": alias,
+            "year": year,
+            "issues": 0,
+            "content_items_out": 0,
+            "lang_fd": Counter(),
+        }
+        if src_medium and src_medium == "audio":
+            counts["audios"] = 0
+        else:
+            counts["pages"] = 0
+            counts["images"] = 0
+            counts["reocred_cis"] = 0
+        return counts
 
-    if src_medium and src_medium == "audio":
-        df_meta["audios"] = int
-        df_agg["audios"] = sum
-    else:
-        df_meta["pages"] = int
-        df_meta["images"] = int
-        df_meta["reocred_cis"] = int
-        df_agg["pages"] = sum
-        df_agg["images"] = sum
-        df_agg["reocred_cis"] = sum
+    def _langs_for_issue(issue: dict[str, Any]) -> list[str]:
+        langs = []
+        for ci in issue["i"]:
+            if "consolidated_lg" not in ci["m"]:
+                langs.append("Not defined")
+            elif ci["m"]["consolidated_lg"] is None:
+                langs.append("None")
+            else:
+                langs.append(ci["m"]["consolidated_lg"])
+        return langs
 
-    count_df = (
-        s3_can_cons_issues.map(
-            lambda i: counts_for_can_cons_issue(i, src_medium=src_medium)
-        ).to_dataframe(meta=df_meta)
-        # .astype({"media_alias": "object", "year": "object"})  # Convert Arrow strings
-        .persist()
+    def _update_can_cons_stats(
+        acc: dict[tuple[str, str], dict[str, Any]], issue: dict[str, Any]
+    ) -> dict[tuple[str, str], dict[str, Any]]:
+        issue_id = issue["id"]
+        alias, year = issue_id.split("-")[:2]
+        key = (alias, year)
+        entry = acc.setdefault(key, _new_can_cons_stats(alias, year))
+
+        entry["issues"] += 1
+        entry["content_items_out"] += len(issue["i"])
+        entry["lang_fd"].update(_langs_for_issue(issue))
+
+        if src_medium and src_medium == "audio":
+            if "sm" not in issue or issue["sm"] != src_medium:
+                log_src_medium_mismatch(issue_id, "canonical", src_medium, issue["sm"])
+            entry["audios"] += len(set(issue["rr"]))
+        else:
+            if "sm" in issue and issue["sm"] != src_medium:
+                log_src_medium_mismatch(issue_id, "canonical", src_medium, issue["sm"])
+            entry["pages"] += len(set(issue["pp"]))
+            entry["images"] += len([item for item in issue["i"] if item["m"]["tp"] == "image"])
+            entry["reocred_cis"] += len(
+                [
+                    item
+                    for item in issue["i"]
+                    if "consolidated_reocr_applied" in item["m"]
+                    and item["m"]["consolidated_reocr_applied"]
+                ]
+            )
+        return acc
+
+    def _partition_can_cons_stats(records):
+        aggregated = {}
+        for issue in records:
+            _update_can_cons_stats(aggregated, issue)
+        return aggregated
+
+    def _merge_can_cons_stats(partials):
+        merged = {}
+        for partial in partials:
+            for key, values in partial.items():
+                entry = merged.setdefault(
+                    key, _new_can_cons_stats(values["media_alias"], values["year"])
+                )
+                entry["issues"] += values["issues"]
+                entry["content_items_out"] += values["content_items_out"]
+                entry["lang_fd"].update(values["lang_fd"])
+                if src_medium and src_medium == "audio":
+                    entry["audios"] += values["audios"]
+                else:
+                    entry["pages"] += values["pages"]
+                    entry["images"] += values["images"]
+                    entry["reocred_cis"] += values["reocred_cis"]
+        return merged
+
+    aggregated = s3_can_cons_issues.reduction(
+        perpartition=_partition_can_cons_stats,
+        aggregate=_merge_can_cons_stats,
+        split_every=8,
     )
 
-    # cum the counts for all values collected
-    aggregated_df = (
-        count_df.groupby(by=["media_alias", "year"]).agg(df_agg).reset_index()
-    ).persist()
-
     if client is not None:
-        # only add the progress bar if the client is defined
-        progress(aggregated_df)
+        progress(aggregated)
+
+    aggregated_result = aggregated.compute()
 
     print(f"{title} - Finished grouping and aggregating stats by title and year.")
     logger.info("%s - Finished grouping and aggregating stats by title and year.", title)
 
-    # return as a list of dicts
-    return aggregated_df.to_bag(format="dict").map(freq, for_can_cons=True).compute()
+    return sorted(
+        [
+            {
+                **{
+                    k: v
+                    for k, v in values.items()
+                    if k not in {"lang_fd"}
+                },
+                "lang_fd": dict(values["lang_fd"]),
+            }
+            for values in aggregated_result.values()
+        ],
+        key=lambda row: (row["media_alias"], row["year"]),
+    )
 
 
 ### DEFINITION of tunique ###

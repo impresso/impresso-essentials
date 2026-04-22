@@ -16,6 +16,7 @@ import json
 import os
 import traceback
 import logging
+from time import perf_counter
 from typing import Any, Optional
 import git
 from docopt import docopt
@@ -42,6 +43,19 @@ from impresso_essentials.versioning import aggregators
 from impresso_essentials.versioning.data_manifest import DataManifest
 
 logger = logging.getLogger(__name__)
+
+
+def _format_runtime(seconds: float) -> str:
+    """Return a human-readable duration string."""
+    total_seconds = int(round(seconds))
+    hours, remainder = divmod(total_seconds, 3600)
+    minutes, secs = divmod(remainder, 60)
+
+    if hours:
+        return f"{hours}h {minutes}m {secs}s"
+    if minutes:
+        return f"{minutes}m {secs}s"
+    return f"{secs}s"
 
 # list of optional configurations
 OPT_CONFIG_KEYS = [
@@ -745,6 +759,7 @@ def create_manifest(config_dict: dict[str, Any], client: Optional[Client] = None
 
 
 def main():
+    start_time = perf_counter()
     arguments = docopt(__doc__)
     config_file_path = arguments["--config-file"]
     log_file = arguments["--log-file"]
@@ -787,6 +802,10 @@ def main():
     except Exception as e:
         traceback.print_tb(e.__traceback__)
         print(e)
+    finally:
+        runtime_msg = f"Total manifest runtime: {_format_runtime(perf_counter() - start_time)}"
+        logger.info(runtime_msg)
+        print(runtime_msg)
         client.shutdown()
 
 
