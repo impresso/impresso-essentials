@@ -847,13 +847,13 @@ def compute_stats_in_topics_bag(
         msg = f"{title} - Warning! the aggregated topics stats were empty!! {e}"
         print(msg)
         logger.warning(msg)
-        return {}
+        return []
 
     if not aggregated_result:
         msg = f"{title} - Warning! the aggregated topics stats were empty!!"
         print(msg)
         logger.warning(msg)
-        return {}
+        return []
 
     print(f"{title} - Finished grouping and aggregating stats by title and year.")
     logger.info("%s - Finished grouping and aggregating stats by title and year.", title)

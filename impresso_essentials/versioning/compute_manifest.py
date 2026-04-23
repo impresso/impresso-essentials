@@ -8,7 +8,7 @@ Options:
 --config-file=<cf>  Path to config file containing all arguments for manifest computation.
 --log-file=<lf>  Path to log file to use.
 --scheduler=<sch>  Tell dask to use an existing scheduler (otherwise it'll create one)
---nworkers=<nw>  number of workers for (local) Dask client.
+--nworkers=<nw>  number of threads per workers for (local) Dask client. (semantics kept to workers to prevent changes to CLI).
 --verbose  Set logging level to DEBUG (by default is INFO).
 """
 
@@ -56,6 +56,7 @@ def _format_runtime(seconds: float) -> str:
     if minutes:
         return f"{minutes}m {secs}s"
     return f"{secs}s"
+
 
 # list of optional configurations
 OPT_CONFIG_KEYS = [
@@ -225,7 +226,9 @@ def get_files_to_consider(config: dict[str, Any]) -> Optional[dict[str, dict[str
         if "entities" in config["data_stage"]:
             len_before = len(files)
             # entities processing includes other files which are not desired
-            files = list(filter(lambda x: "local_tracking" not in x and "rejected_entities" not in x, files))
+            files = list(
+                filter(lambda x: "local_tracking" not in x and "rejected_entities" not in x, files)
+            )
             msg = (
                 f"Filtered out {len_before-len(files)} files which were not to be "
                 "processed (local_tracking and rejected_entities)"
@@ -238,7 +241,7 @@ def get_files_to_consider(config: dict[str, Any]) -> Optional[dict[str, dict[str
         )
         s3_files = {}
         for s3_key in files:
-            
+
             provider, alias = extract_provider_alias_key(
                 s3_key, config["output_bucket"], prov_included=incl_provider
             )
@@ -279,7 +282,12 @@ def get_files_to_consider(config: dict[str, Any]) -> Optional[dict[str, dict[str
             if "entities" in config["data_stage"]:
                 len_before = len(s3_path)
                 # entities processing includes other files which are not desired
-                s3_path = list(filter(lambda x: "local_tracking" not in x and "rejected_entities" not in x, s3_path))
+                s3_path = list(
+                    filter(
+                        lambda x: "local_tracking" not in x and "rejected_entities" not in x,
+                        s3_path,
+                    )
+                )
                 msg = (
                     f"Filtered out {len_before-len(s3_path)} files which were not to "
                     "be processed (local_tracking and rejected_entities)"
@@ -512,9 +520,17 @@ def add_stats_to_mft(
             del stats["media_alias"]
             del stats["year"]
             logger.debug("Adding %s to %s-%s (%s)", stats, title, year, provider)
-            if int(stats['content_items_out']) == 0:
-                print(f"There is a problem with these stats!! Adding {stats} to {title}-{year} ({provider})")
-                logger.warning("There is a problem with these stats!! Adding %s to %s-%s (%s)", stats, title, year, provider)
+            if int(stats["content_items_out"]) == 0:
+                print(
+                    f"There is a problem with these stats!! Adding {stats} to {title}-{year} ({provider})"
+                )
+                logger.warning(
+                    "There is a problem with these stats!! Adding %s to %s-%s (%s)",
+                    stats,
+                    title,
+                    year,
+                    provider,
+                )
             manifest.add_by_title_year(title, year, stats, src_medium=src_medium, provider=provider)
 
     logger.info("%s - Finished adding stats, going to the next title...", media_alias)
@@ -764,7 +780,7 @@ def main():
     config_file_path = arguments["--config-file"]
     log_file = arguments["--log-file"]
     log_level = logging.DEBUG if arguments["--verbose"] else logging.INFO
-    nworkers = int(arguments["--nworkers"]) if arguments["--nworkers"] else 8
+    threads_per_worker = int(arguments["--nworkers"]) if arguments["--nworkers"] else 8
     scheduler = arguments["--scheduler"]
 
     init_logger(logger, log_level, log_file)
@@ -779,7 +795,7 @@ def main():
     if scheduler is None:
         cluster = LocalCluster(
             n_workers=1,
-            threads_per_worker=max(1, nworkers),
+            threads_per_worker=max(1, threads_per_worker),
             processes=False,
         )
         client = Client(cluster)
