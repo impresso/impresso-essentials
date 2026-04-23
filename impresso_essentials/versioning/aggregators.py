@@ -192,77 +192,6 @@ def compute_stats_in_canonical_bag(
     return aggregated_df.to_bag(format="dict").compute()
 
 
-def counts_for_can_cons_issue(
-    issue: dict[str, Any],
-    src_medium: str | None = None,
-) -> dict[str, int]:
-    """Given the canonical representation of an issue, get its counts.
-
-    Args:
-        issue (dict[str, Any]): Canonical JSON representation of an issue.
-        incl_alias_yr (bool, optional): Whether the newspaper title and year should
-            be included in the returned dict for later aggregation. Defaults to False.
-        src_medium (str, optional): The source medium of this issue. Defaults to None.
-
-    Returns:
-        dict[str, int]: Dict listing the counts for this issue, ready to be aggregated.
-    """
-
-    counts = {
-        "media_alias": issue["id"].split("-")[0],
-        "year": issue["id"].split("-")[1],
-        "issues": 1,
-        "content_items_out": len(issue["i"]),
-    }
-
-    if src_medium and src_medium == "audio":
-        if "sm" not in issue or issue["sm"] != src_medium:
-            # the source medium should always be defined for radio data
-            log_src_medium_mismatch(issue["id"], "canonical", src_medium, issue["sm"])
-
-        # case of audio
-        counts["audios"] = len(set(issue["rr"]))
-
-    else:
-        if "sm" in issue and issue["sm"] != src_medium:
-            log_src_medium_mismatch(issue["id"], "canonical", src_medium, issue["sm"])
-
-        # case of paper (print and typescripts)
-        counts.update(
-            {
-                "pages": len(set(issue["pp"])),
-                "images": len([item for item in issue["i"] if item["m"]["tp"] == "image"]),
-                "reocred_cis": len(
-                    [
-                        item
-                        for item in issue["i"]
-                        if "consolidated_reocr_applied" in item["m"]
-                        and item["m"]["consolidated_reocr_applied"]
-                    ]
-                ),
-            }
-        )
-
-    # defin the counts as string to prevent problems when concatenating
-    counts["lang_fd"] = ", ".join(
-        [
-            (
-                "'Not defined'"
-                if "consolidated_lg" not in ci["m"]
-                else (
-                    "'None'"
-                    if ci["m"]["consolidated_lg"] is None
-                    else "'" + ci["m"]["consolidated_lg"] + "'"
-                )
-            )
-            for ci in issue["i"]
-        ]
-    )
-    counts["lang_fd"] = counts["lang_fd"] + ", "
-
-    return counts
-
-
 concat_str = Aggregation(
     name="concat_str",
     chunk=lambda s: s.sum(),  # sum strings within each partition
@@ -310,7 +239,6 @@ def freq(
 
             x[col] = dict(Counter(literal))
 
-    print(f"in FREQ: x={x}")
     return x
 
 
@@ -356,7 +284,12 @@ def compute_stats_in_can_consolidated_bag(
         langs = []
         for ci in issue["i"]:
             if "consolidated_lg" not in ci["m"]:
-                langs.append("Not defined")
+                if "tp" in ci["m"] and ci["m"]["tp"] == "image":
+                    # images don't need a language
+                    langs.append("N/A")
+                else:
+                    # some non-image CIs don't have a language and should
+                    langs.append("Not defined")
             elif ci["m"]["consolidated_lg"] is None:
                 langs.append("None")
             else:
@@ -435,11 +368,7 @@ def compute_stats_in_can_consolidated_bag(
     return sorted(
         [
             {
-                **{
-                    k: v
-                    for k, v in values.items()
-                    if k not in {"lang_fd"}
-                },
+                **{k: v for k, v in values.items() if k not in {"lang_fd"}},
                 "lang_fd": dict(values["lang_fd"]),
             }
             for values in aggregated_result.values()
