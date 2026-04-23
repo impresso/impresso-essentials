@@ -751,53 +751,77 @@ def compute_stats_in_text_reuse_passage_bag(
     print(f"{title} - Fetched all files, gathering desired information.")
     logger.info("%s - Fetched all files, gathering desired information.", title)
 
-    count_df = (
-        s3_tr_passages.map(
-            lambda passage: {
-                "media_alias": passage["ci_id"].split("-")[0],
-                "year": passage["ci_id"].split("-")[1],
-                "issues": "-".join(passage["ci_id"].split("-")[:-1]),
-                "content_items_out": passage["ci_id"],
-                "text_reuse_passages": 1,
-                "text_reuse_clusters": passage["cluster_id"],
-            }
-        )
-        .to_dataframe(
-            meta={
-                "media_alias": str,
-                "year": str,
-                "issues": str,
-                "content_items_out": str,
-                "text_reuse_passages": int,
-                "text_reuse_clusters": str,
-            }
-        )
-        .persist()
+    def _new_text_reuse_stats(alias: str, year: str) -> dict[str, Any]:
+        return {
+            "media_alias": alias,
+            "year": year,
+            "issues": set(),
+            "content_items_out": set(),
+            "text_reuse_passages": 0,
+            "text_reuse_clusters": set(),
+        }
+
+    def _update_text_reuse_stats(
+        acc: dict[tuple[str, str], dict[str, Any]], passage: dict[str, Any]
+    ) -> dict[tuple[str, str], dict[str, Any]]:
+        ci_id = passage["ci_id"]
+        alias, year = ci_id.split("-")[:2]
+        key = (alias, year)
+        entry = acc.setdefault(key, _new_text_reuse_stats(alias, year))
+
+        entry["issues"].add("-".join(ci_id.split("-")[:-1]))
+        entry["content_items_out"].add(ci_id)
+        entry["text_reuse_passages"] += 1
+        entry["text_reuse_clusters"].add(passage["cluster_id"])
+        return acc
+
+    def _partition_text_reuse_stats(records):
+        aggregated = {}
+        for passage in records:
+            _update_text_reuse_stats(aggregated, passage)
+        return aggregated
+
+    def _merge_text_reuse_stats(partials):
+        merged = {}
+        for partial in partials:
+            for key, values in partial.items():
+                entry = merged.setdefault(
+                    key, _new_text_reuse_stats(values["media_alias"], values["year"])
+                )
+                entry["issues"].update(values["issues"])
+                entry["content_items_out"].update(values["content_items_out"])
+                entry["text_reuse_passages"] += values["text_reuse_passages"]
+                entry["text_reuse_clusters"].update(values["text_reuse_clusters"])
+        return merged
+
+    aggregated = s3_tr_passages.reduction(
+        perpartition=_partition_text_reuse_stats,
+        aggregate=_merge_text_reuse_stats,
+        split_every=8,
     )
 
-    aggregated_df = (
-        count_df.groupby(by=["media_alias", "year"])
-        .agg(
-            {
-                "issues": tunique,
-                "content_items_out": tunique,
-                "text_reuse_passages": sum,
-                "text_reuse_clusters": tunique,
-            }
-        )
-        .reset_index()
-        .sort_values("year")
-    ).persist()
+    if client is not None:
+        progress(aggregated)
+
+    aggregated_result = aggregated.compute()
 
     print(f"{title} - Finished grouping and aggregating stats by title and year.")
     logger.info("%s - Finished grouping and aggregating stats by title and year.", title)
 
-    if client is not None:
-        # only add the progress bar if the client is defined
-        progress(aggregated_df)
-
-    # return as a list of dicts
-    return aggregated_df.to_bag(format="dict").compute()
+    return sorted(
+        [
+            {
+                "media_alias": values["media_alias"],
+                "year": values["year"],
+                "issues": len(values["issues"]),
+                "content_items_out": len(values["content_items_out"]),
+                "text_reuse_passages": values["text_reuse_passages"],
+                "text_reuse_clusters": len(values["text_reuse_clusters"]),
+            }
+            for values in aggregated_result.values()
+        ],
+        key=lambda row: (row["media_alias"], row["year"]),
+    )
 
 
 def compute_stats_in_topics_bag(
