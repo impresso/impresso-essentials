@@ -1513,77 +1513,85 @@ def compute_stats_in_classif_img_bag(
     print(f"{title} - Fetched all files, gathering desired information.")
     logger.info("%s - Fetched all files, gathering desired information.", title)
 
-    count_df = s3_classif_images.map(
-        lambda ci: {
-            "media_alias": ci["ci_id"].split("-")[0],
-            "year": ci["ci_id"].split("-")[1],
-            "issues": ci["ci_id"].split("-i")[0],
-            "content_items_out": 1,
-            "images": 1,
-            "img_level0_class_fd": (
-                "image" if ci["level3_predictions"][0]["class"] != "not_image" else "not_image"
-            ),  # identify the number of listed "images" which are actually predicted to be images
-            # not all CIs have level 1 and level 2 preds
+    def _new_classif_img_stats(alias: str, year: str) -> dict[str, Any]:
+        return {
+            "media_alias": alias,
+            "year": year,
+            "issues": set(),
+            "content_items_out": 0,
+            "images": 0,
+            "img_level0_class_fd": Counter(),
+            "img_level1_class_fd": Counter(),
+            "img_level2_class_fd": Counter(),
+            "img_level3_class_fd": Counter(),
+        }
+
+    def _classes_for_image(ci: dict[str, Any]) -> dict[str, str]:
+        level3_class = ci["level3_predictions"][0]["class"]
+        non_image_fallback = "not_image" if level3_class == "not_image" else "not_inferred"
+
+        return {
+            "img_level0_class_fd": "image" if level3_class != "not_image" else "not_image",
             "img_level1_class_fd": (
-                (
-                    "not_image"
-                    if ci["level3_predictions"][0]["class"] == "not_image"
-                    else "not_inferred"
-                )
+                non_image_fallback
                 if "level1_predictions" not in ci
                 else ci["level1_predictions"][0]["class"]
             ),
             "img_level2_class_fd": (
-                (
-                    "not_image"
-                    if ci["level3_predictions"][0]["class"] == "not_image"
-                    else "not_inferred"
-                )
+                non_image_fallback
                 if "level2_predictions" not in ci
                 else ci["level2_predictions"][0]["class"]
             ),
-            "img_level3_class_fd": ci["level3_predictions"][0]["class"],
+            "img_level3_class_fd": level3_class,
         }
-    ).to_dataframe(
-        meta={
-            "media_alias": str,
-            "year": str,
-            "issues": str,
-            "content_items_out": int,
-            "images": int,
-            "img_level0_class_fd": object,
-            "img_level1_class_fd": object,
-            "img_level2_class_fd": object,
-            "img_level3_class_fd": object,
-        }
-    )
 
-    # cum the counts for all values collected
-    aggregated_df = (
-        count_df.groupby(by=["media_alias", "year"])
-        .agg(
-            {
-                "issues": tunique,
-                "content_items_out": sum,
-                "images": sum,
-                "img_level0_class_fd": list,
-                "img_level1_class_fd": list,
-                "img_level2_class_fd": list,
-                "img_level3_class_fd": list,
-            }
-        )
-        .reset_index()
-    ).persist()
+    def _update_classif_img_stats(
+        acc: dict[tuple[str, str], dict[str, Any]], ci: dict[str, Any]
+    ) -> dict[tuple[str, str], dict[str, Any]]:
+        ci_id = ci["ci_id"]
+        alias, year = ci_id.split("-")[:2]
+        key = (alias, year)
+        entry = acc.setdefault(key, _new_classif_img_stats(alias, year))
 
-    # Dask dataframes did not support using literal_eval
-    agg_bag = aggregated_df.to_bag(format="dict").map(
-        freq,
-        cols=[
+        entry["issues"].add(ci_id.split("-i")[0])
+        entry["content_items_out"] += 1
+        entry["images"] += 1
+
+        for class_key, class_value in _classes_for_image(ci).items():
+            entry[class_key].update([class_value])
+        return acc
+
+    def _partition_classif_img_stats(records):
+        aggregated = {}
+        for ci in records:
+            _update_classif_img_stats(aggregated, ci)
+        return aggregated
+
+    def _merge_classif_img_stats(partials):
+        merged = {}
+        counter_keys = [
             "img_level0_class_fd",
             "img_level1_class_fd",
             "img_level2_class_fd",
             "img_level3_class_fd",
-        ],
+        ]
+
+        for partial in partials:
+            for key, values in partial.items():
+                entry = merged.setdefault(
+                    key, _new_classif_img_stats(values["media_alias"], values["year"])
+                )
+                entry["issues"].update(values["issues"])
+                entry["content_items_out"] += values["content_items_out"]
+                entry["images"] += values["images"]
+                for counter_key in counter_keys:
+                    entry[counter_key].update(values[counter_key])
+        return merged
+
+    aggregated = s3_classif_images.reduction(
+        perpartition=_partition_classif_img_stats,
+        aggregate=_merge_classif_img_stats,
+        split_every=8,
     )
 
     print(f"{title} - Finished grouping and aggregating stats by title and year.")
@@ -1591,6 +1599,24 @@ def compute_stats_in_classif_img_bag(
 
     if client is not None:
         # only add the progress bar if the client is defined
-        progress(agg_bag)
+        progress(aggregated)
 
-    return agg_bag.compute()
+    aggregated_result = aggregated.compute()
+
+    return sorted(
+        [
+            {
+                "media_alias": values["media_alias"],
+                "year": values["year"],
+                "issues": len(values["issues"]),
+                "content_items_out": values["content_items_out"],
+                "images": values["images"],
+                "img_level0_class_fd": dict(values["img_level0_class_fd"]),
+                "img_level1_class_fd": dict(values["img_level1_class_fd"]),
+                "img_level2_class_fd": dict(values["img_level2_class_fd"]),
+                "img_level3_class_fd": dict(values["img_level3_class_fd"]),
+            }
+            for values in aggregated_result.values()
+        ],
+        key=lambda row: (row["media_alias"], row["year"]),
+    )
