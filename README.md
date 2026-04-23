@@ -38,7 +38,7 @@ git clone --recursive git@github.com:impresso/impresso-essentials.git
 The `versioning` package of `impresso-essentials` contains several modules and scripts that allow to version Impresso's data at various stages of the processing pipeline.
 The main goal of this approach is to version the data and track information at every stage to:
 
-1. **Ensure data consisteny and ease of debugging:** Data elements should be consistent across stages, and inconsistencies/differences should be justifiable through the identification of data leakage points.
+1. **Ensure data consistency and ease of debugging:** Data elements should be consistent across stages, and inconsistencies/differences should be justifiable through the identification of data leakage points.
 2. **Allow partial updates:** It should be possible to (re)run all or part of the processes on subsets of the data, knowing which version of the data was used at each step. This can be necessary when new media collections arrive, or when an existing collection has been patched.
 3. **Ensure transparency:** Citation of the various data stages and datasets should be straightforward; users should know when using the interface exactly what versions they are using, and should be able to consult the precise statistics related to them.
 

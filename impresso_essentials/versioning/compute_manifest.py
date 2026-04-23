@@ -8,7 +8,7 @@ Options:
 --config-file=<cf>  Path to config file containing all arguments for manifest computation.
 --log-file=<lf>  Path to log file to use.
 --scheduler=<sch>  Tell dask to use an existing scheduler (otherwise it'll create one)
---nworkers=<nw>  number of workers for (local) Dask client.
+--nworkers=<nw>  number of threads per workers for (local) Dask client. (semantics kept to workers to prevent changes to CLI).
 --verbose  Set logging level to DEBUG (by default is INFO).
 """
 
@@ -16,13 +16,14 @@ import json
 import os
 import traceback
 import logging
+from time import perf_counter
 from typing import Any, Optional
 import git
 from docopt import docopt
 from tqdm import tqdm
 
 import dask.bag as db
-from dask.distributed import Client
+from dask.distributed import Client, LocalCluster
 from impresso_essentials.io.s3 import (
     fixed_s3fs_glob,
     IMPRESSO_STORAGEOPT,
@@ -42,6 +43,20 @@ from impresso_essentials.versioning import aggregators
 from impresso_essentials.versioning.data_manifest import DataManifest
 
 logger = logging.getLogger(__name__)
+
+
+def _format_runtime(seconds: float) -> str:
+    """Return a human-readable duration string."""
+    total_seconds = int(round(seconds))
+    hours, remainder = divmod(total_seconds, 3600)
+    minutes, secs = divmod(remainder, 60)
+
+    if hours:
+        return f"{hours}h {minutes}m {secs}s"
+    if minutes:
+        return f"{minutes}m {secs}s"
+    return f"{secs}s"
+
 
 # list of optional configurations
 OPT_CONFIG_KEYS = [
@@ -211,7 +226,9 @@ def get_files_to_consider(config: dict[str, Any]) -> Optional[dict[str, dict[str
         if "entities" in config["data_stage"]:
             len_before = len(files)
             # entities processing includes other files which are not desired
-            files = list(filter(lambda x: "local_tracking" not in x and "rejected_entities" not in x, files))
+            files = list(
+                filter(lambda x: "local_tracking" not in x and "rejected_entities" not in x, files)
+            )
             msg = (
                 f"Filtered out {len_before-len(files)} files which were not to be "
                 "processed (local_tracking and rejected_entities)"
@@ -224,7 +241,7 @@ def get_files_to_consider(config: dict[str, Any]) -> Optional[dict[str, dict[str
         )
         s3_files = {}
         for s3_key in files:
-            
+
             provider, alias = extract_provider_alias_key(
                 s3_key, config["output_bucket"], prov_included=incl_provider
             )
@@ -265,7 +282,12 @@ def get_files_to_consider(config: dict[str, Any]) -> Optional[dict[str, dict[str
             if "entities" in config["data_stage"]:
                 len_before = len(s3_path)
                 # entities processing includes other files which are not desired
-                s3_path = list(filter(lambda x: "local_tracking" not in x and "rejected_entities" not in x, s3_path))
+                s3_path = list(
+                    filter(
+                        lambda x: "local_tracking" not in x and "rejected_entities" not in x,
+                        s3_path,
+                    )
+                )
                 msg = (
                     f"Filtered out {len_before-len(s3_path)} files which were not to "
                     "be processed (local_tracking and rejected_entities)"
@@ -498,9 +520,17 @@ def add_stats_to_mft(
             del stats["media_alias"]
             del stats["year"]
             logger.debug("Adding %s to %s-%s (%s)", stats, title, year, provider)
-            if int(stats['content_items_out']) == 0:
-                print(f"There is a problem with these stats!! Adding {stats} to {title}-{year} ({provider})")
-                logger.warning("There is a problem with these stats!! Adding %s to %s-%s (%s)", stats, title, year, provider)
+            if int(stats["content_items_out"]) == 0:
+                print(
+                    f"There is a problem with these stats!! Adding {stats} to {title}-{year} ({provider})"
+                )
+                logger.warning(
+                    "There is a problem with these stats!! Adding %s to %s-%s (%s)",
+                    stats,
+                    title,
+                    year,
+                    provider,
+                )
             manifest.add_by_title_year(title, year, stats, src_medium=src_medium, provider=provider)
 
     logger.info("%s - Finished adding stats, going to the next title...", media_alias)
@@ -533,8 +563,17 @@ def process_by_title(
 
     for provider, provider_alias_files in s3_files.items():
         for alias, s3_files_for_alias in provider_alias_files.items():
+            if provider not in PARTNER_TO_MEDIA:
+                inferred_provider = get_provider_for_alias(alias) if alias in ALL_MEDIA else None
+                msg = (
+                    f"Found invalid provider key {provider!r} for alias {alias!r}; "
+                    f"using inferred provider {inferred_provider!r} instead."
+                )
+                logger.warning(msg)
+                print(msg)
+                provider = inferred_provider
 
-            if alias in PARTNER_TO_MEDIA[provider]:
+            if provider and alias in PARTNER_TO_MEDIA[provider]:
                 logger.info("---------- %s (%s) ----------", alias, provider)
                 msg = f"The list of files selected for {alias} is: {s3_files_for_alias}"
                 logger.info(msg)
@@ -736,11 +775,12 @@ def create_manifest(config_dict: dict[str, Any], client: Optional[Client] = None
 
 
 def main():
+    start_time = perf_counter()
     arguments = docopt(__doc__)
     config_file_path = arguments["--config-file"]
     log_file = arguments["--log-file"]
     log_level = logging.DEBUG if arguments["--verbose"] else logging.INFO
-    nworkers = int(arguments["--nworkers"]) if arguments["--nworkers"] else 8
+    threads_per_worker = int(arguments["--nworkers"]) if arguments["--nworkers"] else 8
     scheduler = arguments["--scheduler"]
 
     init_logger(logger, log_level, log_file)
@@ -749,9 +789,16 @@ def main():
     logging.getLogger("botocore").setLevel(logging.WARNING)
     logging.getLogger("smart_open").setLevel(logging.WARNING)
 
-    # start the dask local cluster
+    # For local runs, prefer a single in-process threaded worker. This avoids
+    # nanny restarts and per-worker memory partitioning on one machine while
+    # still allowing concurrent IO-bound work.
     if scheduler is None:
-        client = Client(n_workers=nworkers, threads_per_worker=1)
+        cluster = LocalCluster(
+            n_workers=1,
+            threads_per_worker=max(1, threads_per_worker),
+            processes=False,
+        )
+        client = Client(cluster)
     else:
         client = Client(scheduler)
 
@@ -771,6 +818,10 @@ def main():
     except Exception as e:
         traceback.print_tb(e.__traceback__)
         print(e)
+    finally:
+        runtime_msg = f"Total manifest runtime: {_format_runtime(perf_counter() - start_time)}"
+        logger.info(runtime_msg)
+        print(runtime_msg)
         client.shutdown()
 
 
