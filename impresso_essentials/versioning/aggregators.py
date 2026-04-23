@@ -475,45 +475,62 @@ def compute_stats_in_rebuilt_bag(
     print(f"{title} - Fetched all files, gathering desired information.")
     logger.info("%s - Fetched all files, gathering desired information.", title)
 
-    # define the list of columns in the dataframe
-    df_meta = {"media_alias": str} if include_alias else {}
-    df_meta.update(
-        {
-            "year": str,
-            "issues": str,
-            "content_items_out": int,
+    def _new_rebuilt_stats(media_alias: str | None, year: str) -> dict[str, Any]:
+        counts = {
+            "year": year,
+            "issues": set(),
+            "content_items_out": 0,
         }
+        if include_alias:
+            counts["media_alias"] = media_alias
+        if not passim:
+            counts["ft_tokens"] = 0
+        return counts
+
+    def _update_rebuilt_stats(
+        acc: dict[Any, dict[str, Any]], rebuilt_ci: dict[str, Any]
+    ) -> dict[Any, dict[str, Any]]:
+        counts = counts_for_rebuilt(
+            rebuilt_ci,
+            include_alias=include_alias,
+            passim=passim,
+        )
+        media_alias = counts.get("media_alias")
+        year = counts["year"]
+        group_key = (media_alias, year) if include_alias else year
+        entry = acc.setdefault(group_key, _new_rebuilt_stats(media_alias, year))
+
+        entry["issues"].add(counts["issues"])
+        entry["content_items_out"] += counts["content_items_out"]
+        if not passim:
+            entry["ft_tokens"] += counts["ft_tokens"]
+        return acc
+
+    def _partition_rebuilt_stats(records):
+        aggregated = {}
+        for rebuilt_ci in records:
+            _update_rebuilt_stats(aggregated, rebuilt_ci)
+        return aggregated
+
+    def _merge_rebuilt_stats(partials):
+        merged = {}
+        for partial in partials:
+            for group_key, values in partial.items():
+                entry = merged.setdefault(
+                    group_key,
+                    _new_rebuilt_stats(values.get("media_alias"), values["year"]),
+                )
+                entry["issues"].update(values["issues"])
+                entry["content_items_out"] += values["content_items_out"]
+                if not passim:
+                    entry["ft_tokens"] += values["ft_tokens"]
+        return merged
+
+    aggregated = rebuilt_articles.reduction(
+        perpartition=_partition_rebuilt_stats,
+        aggregate=_merge_rebuilt_stats,
+        split_every=8,
     )
-    if not passim:
-        df_meta.update(
-            {
-                "ft_tokens": int,
-            }
-        )
-
-    rebuilt_count_df = (
-        rebuilt_articles.map(
-            lambda rf: counts_for_rebuilt(rf, include_alias=include_alias, passim=passim)
-        )
-        .to_dataframe(meta=df_meta)
-        .persist()
-    )
-
-    gp_key = ["media_alias", "year"] if include_alias else "year"
-    # agggregate them at the scale of the entire corpus
-    # first groupby title, year and issue to also count the individual issues present
-    if not passim:
-        aggregated_df = rebuilt_count_df.groupby(by=gp_key).agg(
-            {"issues": tunique, "content_items_out": sum, "ft_tokens": sum}
-        )
-    else:
-        aggregated_df = rebuilt_count_df.groupby(by=gp_key).agg(
-            {"issues": tunique, "content_items_out": sum}
-        )
-
-    # when titles are included, multiple titles and years will be represented
-    if include_alias:
-        aggregated_df = aggregated_df.reset_index().persist()
 
     msg = "Obtaining the yearly rebuilt statistics"
     if key != "":
@@ -521,14 +538,35 @@ def compute_stats_in_rebuilt_bag(
     else:
         logger.info(msg)
 
+    if client is not None:
+        # only add the progress bar if the client is defined
+        progress(aggregated)
+
+    aggregated_result = aggregated.compute()
+
     print(f"{title} - Finished grouping and aggregating stats by title and year.")
     logger.info("%s - Finished grouping and aggregating stats by title and year.", title)
 
-    if client is not None:
-        # only add the progress bar if the client is defined
-        progress(aggregated_df)
-
-    return aggregated_df.to_bag(format="dict").compute()
+    return sorted(
+        [
+            {
+                **(
+                    {"media_alias": values["media_alias"]}
+                    if include_alias
+                    else {}
+                ),
+                "year": values["year"],
+                "issues": len(values["issues"]),
+                "content_items_out": values["content_items_out"],
+                **({"ft_tokens": values["ft_tokens"]} if not passim else {}),
+            }
+            for values in aggregated_result.values()
+        ],
+        key=lambda row: (
+            row["media_alias"] if include_alias else "",
+            row["year"],
+        ),
+    )
 
 
 def compute_stats_in_entities_bag(
