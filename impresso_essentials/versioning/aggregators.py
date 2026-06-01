@@ -978,6 +978,7 @@ def compute_stats_in_lingproc_bag(
     ) -> dict[tuple[str, str], dict[str, Any]]:
         ci_id = ci if isinstance(ci, str) else ci.get("ci_id", ci.get("id"))
         if not ci_id:
+            logger.debug("Skipping lingproc record without ci_id/id: %s", ci)
             return acc
         alias, year = ci_id.split("-")[:2]
         key = (alias, year)
@@ -1004,7 +1005,7 @@ def compute_stats_in_lingproc_bag(
                 entry["content_items_out"] += values["content_items_out"]
         return merged
 
-    split_every = max(8, len(client.nthreads())) if client is not None else 8
+    split_every = max(8, sum(client.nthreads().values())) if client is not None else 8
     aggregated = s3_lingprocs.reduction(
         perpartition=_partition_lingproc_stats,
         aggregate=_merge_lingproc_stats,
