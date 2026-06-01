@@ -879,7 +879,7 @@ PARTNER_TO_MEDIA = {
         "chron_instit",
         "nu_parle",
         "chron_unesco",
-        "courrier_cr",
+        # "courrier_cr", no data
         "monde_sem",
         "monde_ant",
         "suisse_euro",
@@ -897,7 +897,7 @@ PARTNER_TO_MEDIA = {
         "mag_sci2",
         "ana_media",
         "hist_ondes",
-        "mag_tv1",
+        # "mag_tv1", no data
         "mag_tv2",
         "mem_ondes",
     ],
