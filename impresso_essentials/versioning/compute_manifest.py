@@ -54,7 +54,8 @@ def extract_ci_id_only(line: str) -> str | None:
     """
     match = CI_ID_RE.search(line)
     if match is not None:
-        return bytes(match.group(1), "utf-8").decode("unicode_escape")
+        escaped_id = match.group(1)
+        return json.loads(f'"{escaped_id}"')
     return None
 
 
