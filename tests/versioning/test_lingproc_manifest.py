@@ -12,6 +12,9 @@ def test_extract_ci_id_only():
         "IMP-1901-01-01-a-i0002"
     )
     assert extract_ci_id_only('{"tokens":[1,2]}') is None
+    assert extract_ci_id_only('{"ci_id":"NZZ-1900-01-01-a-i0001-\\\"part\\\""}') == (
+        'NZZ-1900-01-01-a-i0001-"part"'
+    )
 
 
 def test_compute_stats_in_lingproc_bag_accepts_ci_id_strings():

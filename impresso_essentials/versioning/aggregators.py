@@ -14,6 +14,7 @@ from itertools import chain
 
 logger = logging.getLogger(__name__)
 MIN_SPLIT_EVERY = 8
+MAX_SPLIT_EVERY = 32
 
 
 def log_src_medium_mismatch(
@@ -1007,7 +1008,7 @@ def compute_stats_in_lingproc_bag(
         return merged
 
     split_every = (
-        max(MIN_SPLIT_EVERY, sum(client.nthreads().values()))
+        min(MAX_SPLIT_EVERY, max(MIN_SPLIT_EVERY, sum(client.nthreads().values())))
         if client is not None
         else MIN_SPLIT_EVERY
     )

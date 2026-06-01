@@ -44,7 +44,7 @@ from impresso_essentials.versioning import aggregators
 from impresso_essentials.versioning.data_manifest import DataManifest
 
 logger = logging.getLogger(__name__)
-CI_ID_RE = re.compile(r'"(?:ci_id|id)"\s*:\s*"([^"]+)"')
+CI_ID_RE = re.compile(r'"(?:ci_id|id)"\s*:\s*"((?:[^"\\]|\\.)*)"')
 
 
 def extract_ci_id_only(line: str) -> str | None:
@@ -54,7 +54,7 @@ def extract_ci_id_only(line: str) -> str | None:
     """
     match = CI_ID_RE.search(line)
     if match is not None:
-        return match.group(1)
+        return bytes(match.group(1), "utf-8").decode("unicode_escape")
     return None
 
 
