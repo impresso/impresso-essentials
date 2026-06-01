@@ -48,7 +48,10 @@ CI_ID_RE = re.compile(r'"(?:ci_id|id)"\s*:\s*"([^"]+)"')
 
 
 def extract_ci_id_only(line: str) -> str | None:
-    """Extract a lingproc content item identifier from a JSONL record."""
+    """Extract a lingproc content item identifier from a JSONL record.
+
+    This is a fast-path extractor for regular lingproc IDs where `ci_id`/`id` is a plain string.
+    """
     match = CI_ID_RE.search(line)
     if match is not None:
         return match.group(1)
