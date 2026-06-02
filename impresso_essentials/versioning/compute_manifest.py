@@ -1,14 +1,15 @@
 """Command-line script to generate a manifest for an S3 bucket or partition after a processing.
 
 Usage:
-    compute_manifest.py --config-file=<cf> --log-file=<lf> [--scheduler=<sch> --nworkers=<nw> --verbose]
+    compute_manifest.py --config-file=<cf> --log-file=<lf> [--scheduler=<sch> --nworkers=<nw> --threads-p-worker=<tpw> --verbose]
 
 Options:
 
 --config-file=<cf>  Path to config file containing all arguments for manifest computation.
 --log-file=<lf>  Path to log file to use.
 --scheduler=<sch>  Tell dask to use an existing scheduler (otherwise it'll create one)
---nworkers=<nw>  number of threads per workers for (local) Dask client. (semantics kept to workers to prevent changes to CLI).
+--nworkers=<nw>  number of workers for the dask local cluster, defaults to 1.
+--threads-p-worker=<tpw> number of threads per workers for (local) Dask client, defaults to 8.
 --verbose  Set logging level to DEBUG (by default is INFO).
 """
 
@@ -350,9 +351,7 @@ def compute_stats_for_stage(
                 files_bag, client=client, title=title, src_medium=src_medium
             )
         case DataStage.REBUILT:
-            return aggregators.compute_stats_in_rebuilt_bag(
-                files_bag, client=client, title=title
-            )
+            return aggregators.compute_stats_in_rebuilt_bag(files_bag, client=client, title=title)
         case DataStage.ENTITIES:
             return aggregators.compute_stats_in_entities_bag(files_bag, client=client, title=title)
         case DataStage.NEWS_AGENCIES:
@@ -779,7 +778,10 @@ def main():
     config_file_path = arguments["--config-file"]
     log_file = arguments["--log-file"]
     log_level = logging.DEBUG if arguments["--verbose"] else logging.INFO
-    threads_per_worker = int(arguments["--nworkers"]) if arguments["--nworkers"] else 8
+    nworkers = int(arguments["--nworkers"]) if arguments["--nworkers"] else 1
+    threads_per_worker = (
+        int(arguments["--threads-p-worker"]) if arguments["--threads-p-worker"] else 8
+    )
     scheduler = arguments["--scheduler"]
 
     init_logger(logger, log_level, log_file)
@@ -793,7 +795,7 @@ def main():
     # still allowing concurrent IO-bound work.
     if scheduler is None:
         cluster = LocalCluster(
-            n_workers=1,
+            n_workers=max(1, nworkers),
             threads_per_worker=max(1, threads_per_worker),
             processes=False,
         )
