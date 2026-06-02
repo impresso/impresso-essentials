@@ -351,7 +351,7 @@ def compute_stats_for_stage(
             )
         case DataStage.REBUILT:
             return aggregators.compute_stats_in_rebuilt_bag(
-                files_bag, include_alias=True, client=client, title=title
+                files_bag, client=client, title=title
             )
         case DataStage.ENTITIES:
             return aggregators.compute_stats_in_entities_bag(files_bag, client=client, title=title)
@@ -360,7 +360,6 @@ def compute_stats_for_stage(
         case DataStage.PASSIM:
             return aggregators.compute_stats_in_rebuilt_bag(
                 files_bag,
-                include_alias=True,
                 passim=True,
                 client=client,
                 title=title,
