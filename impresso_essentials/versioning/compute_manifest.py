@@ -16,6 +16,7 @@ import json
 import os
 import traceback
 import logging
+from collections import defaultdict
 from time import perf_counter
 from typing import Any, Optional
 import git
@@ -560,6 +561,75 @@ def process_by_title(
     """
     print("\n-> Starting computing the manifest by title <-")
     logger.info("\n-> Starting computing the manifest by title <-")
+
+    if stage == DataStage.LINGPROC:
+        valid_alias_inputs = []
+
+        for provider, provider_alias_files in s3_files.items():
+            for alias, s3_files_for_alias in provider_alias_files.items():
+                alias_provider = provider
+                if alias_provider not in PARTNER_TO_MEDIA:
+                    inferred_provider = get_provider_for_alias(alias) if alias in ALL_MEDIA else None
+                    msg = (
+                        f"Found invalid provider key {alias_provider!r} for alias {alias!r}; "
+                        f"using inferred provider {inferred_provider!r} instead."
+                    )
+                    logger.warning(msg)
+                    print(msg)
+                    alias_provider = inferred_provider
+
+                if alias_provider and alias in PARTNER_TO_MEDIA[alias_provider]:
+                    logger.info("---------- %s (%s) ----------", alias, alias_provider)
+                    msg = f"The list of files selected for {alias} is: {s3_files_for_alias}"
+                    logger.info(msg)
+                    src_medium = get_src_info_for_alias(alias, alias_provider)
+                    valid_alias_inputs.append(
+                        (alias_provider, alias, src_medium, s3_files_for_alias)
+                    )
+                elif alias in ALL_MEDIA:
+                    msg = (
+                        f"Found S3 files for {alias} which is in ALL_MEDIA but not of "
+                        f"the provider {alias_provider} - error to be checked, it will be ignored."
+                    )
+                    logger.info(msg)
+                    print(msg)
+                else:
+                    msg = (
+                        f"Found S3 files for {alias} which is not a media title of the "
+                        f"provider {alias_provider}, it will be ignored.",
+                    )
+                    logger.info(msg)
+                    print(msg)
+
+        if not valid_alias_inputs:
+            return manifest
+
+        selected_files = [
+            filepath
+            for _, _, _, s3_files_for_alias in valid_alias_inputs
+            for filepath in s3_files_for_alias
+        ]
+        msg = (
+            "lingproc - Starting to compute the statistics on "
+            f"{len(selected_files)} fetched files across {len(valid_alias_inputs)} aliases..."
+        )
+        logger.info(msg)
+        print(msg)
+        processed_files = (
+            db.read_text(selected_files, storage_options=IMPRESSO_STORAGEOPT)
+            .map(aggregators.extract_lingproc_ci_id)
+            .filter(bool)
+        )
+        computed_stats = compute_stats_for_stage(processed_files, stage, client, title="lingproc")
+        stats_by_alias = defaultdict(list)
+        for stats in computed_stats:
+            stats_by_alias[stats["media_alias"]].append(stats)
+
+        for alias_provider, alias, src_medium, _ in valid_alias_inputs:
+            alias_stats = [dict(stats) for stats in stats_by_alias.get(alias, [])]
+            manifest = add_stats_to_mft(manifest, alias, alias_stats, src_medium, alias_provider)
+
+        return manifest
 
     for provider, provider_alias_files in s3_files.items():
         for alias, s3_files_for_alias in provider_alias_files.items():

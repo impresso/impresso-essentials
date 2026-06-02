@@ -1,6 +1,7 @@
 """Helper functions to used to compute and aggragate the statistics of manifests."""
 
 import logging
+import re
 from ast import literal_eval
 from collections import Counter
 from typing import Any
@@ -13,6 +14,32 @@ from dask.distributed import progress, Client
 from itertools import chain
 
 logger = logging.getLogger(__name__)
+
+LINGPROC_CI_ID_RE = re.compile(r'"ci_id"\s*:\s*"([^"]+)"')
+LINGPROC_ID_RE = re.compile(r'"id"\s*:\s*"([^"]+)"')
+
+
+def extract_lingproc_ci_id(record: str | bytes) -> str | None:
+    """Extract the content-item id from a lingproc JSONL record without decoding JSON."""
+    if isinstance(record, bytes):
+        record = record.decode("utf-8")
+
+    match = LINGPROC_CI_ID_RE.search(record)
+    if match is None:
+        match = LINGPROC_ID_RE.search(record)
+    return match.group(1) if match is not None else None
+
+
+def _split_every_for_client(client: Client | None, default: int = 8) -> int:
+    """Choose a reduction fan-in that roughly matches the active Dask worker count."""
+    if client is None:
+        return default
+
+    try:
+        return max(default, len(client.nthreads()))
+    except Exception:
+        logger.exception("Failed to inspect Dask worker count, using split_every=%s", default)
+        return default
 
 
 def log_src_medium_mismatch(
@@ -973,15 +1000,29 @@ def compute_stats_in_lingproc_bag(
             "content_items_out": 0,
         }
 
+    def _get_lingproc_ci_id(ci: dict[str, Any] | str | None) -> str | None:
+        if ci is None:
+            return None
+        if isinstance(ci, str):
+            return ci
+        return ci.get("ci_id", ci.get("id"))
+
     def _update_lingproc_stats(
-        acc: dict[tuple[str, str], dict[str, Any]], ci: dict[str, Any]
+        acc: dict[tuple[str, str], dict[str, Any]], ci: dict[str, Any] | str | None
     ) -> dict[tuple[str, str], dict[str, Any]]:
-        ci_id = ci.get("ci_id", ci.get("id"))
-        alias, year = ci_id.split("-")[:2]
+        ci_id = _get_lingproc_ci_id(ci)
+        if ci_id is None:
+            return acc
+
+        id_parts = ci_id.split("-")
+        if len(id_parts) < 2:
+            return acc
+
+        alias, year = id_parts[:2]
         key = (alias, year)
         entry = acc.setdefault(key, _new_lingproc_stats(alias, year))
 
-        entry["issues"].add("-".join(ci_id.split("-")[:-1]))
+        entry["issues"].add("-".join(id_parts[:-1]))
         entry["content_items_out"] += 1
         return acc
 
@@ -1005,13 +1046,15 @@ def compute_stats_in_lingproc_bag(
     aggregated = s3_lingprocs.reduction(
         perpartition=_partition_lingproc_stats,
         aggregate=_merge_lingproc_stats,
-        split_every=8,
+        split_every=_split_every_for_client(client),
     )
 
     if client is not None:
-        progress(aggregated)
-
-    aggregated_result = aggregated.compute()
+        aggregated_future = client.compute(aggregated)
+        progress(aggregated_future)
+        aggregated_result = aggregated_future.result()
+    else:
+        aggregated_result = aggregated.compute()
 
     print(f"{title} - Finished grouping and aggregating stats by title and year.")
     logger.info("%s - Finished grouping and aggregating stats by title and year.", title)
