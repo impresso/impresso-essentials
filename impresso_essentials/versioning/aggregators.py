@@ -1,6 +1,7 @@
 """Helper functions to used to compute and aggragate the statistics of manifests."""
 
 import logging
+import json
 import re
 from ast import literal_eval
 from collections import Counter
@@ -16,7 +17,6 @@ from itertools import chain
 logger = logging.getLogger(__name__)
 
 LINGPROC_CI_ID_RE = re.compile(r'"ci_id"\s*:\s*"([^"]+)"')
-LINGPROC_ID_RE = re.compile(r'"id"\s*:\s*"([^"]+)"')
 
 
 def extract_lingproc_ci_id(record: str | bytes) -> str | None:
@@ -25,9 +25,14 @@ def extract_lingproc_ci_id(record: str | bytes) -> str | None:
         record = record.decode("utf-8")
 
     match = LINGPROC_CI_ID_RE.search(record)
-    if match is None:
-        match = LINGPROC_ID_RE.search(record)
-    return match.group(1) if match is not None else None
+    if match is not None:
+        return match.group(1)
+
+    try:
+        ci = json.loads(record)
+    except json.JSONDecodeError:
+        return None
+    return ci.get("ci_id", ci.get("id"))
 
 
 def _split_every_for_client(client: Client | None, default: int = 8) -> int:
@@ -40,6 +45,16 @@ def _split_every_for_client(client: Client | None, default: int = 8) -> int:
     except Exception:
         logger.exception("Failed to inspect Dask worker count, using split_every=%s", default)
         return default
+
+
+def _compute_with_optional_progress(collection: Any, client: Client | None) -> Any:
+    """Compute a Dask collection once, optionally displaying distributed progress."""
+    if client is None:
+        return collection.compute()
+
+    future = client.compute(collection)
+    progress(future)
+    return future.result()
 
 
 def log_src_medium_mismatch(
@@ -381,13 +396,10 @@ def compute_stats_in_can_consolidated_bag(
     aggregated = s3_can_cons_issues.reduction(
         perpartition=_partition_can_cons_stats,
         aggregate=_merge_can_cons_stats,
-        split_every=8,
+        split_every=_split_every_for_client(client),
     )
 
-    if client is not None:
-        progress(aggregated)
-
-    aggregated_result = aggregated.compute()
+    aggregated_result = _compute_with_optional_progress(aggregated, client)
 
     print(f"{title} - Finished grouping and aggregating stats by title and year.")
     logger.info("%s - Finished grouping and aggregating stats by title and year.", title)
@@ -606,17 +618,13 @@ def compute_stats_in_entities_bag(
     aggregated = s3_entities.reduction(
         perpartition=_partition_entities_stats,
         aggregate=_merge_entities_stats,
-        split_every=8,
+        split_every=_split_every_for_client(client),
     )
 
     print(f"{title} - Finished grouping and aggregating stats by title and year.")
     logger.info("%s - Finished grouping and aggregating stats by title and year.", title)
 
-    if client is not None:
-        # only add the progress bar if the client is defined
-        progress(aggregated)
-
-    aggregated_result = aggregated.compute()
+    aggregated_result = _compute_with_optional_progress(aggregated, client)
 
     return sorted(
         [
@@ -699,13 +707,10 @@ def compute_stats_in_langident_bag(
     aggregated = s3_langident.reduction(
         perpartition=_partition_langident_stats,
         aggregate=_merge_langident_stats,
-        split_every=8,
+        split_every=_split_every_for_client(client),
     )
 
-    if client is not None:
-        progress(aggregated)
-
-    aggregated_result = aggregated.compute()
+    aggregated_result = _compute_with_optional_progress(aggregated, client)
 
     print(f"{title} - Finished grouping and aggregating stats by title and year.")
     logger.info("%s - Finished grouping and aggregating stats by title and year.", title)
@@ -861,15 +866,11 @@ def compute_stats_in_topics_bag(
     aggregated = s3_topics.reduction(
         perpartition=_partition_topic_stats,
         aggregate=_merge_topic_stats,
-        split_every=8,
+        split_every=_split_every_for_client(client),
     )
 
-    if client is not None:
-        # only add the progress bar if the client is defined
-        progress(aggregated)
-
     try:
-        aggregated_result = aggregated.compute()
+        aggregated_result = _compute_with_optional_progress(aggregated, client)
     except Exception as e:
         msg = f"{title} - Warning! the aggregated topics stats were empty!! {e}"
         print(msg)
@@ -1049,12 +1050,7 @@ def compute_stats_in_lingproc_bag(
         split_every=_split_every_for_client(client),
     )
 
-    if client is not None:
-        aggregated_future = client.compute(aggregated)
-        progress(aggregated_future)
-        aggregated_result = aggregated_future.result()
-    else:
-        aggregated_result = aggregated.compute()
+    aggregated_result = _compute_with_optional_progress(aggregated, client)
 
     print(f"{title} - Finished grouping and aggregating stats by title and year.")
     logger.info("%s - Finished grouping and aggregating stats by title and year.", title)
@@ -1138,13 +1134,10 @@ def compute_stats_in_solr_text_ing_bag(
     aggregated = s3_solr_ing_cis.reduction(
         perpartition=_partition_solr_stats,
         aggregate=_merge_solr_stats,
-        split_every=8,
+        split_every=_split_every_for_client(client),
     )
 
-    if client is not None:
-        progress(aggregated)
-
-    aggregated_result = aggregated.compute()
+    aggregated_result = _compute_with_optional_progress(aggregated, client)
 
     print(f"{title} - Finished grouping and aggregating stats by title and year.")
     logger.info("%s - Finished grouping and aggregating stats by title and year.", title)
@@ -1233,13 +1226,10 @@ def compute_stats_in_ocrqa_bag(
     aggregated = s3_ocrqas.reduction(
         perpartition=_partition_ocrqa_stats,
         aggregate=_merge_ocrqa_stats,
-        split_every=8,
+        split_every=_split_every_for_client(client),
     )
 
-    if client is not None:
-        progress(aggregated)
-
-    aggregated_result = aggregated.compute()
+    aggregated_result = _compute_with_optional_progress(aggregated, client)
 
     print(f"{title} - Finished grouping and aggregating stats by title and year.")
     logger.info("%s - Finished grouping and aggregating stats by title and year.", title)
@@ -1339,13 +1329,10 @@ def compute_stats_in_langid_ocrqa_bag(
     aggregated = s3_langid_ocrqas.reduction(
         perpartition=_partition_langid_ocrqa_stats,
         aggregate=_merge_langid_ocrqa_stats,
-        split_every=8,
+        split_every=_split_every_for_client(client),
     )
 
-    if client is not None:
-        progress(aggregated)
-
-    aggregated_result = aggregated.compute()
+    aggregated_result = _compute_with_optional_progress(aggregated, client)
 
     print(f"{title} - Finished grouping and aggregating stats by title and year.")
     logger.info("%s - Finished grouping and aggregating stats by title and year.", title)
@@ -1532,8 +1519,4 @@ def compute_stats_in_classif_img_bag(
     print(f"{title} - Finished grouping and aggregating stats by title and year.")
     logger.info("%s - Finished grouping and aggregating stats by title and year.", title)
 
-    if client is not None:
-        # only add the progress bar if the client is defined
-        progress(agg_bag)
-
-    return agg_bag.compute()
+    return _compute_with_optional_progress(agg_bag, client)

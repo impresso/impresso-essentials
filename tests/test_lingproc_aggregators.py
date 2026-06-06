@@ -15,6 +15,18 @@ def test_extract_lingproc_ci_id_prefers_ci_id_without_decoding_payload():
     assert extract_lingproc_ci_id(line) == "NZZ-1900-01-01-a-i0001"
 
 
+def test_extract_lingproc_ci_id_ignores_nested_id_fallbacks():
+    line = '{"sents":[{"tokens":[{"id":"token-1"}]}]}'
+
+    assert extract_lingproc_ci_id(line) is None
+
+
+def test_extract_lingproc_ci_id_falls_back_to_top_level_id():
+    line = '{"id":"NZZ-1900-01-01-a-i0001","sents":[{"tokens":[{"id":"token-1"}]}]}'
+
+    assert extract_lingproc_ci_id(line) == "NZZ-1900-01-01-a-i0001"
+
+
 def test_compute_stats_in_lingproc_bag_accepts_ci_id_strings():
     records = db.from_sequence(
         [

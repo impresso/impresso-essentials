@@ -1,14 +1,16 @@
 """Command-line script to generate a manifest for an S3 bucket or partition after a processing.
 
 Usage:
-    compute_manifest.py --config-file=<cf> --log-file=<lf> [--scheduler=<sch> --nworkers=<nw> --verbose]
+    compute_manifest.py --config-file=<cf> --log-file=<lf> [--scheduler=<sch>] [--nworkers=<nw>] [--nthreads=<nt>] [--processes] [--verbose]
 
 Options:
 
 --config-file=<cf>  Path to config file containing all arguments for manifest computation.
 --log-file=<lf>  Path to log file to use.
 --scheduler=<sch>  Tell dask to use an existing scheduler (otherwise it'll create one)
---nworkers=<nw>  number of threads per workers for (local) Dask client. (semantics kept to workers to prevent changes to CLI).
+--nworkers=<nw>  Number of local Dask workers. Backward compatible: without --nthreads or --processes, this remains the local thread count.
+--nthreads=<nt>  Number of threads per local Dask worker.
+--processes  Run local Dask workers in separate processes instead of in-process threaded workers.
 --verbose  Set logging level to DEBUG (by default is INFO).
 """
 
@@ -44,6 +46,19 @@ from impresso_essentials.versioning import aggregators
 from impresso_essentials.versioning.data_manifest import DataManifest
 
 logger = logging.getLogger(__name__)
+
+
+try:
+    import orjson
+
+    loads_json = orjson.loads
+except ImportError:
+    try:
+        import ujson
+
+        loads_json = ujson.loads
+    except ImportError:
+        loads_json = json.loads
 
 
 def _format_runtime(seconds: float) -> str:
@@ -118,7 +133,8 @@ def remove_corrupted_files(
                 # try to read the file and only take the first one
                 contents = (
                     db.read_text(files_alias, storage_options=IMPRESSO_STORAGEOPT)
-                    .map(lambda x: (len(json.loads(x)), json.loads(x).keys()))
+                    .map(lambda x: loads_json(x))
+                    .map(lambda x: (len(x), x.keys()))
                     .compute()
                 )
 
@@ -141,7 +157,7 @@ def remove_corrupted_files(
                     try:
                         corr_contents = (
                             db.read_text(file, storage_options=IMPRESSO_STORAGEOPT)
-                            .map(lambda x: len(json.loads(x)))
+                            .map(lambda x: len(loads_json(x)))
                             .compute()
                         )
 
@@ -633,29 +649,30 @@ def process_by_title(
 
     for provider, provider_alias_files in s3_files.items():
         for alias, s3_files_for_alias in provider_alias_files.items():
-            if provider not in PARTNER_TO_MEDIA:
+            alias_provider = provider
+            if alias_provider not in PARTNER_TO_MEDIA:
                 inferred_provider = get_provider_for_alias(alias) if alias in ALL_MEDIA else None
                 msg = (
-                    f"Found invalid provider key {provider!r} for alias {alias!r}; "
+                    f"Found invalid provider key {alias_provider!r} for alias {alias!r}; "
                     f"using inferred provider {inferred_provider!r} instead."
                 )
                 logger.warning(msg)
                 print(msg)
-                provider = inferred_provider
+                alias_provider = inferred_provider
 
-            if provider and alias in PARTNER_TO_MEDIA[provider]:
-                logger.info("---------- %s (%s) ----------", alias, provider)
+            if alias_provider and alias in PARTNER_TO_MEDIA[alias_provider]:
+                logger.info("---------- %s (%s) ----------", alias, alias_provider)
                 msg = f"The list of files selected for {alias} is: {s3_files_for_alias}"
                 logger.info(msg)
                 # load the selected files in dask bags
                 processed_files = db.read_text(
                     s3_files_for_alias, storage_options=IMPRESSO_STORAGEOPT
-                ).map(json.loads)
+                ).map(loads_json)
 
                 msg = f"{alias} - Starting to compute the statistics on the fetched files..."
                 logger.info(msg)
                 print(msg)
-                src_medium = get_src_info_for_alias(alias, provider)
+                src_medium = get_src_info_for_alias(alias, alias_provider)
                 computed_stats = compute_stats_for_stage(
                     processed_files,
                     stage,
@@ -664,18 +681,20 @@ def process_by_title(
                     src_medium=src_medium,
                 )
 
-                manifest = add_stats_to_mft(manifest, alias, computed_stats, src_medium, provider)
+                manifest = add_stats_to_mft(
+                    manifest, alias, computed_stats, src_medium, alias_provider
+                )
             elif alias in ALL_MEDIA:
                 msg = (
                     f"Found S3 files for {alias} which is in ALL_MEDIA but not of "
-                    f"the provider {provider} - error to be checked, it will be ignored."
+                    f"the provider {alias_provider} - error to be checked, it will be ignored."
                 )
                 logger.info(msg)
                 print(msg)
             else:
                 msg = (
                     f"Found S3 files for {alias} which is not a media title of the "
-                    f"provider {provider}, it will be ignored.",
+                    f"provider {alias_provider}, it will be ignored.",
                 )
                 logger.info(msg)
                 print(msg)
@@ -685,62 +704,105 @@ def process_by_title(
 
 def process_altogether(
     manifest: DataManifest,
-    s3_files: dict[str, list[str]],
+    s3_files: dict[str, dict[str, list[str]]],
     stage: DataStage,
     client: Client | None,
 ) -> DataManifest:
-    """Process all fetched S3 files at once, filtering them by title to populate the manifest.
+    """Process all fetched S3 files at once and populate the manifest by title.
 
     The equivalent of `process_by_title` but when working with large unified datasets.
 
     Args:
         manifest (DataManifest): The manifest object to be populated with computed statistics.
-        s3_files (dict[str, list[str]]): A dictionary mapping each provider to a list of S3 file paths.
+        s3_files (dict[str, dict[str, list[str]]]): S3 paths grouped by provider and alias.
         stage (DataStage): The stage of data processing, which determines how statistics should be computed.
         client (Client | None): Optional Dask client to parallelize computation when available.
 
     Returns:
         DataManifest: The updated manifest instance containing statistics for each processed media alias.
     """
-    msg = "\n-> Starting to compute the manifest altogether, filterting iteratively by title <-"
+    msg = "\n-> Starting to compute the manifest altogether <-"
     logger.info(msg)
     print(msg)
 
-    s3_fpaths = [j for part_j in s3_files.values() for j in part_j]
+    alias_metadata = {}
+    s3_fpaths = []
+    for provider, provider_alias_files in s3_files.items():
+        for alias, s3_files_for_alias in provider_alias_files.items():
+            alias_provider = provider
+            if alias_provider not in PARTNER_TO_MEDIA:
+                alias_provider = get_provider_for_alias(alias) if alias in ALL_MEDIA else None
+
+            if alias_provider and alias in PARTNER_TO_MEDIA[alias_provider]:
+                alias_metadata[alias] = (
+                    alias_provider,
+                    get_src_info_for_alias(alias, alias_provider),
+                )
+                s3_fpaths.extend(s3_files_for_alias)
+            elif alias in ALL_MEDIA:
+                msg = (
+                    f"Found S3 files for {alias} which is in ALL_MEDIA but not of "
+                    f"the provider {alias_provider} - error to be checked, it will be ignored."
+                )
+                logger.info(msg)
+                print(msg)
+            else:
+                msg = (
+                    f"Found S3 files for {alias} which is not a media title of the "
+                    f"provider {alias_provider}, it will be ignored.",
+                )
+                logger.info(msg)
+                print(msg)
+
+    if not s3_fpaths:
+        return manifest
+
     logger.debug("The list of files selected is: %s", s3_fpaths)
-    # load the selected files in dask bags
-    processed_files = (
-        db.read_text(s3_fpaths, storage_options=IMPRESSO_STORAGEOPT).map(json.loads).persist()
-    )  # .map(lambda x: (x['ci_id'].split('-')[0], x)).persist()
+    logger.info("Computing the statistics on all fetched files at once...")
+    computed_stats = []
+    if stage in {DataStage.CANONICAL, DataStage.CAN_CONSOLIDATED}:
+        files_by_src_medium = defaultdict(list)
+        for provider, provider_alias_files in s3_files.items():
+            for alias, s3_files_for_alias in provider_alias_files.items():
+                if alias in alias_metadata:
+                    _, src_medium = alias_metadata[alias]
+                    files_by_src_medium[src_medium].extend(s3_files_for_alias)
 
-    total_num = len(ALL_MEDIA)
-    cum_idx = 0
-    for provider, prov_aliases in PARTNER_TO_MEDIA.items():
-        num_aliases = len(prov_aliases)
-        msg = f"{'-'*10} PROCESSING MEDIA TITLES FROM {provider} ({num_aliases} titles) {'-'*10}"
-        logger.info(msg)
-
-        for idx, alias in enumerate(prov_aliases):
-
-            msg = (
-                f"{'-'*10} {alias} - {cum_idx + idx + 1}/{total_num} - "
-                f"(for {provider} {idx+1}/{num_aliases}) {'-'*10}"
+        for src_medium, src_medium_files in files_by_src_medium.items():
+            processed_files = db.read_text(
+                src_medium_files, storage_options=IMPRESSO_STORAGEOPT
+            ).map(loads_json)
+            computed_stats.extend(
+                compute_stats_for_stage(
+                    processed_files,
+                    stage,
+                    client,
+                    title=f"all-{src_medium}",
+                    src_medium=src_medium,
+                )
+                or []
             )
-            logger.info(msg)
-
-            # filter to only keep the tr_passages for this title
-            filtered = processed_files.filter(
-                lambda x: x["ci_id"].startswith(f"{alias}-")  # in x["ci_id"]
-            ).persist()
-            logger.info("%s - Computing the statistics on the filtered files...", alias)
-
-            src_medium = get_src_info_for_alias(alias, provider)
-            computed_stats = compute_stats_for_stage(
-                filtered, stage, client, title=alias, src_medium=src_medium
+    else:
+        if stage == DataStage.LINGPROC:
+            processed_files = (
+                db.read_text(s3_fpaths, storage_options=IMPRESSO_STORAGEOPT)
+                .map(aggregators.extract_lingproc_ci_id)
+                .filter(bool)
+            )
+        else:
+            processed_files = db.read_text(s3_fpaths, storage_options=IMPRESSO_STORAGEOPT).map(
+                loads_json
             )
 
-            manifest = add_stats_to_mft(manifest, alias, computed_stats, src_medium, provider)
-        cum_idx += num_aliases
+        computed_stats = compute_stats_for_stage(processed_files, stage, client, title="all") or []
+
+    stats_by_alias = defaultdict(list)
+    for stats in computed_stats:
+        stats_by_alias[stats["media_alias"]].append(stats)
+
+    for alias, (provider, src_medium) in alias_metadata.items():
+        alias_stats = [dict(stats) for stats in stats_by_alias.get(alias, [])]
+        manifest = add_stats_to_mft(manifest, alias, alias_stats, src_medium, provider)
 
     return manifest
 
@@ -850,7 +912,9 @@ def main():
     config_file_path = arguments["--config-file"]
     log_file = arguments["--log-file"]
     log_level = logging.DEBUG if arguments["--verbose"] else logging.INFO
-    threads_per_worker = int(arguments["--nworkers"]) if arguments["--nworkers"] else 8
+    nworkers_arg = int(arguments["--nworkers"]) if arguments["--nworkers"] else None
+    nthreads_arg = int(arguments["--nthreads"]) if arguments["--nthreads"] else None
+    use_processes = bool(arguments["--processes"])
     scheduler = arguments["--scheduler"]
 
     init_logger(logger, log_level, log_file)
@@ -859,14 +923,20 @@ def main():
     logging.getLogger("botocore").setLevel(logging.WARNING)
     logging.getLogger("smart_open").setLevel(logging.WARNING)
 
-    # For local runs, prefer a single in-process threaded worker. This avoids
-    # nanny restarts and per-worker memory partitioning on one machine while
-    # still allowing concurrent IO-bound work.
     if scheduler is None:
+        if nthreads_arg is None and not use_processes:
+            # Backward compatibility: historically --nworkers controlled the
+            # thread count of one in-process worker.
+            n_workers = 1
+            threads_per_worker = nworkers_arg or 8
+        else:
+            n_workers = nworkers_arg or 1
+            threads_per_worker = nthreads_arg or 1
+
         cluster = LocalCluster(
-            n_workers=1,
+            n_workers=max(1, n_workers),
             threads_per_worker=max(1, threads_per_worker),
-            processes=False,
+            processes=use_processes,
         )
         client = Client(cluster)
     else:
