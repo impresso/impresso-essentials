@@ -146,6 +146,7 @@
 <li class="toctree-l3"><a class="reference internal" href="#impresso_essentials.versioning.compute_manifest.aliases_to_process"><code class="docutils literal notranslate"><span class="pre">aliases_to_process()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#impresso_essentials.versioning.compute_manifest.compute_stats_for_stage"><code class="docutils literal notranslate"><span class="pre">compute_stats_for_stage()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#impresso_essentials.versioning.compute_manifest.create_manifest"><code class="docutils literal notranslate"><span class="pre">create_manifest()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#impresso_essentials.versioning.compute_manifest.extract_ci_id_only"><code class="docutils literal notranslate"><span class="pre">extract_ci_id_only()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#impresso_essentials.versioning.compute_manifest.get_files_to_consider"><code class="docutils literal notranslate"><span class="pre">get_files_to_consider()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#impresso_essentials.versioning.compute_manifest.main"><code class="docutils literal notranslate"><span class="pre">main()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#impresso_essentials.versioning.compute_manifest.process_altogether"><code class="docutils literal notranslate"><span class="pre">process_altogether()</span></code></a></li>
@@ -1932,6 +1933,13 @@ Defaults to None.</p></li>
 </ul>
 </dd>
 </dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="impresso_essentials.versioning.compute_manifest.extract_ci_id_only">
+<span class="sig-prename descclassname"><span class="pre">impresso_essentials.versioning.compute_manifest.</span></span><span class="sig-name descname"><span class="pre">extract_ci_id_only</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">line</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span></span><a class="headerlink" href="#impresso_essentials.versioning.compute_manifest.extract_ci_id_only" title="Link to this definition"></a></dt>
+<dd><p>Extract a lingproc content item identifier from a JSONL record.</p>
+<p>This is a fast-path extractor for regular lingproc IDs where <cite>ci_id</cite>/<cite>id</cite> is a plain string.</p>
 </dd></dl>
 
 <dl class="py function">

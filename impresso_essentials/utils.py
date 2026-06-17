@@ -901,6 +901,14 @@ PARTNER_TO_MEDIA = {
         "mag_tv2",
         "mem_ondes",
     ],
+    "LOC": [
+        "dailydispatch",
+        "eveningstar",
+        "memphisdailyappeal",
+        "newyorktribune",
+        "sanfranciscocall",
+        "seattlestar",
+    ],
 }
 
 PARTNER_TO_COUNTRY = {
@@ -918,6 +926,7 @@ PARTNER_TO_COUNTRY = {
     "RTS": "CH",
     "INA": "FR",
     "SUB": "DE",
+    "LOC": "US",
 }
 # flatten the known journals into a sorted list
 ALL_MEDIA = sorted([j for part_j in PARTNER_TO_MEDIA.values() for j in part_j])
@@ -939,6 +948,7 @@ SOURCE_MEDIUMS_TO_PARTNERS_TO_MEDIA = {
         "BCUL": "all",
         "BL": "all",
         "SUB": "all",
+        "LOC": "all",
         # "KB": {# SourceMedium.PT: [], # all KB NP titles should be listed},
     },
     SourceMedium.TPS: {
@@ -970,6 +980,7 @@ PARTNERS_TO_SRC_MEDIUM_TO_MEDIA = {
     "RTS": {SourceMedium.AO: "all"},
     "INA": {SourceMedium.AO: "all"},
     "SUB": {SourceMedium.PT: "all"},
+    "LOC": {SourceMedium.PT: "all"},
 }
 PARTNERS_TO_SRC_TYPE_TO_MEDIA = {
     "SNL": {SourceType.NP: "all"},
@@ -992,6 +1003,7 @@ PARTNERS_TO_SRC_TYPE_TO_MEDIA = {
     "RTS": {SourceType.RB: "all"},
     "INA": {SourceType.RB: "all"},
     "SUB": {SourceType.NP: "all"},
+    "LOC": {SourceType.NP: "all"},
 }
 
 
