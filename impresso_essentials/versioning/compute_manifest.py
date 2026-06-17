@@ -15,6 +15,7 @@ Options:
 
 import json
 import os
+import re
 import traceback
 import logging
 from time import perf_counter
@@ -44,6 +45,19 @@ from impresso_essentials.versioning import aggregators
 from impresso_essentials.versioning.data_manifest import DataManifest
 
 logger = logging.getLogger(__name__)
+CI_ID_RE = re.compile(r'"(?:ci_id|id)"\s*:\s*"((?:[^"\\]|\\.)*)"')
+
+
+def extract_ci_id_only(line: str) -> str | None:
+    """Extract a lingproc content item identifier from a JSONL record.
+
+    This is a fast-path extractor for regular lingproc IDs where `ci_id`/`id` is a plain string.
+    """
+    match = CI_ID_RE.search(line)
+    if match is not None:
+        escaped_id = match.group(1)
+        return json.loads(f'"{escaped_id}"')
+    return None
 
 
 def _format_runtime(seconds: float) -> str:
@@ -576,9 +590,15 @@ def process_by_title(
                 msg = f"The list of files selected for {alias} is: {s3_files_for_alias}"
                 logger.info(msg)
                 # load the selected files in dask bags
-                processed_files = db.read_text(
-                    s3_files_for_alias, storage_options=IMPRESSO_STORAGEOPT
-                ).map(json.loads)
+                if stage == DataStage.LINGPROC:
+                    processed_files = db.read_text(
+                        s3_files_for_alias, storage_options=IMPRESSO_STORAGEOPT
+                    ).map(extract_ci_id_only)
+                    processed_files = processed_files.filter(lambda ci_id: ci_id is not None)
+                else:
+                    processed_files = db.read_text(
+                        s3_files_for_alias, storage_options=IMPRESSO_STORAGEOPT
+                    ).map(json.loads)
 
                 msg = f"{alias} - Starting to compute the statistics on the fetched files..."
                 logger.info(msg)
@@ -637,9 +657,17 @@ def process_altogether(
     s3_fpaths = [j for part_j in s3_files.values() for j in part_j]
     logger.debug("The list of files selected is: %s", s3_fpaths)
     # load the selected files in dask bags
-    processed_files = (
-        db.read_text(s3_fpaths, storage_options=IMPRESSO_STORAGEOPT).map(json.loads).persist()
-    )  # .map(lambda x: (x['ci_id'].split('-')[0], x)).persist()
+    if stage == DataStage.LINGPROC:
+        processed_files = (
+            db.read_text(s3_fpaths, storage_options=IMPRESSO_STORAGEOPT)
+            .map(extract_ci_id_only)
+            .filter(lambda ci_id: ci_id is not None)
+            .persist()
+        )
+    else:
+        processed_files = (
+            db.read_text(s3_fpaths, storage_options=IMPRESSO_STORAGEOPT).map(json.loads).persist()
+        )  # .map(lambda x: (x['ci_id'].split('-')[0], x)).persist()
 
     total_num = len(ALL_MEDIA)
     cum_idx = 0
@@ -657,9 +685,12 @@ def process_altogether(
             logger.info(msg)
 
             # filter to only keep the tr_passages for this title
-            filtered = processed_files.filter(
-                lambda x: x["ci_id"].startswith(f"{alias}-")  # in x["ci_id"]
-            ).persist()
+            if stage == DataStage.LINGPROC:
+                filtered = processed_files.filter(lambda x: x.startswith(f"{alias}-")).persist()
+            else:
+                filtered = processed_files.filter(
+                    lambda x: x["ci_id"].startswith(f"{alias}-")  # in x["ci_id"]
+                ).persist()
             logger.info("%s - Computing the statistics on the filtered files...", alias)
 
             src_medium = get_src_info_for_alias(alias, provider)
