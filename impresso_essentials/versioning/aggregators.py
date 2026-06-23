@@ -469,7 +469,7 @@ def compute_stats_in_rebuilt_bag(
         entry["issues"].add("-".join(split_id[:-1]))
         entry["content_items_out"].add(reb_ci["id"])
         if not passim:
-            entry["ft_tokens"] = len(reb_ci["ft"].split()) if "ft" in reb_ci else 0
+            entry["ft_tokens"] += len(reb_ci["ft"].split()) if "ft" in reb_ci else 0
         return acc
 
     def _partition_rebuilt_stats(records):
