@@ -519,61 +519,6 @@ def compute_stats_in_rebuilt_bag(
         key=lambda row: (row["media_alias"], row["year"]),
     )
 
-    # define the list of columns in the dataframe
-    df_meta = {"media_alias": str} if include_alias else {}
-    df_meta.update(
-        {
-            "year": str,
-            "issues": str,
-            "content_items_out": int,
-        }
-    )
-    if not passim:
-        df_meta.update(
-            {
-                "ft_tokens": int,
-            }
-        )
-
-    rebuilt_count_df = (
-        rebuilt_articles.map(
-            lambda rf: counts_for_rebuilt(rf, include_alias=include_alias, passim=passim)
-        )
-        .to_dataframe(meta=df_meta)
-        .persist()
-    )
-
-    gp_key = ["media_alias", "year"] if include_alias else "year"
-    # agggregate them at the scale of the entire corpus
-    # first groupby title, year and issue to also count the individual issues present
-    if not passim:
-        aggregated_df = rebuilt_count_df.groupby(by=gp_key).agg(
-            {"issues": tunique, "content_items_out": sum, "ft_tokens": sum}
-        )
-    else:
-        aggregated_df = rebuilt_count_df.groupby(by=gp_key).agg(
-            {"issues": tunique, "content_items_out": sum}
-        )
-
-    # when titles are included, multiple titles and years will be represented
-    if include_alias:
-        aggregated_df = aggregated_df.reset_index().persist()
-
-    msg = "Obtaining the yearly rebuilt statistics"
-    if key != "":
-        logger.info("%s for %s", msg, key)
-    else:
-        logger.info(msg)
-
-    print(f"{title} - Finished grouping and aggregating stats by title and year.")
-    logger.info("%s - Finished grouping and aggregating stats by title and year.", title)
-
-    if client is not None:
-        # only add the progress bar if the client is defined
-        progress(aggregated_df)
-
-    return aggregated_df.to_bag(format="dict").compute()
-
 
 def compute_stats_in_entities_bag(
     s3_entities: Bag, client: Client | None = None, title: str | None = None
@@ -1053,11 +998,7 @@ def compute_stats_in_lingproc_bag(
     def _update_lingproc_stats(
         acc: dict[tuple[str, str], dict[str, Any]], ci: dict[str, Any] | str
     ) -> dict[tuple[str, str], dict[str, Any]]:
-        ci_id = (
-            ci
-            if isinstance(ci, str)
-            else (ci.get("ci_id") if "ci_id" in ci else ci.get("id"))
-        )
+        ci_id = ci if isinstance(ci, str) else (ci.get("ci_id") if "ci_id" in ci else ci.get("id"))
         if not ci_id:
             logger.debug("Skipping lingproc record without ci_id/id: %s", ci)
             return acc
