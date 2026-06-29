@@ -412,6 +412,94 @@ tunique = dd.Aggregation("tunique", chunk, agg, finalize)
 ### DEFINITION of tunique ###
 
 
+def compute_stats_in_rebuilt_bag_as_df(
+    rebuilt_articles: Bag,
+    key: str = "",
+    include_alias: bool = False,
+    passim: bool = False,
+    client: Client | None = None,
+    title: str | None = None,
+) -> list[dict[str, int | str]]:
+    """Compute stats on a dask bag of rebuilt output content-items.
+
+    Args:
+        rebuilt_articles (db.core.Bag): Bag with the contents of rebuilt files.
+        key (str, optional): Optionally title-year pair for on-the-fly computation.
+            Defaults to "".
+        include_alias (bool, optional): Whether to include the title in the groupby,
+            not necessary for on-the-fly computation. Defaults to False.
+        passim (bool, optional): True if rebuilt is in passim format. Defaults to False.
+        client (Client | None, optional): Dask client. Defaults to None.
+        title (str, optional): Media title for which the stats are being computed.
+            Defaults to None.
+
+    Returns:
+        list[dict[str, Union[int, str]]]: List of counts that match rebuilt or passim
+        DataStatistics keys.
+    """
+    # when called in the rebuilt, all the rebuilt articles in the bag
+    # are from the same newspaper and year
+    if title is None:
+        title = key.split("-")[0]
+    print(f"{title} - Fetched all files, gathering desired information.")
+    logger.info("%s - Fetched all files, gathering desired information.", title)
+
+    # define the list of columns in the dataframe
+    df_meta = {"media_alias": str} if include_alias else {}
+    df_meta.update(
+        {
+            "year": str,
+            "issues": str,
+            "content_items_out": int,
+        }
+    )
+    if not passim:
+        df_meta.update(
+            {
+                "ft_tokens": int,
+            }
+        )
+
+    rebuilt_count_df = (
+        rebuilt_articles.map(
+            lambda rf: counts_for_rebuilt(rf, include_alias=include_alias, passim=passim)
+        )
+        .to_dataframe(meta=df_meta)
+        .persist()
+    )
+
+    gp_key = ["media_alias", "year"] if include_alias else "year"
+    # agggregate them at the scale of the entire corpus
+    # first groupby title, year and issue to also count the individual issues present
+    if not passim:
+        aggregated_df = rebuilt_count_df.groupby(by=gp_key).agg(
+            {"issues": tunique, "content_items_out": sum, "ft_tokens": sum}
+        )
+    else:
+        aggregated_df = rebuilt_count_df.groupby(by=gp_key).agg(
+            {"issues": tunique, "content_items_out": sum}
+        )
+
+    # when titles are included, multiple titles and years will be represented
+    if include_alias:
+        aggregated_df = aggregated_df.reset_index().persist()
+
+    msg = "Obtaining the yearly rebuilt statistics"
+    if key != "":
+        logger.info("%s for %s", msg, key)
+    else:
+        logger.info(msg)
+
+    print(f"{title} - Finished grouping and aggregating stats by title and year.")
+    logger.info("%s - Finished grouping and aggregating stats by title and year.", title)
+
+    if client is not None:
+        # only add the progress bar if the client is defined
+        progress(aggregated_df)
+
+    return aggregated_df.to_bag(format="dict").compute()
+
+
 def compute_stats_in_rebuilt_bag(
     rebuilt_articles: Bag,
     key: str = "",
@@ -434,7 +522,7 @@ def compute_stats_in_rebuilt_bag(
             Defaults to None.
 
     Returns:
-        list[dict[str, Union[int, str]]]: List of counts that match rebuilt or paassim
+        list[dict[str, Union[int, str]]]: List of counts that match rebuilt or passim
         DataStatistics keys.
     """
     # when called in the rebuilt, all the rebuilt articles in the bag
@@ -450,7 +538,7 @@ def compute_stats_in_rebuilt_bag(
             "media_alias": alias,
             "year": year,
             "issues": set(),
-            "content_items_out": set(),
+            "content_items_out": 0,
         }
 
         if not passim:
@@ -467,7 +555,7 @@ def compute_stats_in_rebuilt_bag(
         entry = acc.setdefault(key, _new_rebuilt_stats(alias, year))
 
         entry["issues"].add("-".join(split_id[:-1]))
-        entry["content_items_out"].add(reb_ci["id"])
+        entry["content_items_out"] += 1
         if not passim:
             entry["ft_tokens"] += len(reb_ci["ft"].split()) if "ft" in reb_ci else 0
         return acc
@@ -486,7 +574,7 @@ def compute_stats_in_rebuilt_bag(
                     key, _new_rebuilt_stats(values["media_alias"], values["year"])
                 )
                 entry["issues"].update(values["issues"])
-                entry["content_items_out"].update(values["content_items_out"])
+                entry["content_items_out"] += values["content_items_out"]
                 if not passim:
                     entry["ft_tokens"] += values["ft_tokens"]
         return merged
@@ -494,7 +582,7 @@ def compute_stats_in_rebuilt_bag(
     aggregated = rebuilt_articles.reduction(
         perpartition=_partition_rebuilt_stats,
         aggregate=_merge_rebuilt_stats,
-        split_every=8,
+        split_every=32,
     )
 
     if client is not None:
@@ -511,7 +599,7 @@ def compute_stats_in_rebuilt_bag(
                 "media_alias": values["media_alias"],
                 "year": values["year"],
                 "issues": len(values["issues"]),
-                "content_items_out": len(values["content_items_out"]),
+                "content_items_out": values["content_items_out"],
                 **({"ft_tokens": values["ft_tokens"]} if not passim else {}),
             }
             for values in aggregated_result.values()
