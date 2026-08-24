@@ -106,7 +106,8 @@ def counts_for_rebuilt(
     Returns:
         dict[str, Union[int, str]]: Dict with rebuilt (passim) keys and counts for 1 CI.
     """
-    split_id = rebuilt_ci["id"].split("-")
+    ci_id = rebuilt_ci["ci_id"] if "ci_id" in rebuilt_ci else rebuilt_ci["id"]
+    split_id = ci_id.split("-")
     counts = {"media_alias": split_id[0]} if include_alias else {}
     counts.update(
         {
@@ -549,7 +550,8 @@ def compute_stats_in_rebuilt_bag(
     def _update_rebuilt_stats(
         acc: dict[tuple[str, str], dict[str, Any]], reb_ci: dict[str, Any]
     ) -> dict[tuple[str, str], dict[str, Any]]:
-        split_id = reb_ci["id"].split("-")
+        ci_id = reb_ci["ci_id"] if "ci_id" in reb_ci else reb_ci["id"]
+        split_id = ci_id.split("-")
         alias, year = split_id[:2]
         key = (alias, year)
         entry = acc.setdefault(key, _new_rebuilt_stats(alias, year))

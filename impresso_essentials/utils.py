@@ -15,6 +15,8 @@ from contextlib import ExitStack, contextmanager
 import jsonschema
 import importlib_resources
 import numpy as np
+from referencing import Registry, Resource
+from referencing.jsonschema import DRAFT202012
 
 from dask.bag.core import Bag
 from dask.diagnostics import ProgressBar
@@ -1304,27 +1306,88 @@ def validate_source(
         raise e
 
 
+_SCHEMA_REGISTRY_CACHE: dict[str, Registry] = {}
+
+
+def _build_schema_registry(package: str) -> Registry:
+    """Register every schema in `package` by its own `$id`, for offline `$ref` resolution.
+
+    Mirrors the approach used by impresso-schemas' own test suite
+    (impresso-schemas/tests/conftest.py's `schema_registry` fixture): every
+    `*.schema.json` file found in `package` is loaded and registered under its `$id`, so
+    that cross-file `$ref`s between schemas (referencing each other by their published
+    `$id` URL) resolve locally instead of requiring network access.
+
+    Args:
+        package (str): Package whose bundled schemas should be registered.
+
+    Returns:
+        Registry: Registry with every schema found in `package` registered by its `$id`.
+    """
+    file_manager = ExitStack()
+    try:
+        schema_root = get_pkg_resource(file_manager, "", package)
+        resources = []
+        for schema_path in pathlib.Path(schema_root).rglob("*.schema.json"):
+            with open(schema_path, "r", encoding="utf-8") as f:
+                schema = json.load(f)
+            schema_id = schema.get("$id")
+            if isinstance(schema_id, str):
+                resources.append(
+                    (schema_id, Resource.from_contents(schema, default_specification=DRAFT202012))
+                )
+        return Registry().with_resources(resources)
+    finally:
+        file_manager.close()
+
+
+def _get_schema_registry(package: str) -> Registry:
+    """Return the (cached) schema registry for `package`, building it if needed.
+
+    Args:
+        package (str): Package whose bundled schemas should be registered.
+
+    Returns:
+        Registry: Registry with every schema found in `package` registered by its `$id`.
+    """
+    if package not in _SCHEMA_REGISTRY_CACHE:
+        _SCHEMA_REGISTRY_CACHE[package] = _build_schema_registry(package)
+    return _SCHEMA_REGISTRY_CACHE[package]
+
+
 def validate_against_schema(
     json_to_validate: dict[str, Any],
     path_to_schema: str = "schemas/json/versioning/manifest.schema.json",
+    package: str = "impresso_essentials",
 ) -> None:
     """Validate a dict corresponding to a JSON against a provided JSON schema.
 
+    Any cross-file `$ref` inside the schema (or transitively, inside a schema it references),
+    pointing at another schema registered in `package` via its `$id` URL, is resolved locally
+    rather than fetched over the network.
+
     Args:
-        json (dict[str, Any]): JSON data to validate against a schema.
+        json_to_validate (dict[str, Any]): JSON data to validate against a schema.
         path_to_schema (str, optional): Path to the JSON schema to validate against.
             Defaults to "impresso-schemas/json/versioning/manifest.schema.json".
+        package (str, optional): Package in which `path_to_schema`, and any schema it
+            references via `$ref`, should be looked up. Defaults to "impresso_essentials".
 
     Raises:
         e: The provided JSON could not be validated against the provided schema.
     """
     file_manager = ExitStack()
-    schema_path = get_pkg_resource(file_manager, path_to_schema)
+    schema_path = get_pkg_resource(file_manager, path_to_schema, package)
     with open(os.path.join(schema_path), "r", encoding="utf-8") as f:
         json_schema = json.load(f)
+    file_manager.close()
+
+    registry = _get_schema_registry(package)
+    validator_cls = jsonschema.validators.validator_for(json_schema)
+    validator = validator_cls(json_schema, registry=registry)
 
     try:
-        jsonschema.validate(json_to_validate, json_schema)
+        validator.validate(json_to_validate)
     except jsonschema.ValidationError as e:
         logger.error(
             "The provided JSON could not be validated against its schema: %s.",
