@@ -9,7 +9,7 @@ Options:
 --log-file=<lf>  Path to log file to use.
 --scheduler=<sch>  Tell dask to use an existing scheduler (otherwise it'll create one)
 --nworkers=<nw>  number of workers for the dask local cluster, defaults to 1.
---threads-p-worker=<tpw> number of threads per workers for (local) Dask client, defaults to 8.
+--threads-p-worker=<tpw>  number of threads per workers for (local) Dask client, defaults to 8.
 --verbose  Set logging level to DEBUG (by default is INFO).
 --as_df  Use the df-based aggregation for rebuilt
 """
