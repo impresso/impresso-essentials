@@ -45,7 +45,7 @@ license-files = []
 impresso_essentials = [
     "data/xmi/*.xml",
     "data/config/*.json",
-    "schemas/json/*/*.json",
-    "schemas/docs/*/*.json",
+    "schemas/json/**/*.json",
+    "schemas/docs/**/*.json",
     "schemas/*",
 ]

@@ -106,7 +106,8 @@ def counts_for_rebuilt(
     Returns:
         dict[str, Union[int, str]]: Dict with rebuilt (passim) keys and counts for 1 CI.
     """
-    split_id = rebuilt_ci["id"].split("-")
+    ci_id = rebuilt_ci["ci_id"] if "ci_id" in rebuilt_ci else rebuilt_ci["id"]
+    split_id = ci_id.split("-")
     counts = {"media_alias": split_id[0]} if include_alias else {}
     counts.update(
         {
@@ -412,7 +413,7 @@ tunique = dd.Aggregation("tunique", chunk, agg, finalize)
 ### DEFINITION of tunique ###
 
 
-def compute_stats_in_rebuilt_bag(
+def compute_stats_in_rebuilt_bag_as_df(
     rebuilt_articles: Bag,
     key: str = "",
     include_alias: bool = False,
@@ -434,7 +435,7 @@ def compute_stats_in_rebuilt_bag(
             Defaults to None.
 
     Returns:
-        list[dict[str, Union[int, str]]]: List of counts that match rebuilt or paassim
+        list[dict[str, Union[int, str]]]: List of counts that match rebuilt or passim
         DataStatistics keys.
     """
     # when called in the rebuilt, all the rebuilt articles in the bag
@@ -498,6 +499,115 @@ def compute_stats_in_rebuilt_bag(
         progress(aggregated_df)
 
     return aggregated_df.to_bag(format="dict").compute()
+
+
+def compute_stats_in_rebuilt_bag(
+    rebuilt_articles: Bag,
+    key: str = "",
+    passim: bool = False,
+    client: Client | None = None,
+    title: str | None = None,
+) -> list[dict[str, int | str]]:
+    """Compute stats on a dask bag of rebuilt output content-items.
+
+    Note, these stats include alias and year keys.
+    For on the fly computation they should be removed.
+
+    Args:
+        rebuilt_articles (db.core.Bag): Bag with the contents of rebuilt files.
+        key (str, optional): Optionally title-year pair for on-the-fly computation.
+            Defaults to "".
+        passim (bool, optional): True if rebuilt is in passim format. Defaults to False.
+        client (Client | None, optional): Dask client. Defaults to None.
+        title (str, optional): Media title for which the stats are being computed.
+            Defaults to None.
+
+    Returns:
+        list[dict[str, Union[int, str]]]: List of counts that match rebuilt or passim
+        DataStatistics keys.
+    """
+    # when called in the rebuilt, all the rebuilt articles in the bag
+    # are from the same newspaper and year
+    if title is None:
+        title = key.split("-")[0]
+    print(f"{title} - Fetched all files, gathering desired information.")
+    logger.info("%s - Fetched all files, gathering desired information.", title)
+
+    def _new_rebuilt_stats(alias: str, year: str) -> dict[str, Any]:
+
+        counts = {
+            "media_alias": alias,
+            "year": year,
+            "issues": set(),
+            "content_items_out": 0,
+        }
+
+        if not passim:
+            counts["ft_tokens"] = 0
+
+        return counts
+
+    def _update_rebuilt_stats(
+        acc: dict[tuple[str, str], dict[str, Any]], reb_ci: dict[str, Any]
+    ) -> dict[tuple[str, str], dict[str, Any]]:
+        ci_id = reb_ci["ci_id"] if "ci_id" in reb_ci else reb_ci["id"]
+        split_id = ci_id.split("-")
+        alias, year = split_id[:2]
+        key = (alias, year)
+        entry = acc.setdefault(key, _new_rebuilt_stats(alias, year))
+
+        entry["issues"].add("-".join(split_id[:-1]))
+        entry["content_items_out"] += 1
+        if not passim:
+            entry["ft_tokens"] += len(reb_ci["ft"].split()) if "ft" in reb_ci else 0
+        return acc
+
+    def _partition_rebuilt_stats(records):
+        aggregated = {}
+        for ci in records:
+            _update_rebuilt_stats(aggregated, ci)
+        return aggregated
+
+    def _merge_rebuilt_stats(partials):
+        merged = {}
+        for partial in partials:
+            for key, values in partial.items():
+                entry = merged.setdefault(
+                    key, _new_rebuilt_stats(values["media_alias"], values["year"])
+                )
+                entry["issues"].update(values["issues"])
+                entry["content_items_out"] += values["content_items_out"]
+                if not passim:
+                    entry["ft_tokens"] += values["ft_tokens"]
+        return merged
+
+    aggregated = rebuilt_articles.reduction(
+        perpartition=_partition_rebuilt_stats,
+        aggregate=_merge_rebuilt_stats,
+        split_every=32,
+    )
+
+    if client is not None:
+        progress(aggregated)
+
+    aggregated_result = aggregated.compute()
+
+    print(f"{title} - Finished grouping and aggregating stats by title and year.")
+    logger.info("%s - Finished grouping and aggregating stats by title and year.", title)
+
+    return sorted(
+        [
+            {
+                "media_alias": values["media_alias"],
+                "year": values["year"],
+                "issues": len(values["issues"]),
+                "content_items_out": values["content_items_out"],
+                **({"ft_tokens": values["ft_tokens"]} if not passim else {}),
+            }
+            for values in aggregated_result.values()
+        ],
+        key=lambda row: (row["media_alias"], row["year"]),
+    )
 
 
 def compute_stats_in_entities_bag(
@@ -978,11 +1088,7 @@ def compute_stats_in_lingproc_bag(
     def _update_lingproc_stats(
         acc: dict[tuple[str, str], dict[str, Any]], ci: dict[str, Any] | str
     ) -> dict[tuple[str, str], dict[str, Any]]:
-        ci_id = (
-            ci
-            if isinstance(ci, str)
-            else (ci.get("ci_id") if "ci_id" in ci else ci.get("id"))
-        )
+        ci_id = ci if isinstance(ci, str) else (ci.get("ci_id") if "ci_id" in ci else ci.get("id"))
         if not ci_id:
             logger.debug("Skipping lingproc record without ci_id/id: %s", ci)
             return acc

@@ -271,6 +271,8 @@ def insert_whitespace(
     if (
         token in wsrules["pct_no_ws_before_after"]
         or next_t in wsrules["pct_no_ws_before_after"]
+        or (next_t is not None and next_t[0] in wsrules["pct_no_ws_before_after"])
+        or (token is not None and token[-1] in wsrules["pct_no_ws_before_after"])
     ):
         insert_ws = False
 
@@ -292,9 +294,7 @@ def insert_whitespace(
         else:
             return True
 
-    debug_msg = (
-        f"Insert whitespace: curr={token}, follow={next_t}, " f"prev={prev_t} ({insert_ws})"
-    )
+    debug_msg = f"Insert whitespace: curr={token}, follow={next_t}, " f"prev={prev_t} ({insert_ws})"
     logger.debug(debug_msg)
 
     return insert_ws

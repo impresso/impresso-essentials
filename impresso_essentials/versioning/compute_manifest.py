@@ -1,15 +1,17 @@
 """Command-line script to generate a manifest for an S3 bucket or partition after a processing.
 
 Usage:
-    compute_manifest.py --config-file=<cf> --log-file=<lf> [--scheduler=<sch> --nworkers=<nw> --verbose]
+    compute_manifest.py --config-file=<cf> --log-file=<lf> [--scheduler=<sch> --nworkers=<nw> --threads-p-worker=<tpw> --verbose --as_df]
 
 Options:
 
 --config-file=<cf>  Path to config file containing all arguments for manifest computation.
 --log-file=<lf>  Path to log file to use.
 --scheduler=<sch>  Tell dask to use an existing scheduler (otherwise it'll create one)
---nworkers=<nw>  number of threads per workers for (local) Dask client. (semantics kept to workers to prevent changes to CLI).
+--nworkers=<nw>  number of workers for the dask local cluster, defaults to 1.
+--threads-p-worker=<tpw>  number of threads per workers for (local) Dask client, defaults to 8.
 --verbose  Set logging level to DEBUG (by default is INFO).
+--as_df  Use the df-based aggregation for rebuilt
 """
 
 import json
@@ -339,6 +341,7 @@ def compute_stats_for_stage(
     client: Client | None = None,
     title: str | None = None,
     src_medium: str | None = None,
+    as_df: bool = False,
 ) -> list[dict] | None:
     """Compute statistics for a specific data stage.
 
@@ -364,9 +367,11 @@ def compute_stats_for_stage(
                 files_bag, client=client, title=title, src_medium=src_medium
             )
         case DataStage.REBUILT:
-            return aggregators.compute_stats_in_rebuilt_bag(
-                files_bag, include_alias=True, client=client, title=title
-            )
+            if as_df:
+                return aggregators.compute_stats_in_rebuilt_bag_as_df(
+                    files_bag, include_alias=True, client=client, title=title
+                )
+            return aggregators.compute_stats_in_rebuilt_bag(files_bag, client=client, title=title)
         case DataStage.ENTITIES:
             return aggregators.compute_stats_in_entities_bag(files_bag, client=client, title=title)
         case DataStage.NEWS_AGENCIES:
@@ -374,7 +379,6 @@ def compute_stats_for_stage(
         case DataStage.PASSIM:
             return aggregators.compute_stats_in_rebuilt_bag(
                 files_bag,
-                include_alias=True,
                 passim=True,
                 client=client,
                 title=title,
@@ -557,6 +561,7 @@ def process_by_title(
     s3_files: dict[str, list[str]],
     stage: DataStage,
     client: Client | None,
+    as_df: bool = False,
 ) -> DataManifest:
     """Process compute statistics for stage by media title and add them to the manifest.
 
@@ -607,11 +612,7 @@ def process_by_title(
                 print(msg)
                 src_medium = get_src_info_for_alias(alias, provider)
                 computed_stats = compute_stats_for_stage(
-                    processed_files,
-                    stage,
-                    client,
-                    title=alias,
-                    src_medium=src_medium,
+                    processed_files, stage, client, title=alias, src_medium=src_medium, as_df=as_df
                 )
 
                 manifest = add_stats_to_mft(manifest, alias, computed_stats, src_medium, provider)
@@ -706,7 +707,9 @@ def process_altogether(
     return manifest
 
 
-def create_manifest(config_dict: dict[str, Any], client: Optional[Client] = None) -> None:
+def create_manifest(
+    config_dict: dict[str, Any], client: Optional[Client] = None, as_df: bool = False
+) -> None:
     """Given its configuration, generate the manifest for a given s3 bucket partition.
 
     TODO: separate further into functions
@@ -778,7 +781,7 @@ def create_manifest(config_dict: dict[str, Any], client: Optional[Client] = None
         manifest = process_altogether(manifest, s3_files, stage, client)
     else:
         # processing media_aliases one at a time
-        manifest = process_by_title(manifest, s3_files, stage, client)
+        manifest = process_by_title(manifest, s3_files, stage, client, as_df=as_df)
 
     logger.info("Finalizing the manifest, and computing the result...")
     # Add the note to the manifest
@@ -811,8 +814,12 @@ def main():
     config_file_path = arguments["--config-file"]
     log_file = arguments["--log-file"]
     log_level = logging.DEBUG if arguments["--verbose"] else logging.INFO
-    threads_per_worker = int(arguments["--nworkers"]) if arguments["--nworkers"] else 8
+    nworkers = int(arguments["--nworkers"]) if arguments["--nworkers"] else 1
+    threads_per_worker = (
+        int(arguments["--threads-p-worker"]) if arguments["--threads-p-worker"] else 8
+    )
     scheduler = arguments["--scheduler"]
+    as_df = arguments["--as_df"]
 
     init_logger(logger, log_level, log_file)
 
@@ -825,7 +832,7 @@ def main():
     # still allowing concurrent IO-bound work.
     if scheduler is None:
         cluster = LocalCluster(
-            n_workers=1,
+            n_workers=max(1, nworkers),
             threads_per_worker=max(1, threads_per_worker),
             processes=False,
         )
@@ -844,7 +851,7 @@ def main():
     try:
         logger.info("Provided configuration: ")
         logger.info(config_dict)
-        create_manifest(config_dict, client)
+        create_manifest(config_dict, client, as_df=as_df)
 
     except Exception as e:
         traceback.print_tb(e.__traceback__)

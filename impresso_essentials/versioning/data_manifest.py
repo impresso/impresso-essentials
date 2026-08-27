@@ -238,7 +238,7 @@ class DataManifest:
         # _prev_mft_s3_path is defined upon instantiation, then use it directly
         logger.debug("Reading the previous version of the manifest from S3.")
         if self._prev_mft_s3_path is None:
-            (self._prev_mft_s3_path, prev_v_mft) = read_manifest_from_s3(
+            self._prev_mft_s3_path, prev_v_mft = read_manifest_from_s3(
                 self.output_bucket_name, self.stage, self.output_s3_partition
             )
         else:
@@ -310,7 +310,7 @@ class DataManifest:
         print("No additional keys or patch, but modified info, minor version increase.")
         return increment_version(self.prev_version, "minor")
 
-    def _get_input_data_overall_stats(self, prov_granularity:bool=False) -> list[dict[str, Any]]:
+    def _get_input_data_overall_stats(self, prov_granularity: bool = False) -> list[dict[str, Any]]:
         """Return the `"overall_statistics"` of the input manifest or an empty list.
 
         The input manifest is the manifest versioning the data used as input to the
@@ -326,7 +326,7 @@ class DataManifest:
             list[dict[str, Any]]: Input manifest's `"overall_statistics"` or empty list.
         """
         # by default it's overall_statistics
-        #mft_key = "provider_statistics" if prov_granularity else "overall_statistics"
+        # mft_key = "provider_statistics" if prov_granularity else "overall_statistics"
         # reading the input manifest only if the input s3 bucket is defined
         if self.input_bucket_name is not None:
             logger.debug("Reading the input data's manifest from S3.")
@@ -334,11 +334,11 @@ class DataManifest:
             # only the rebuilt uses the canonical as input
             # text-reuse's input stage, passim rebuilt has various partitions
             split_path = self.input_bucket_name.replace("s3://", "").split("/")
-            (self.input_manifest_s3_path, input_v_mft) = read_manifest_from_s3(
+            self.input_manifest_s3_path, input_v_mft = read_manifest_from_s3(
                 split_path[0], self._input_stage, "/".join(split_path[1:])
             )
 
-            if input_v_mft is not None:# and mft_key in input_v_mft:
+            if input_v_mft is not None:  # and mft_key in input_v_mft:
                 # assert self.input_manifest_s3_path == input_v_mft["mft_s3_path"]
                 # fetch the overall statistics from the input data (it's a list!)
                 if self.stage != DataStage.CANONICAL:
@@ -1047,17 +1047,15 @@ class DataManifest:
                 np_stats.provider = get_provider_for_alias(np_stats.element)
             if np_stats.provider not in full_provider_stats:
                 # if it's a new provider, define a new MediaStatistics object and initialize the title count
-                full_provider_stats[np_stats.provider] = MediaStatistics(self.stage, "provider", np_stats.provider)
+                full_provider_stats[np_stats.provider] = MediaStatistics(
+                    self.stage, "provider", np_stats.provider
+                )
 
             # add the title stats for the provider, counting the number of titles
             np_stats.counts.update({"titles": 1})
-            print(f"{np_stats.element}-{np_stats.provider} - np_stats.count={np_stats.counts}")
+            if logger.level == logging.DEBUG:
+                print(f"{np_stats.element}-{np_stats.provider} - np_stats.count={np_stats.counts}")
             full_provider_stats[np_stats.provider].add_counts(np_stats.counts)
-
-        # add these overall counts to the ones of previous stages
-        #all_prov_stats = self._get_input_data_overall_stats(prov_granularity=True)
-        #if 
-        #overall_stats.append(corpus_stats.pretty_print())
 
         return [s.pretty_print() for s in full_provider_stats.values()]
 
@@ -1074,8 +1072,6 @@ class DataManifest:
         corpus_stats = MediaStatistics(self.stage, "corpus", "")
         for np_stats in title_stats:
             corpus_stats.add_counts(np_stats.counts)
-        # add the number of titles present in corpus
-        #corpus_stats.add_counts({"titles": len(title_stats)})
 
         # add these overall counts to the ones of previous stages
         overall_stats = self._get_input_data_overall_stats()
