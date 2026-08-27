@@ -423,7 +423,7 @@ PARTNER_TO_MEDIA = {
         "cridespeuples",
         "cripeuple1871",
         "figaro1826",
-        "figaro1839",
+        # "figaro1839",
         "figaro1854",
         "figarosupl",
         "franctireur",
