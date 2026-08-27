@@ -76,19 +76,19 @@ The **CLI** for this script is the following:
 
 ```bash
 # when the working directory is impresso_essentials/versioning
-python compute_manifest.py --config-file=<cf> --log-file=<lf> [--scheduler=<sch> --nworkers=<nw> --verbose]
+python compute_manifest.py --config-file=<cf> --log-file=<lf> [--scheduler=<sch> --nworkers=<nw> --threads-p-worker=<tpw> --verbose --as_df]
 ```
 
 Where the `config_file` should be a simple json file, with specific arguments, all described [here](https://github.com/impresso/impresso-essentials/blob/main/impresso_essentials/config/manifest.config.example.md).
 
-- The script uses [dask](https://www.dask.org/) to parallelize its task. By default, it will start a local cluster, with 8 as the default number of workers (the parameter `nworkers` can be used to specify any desired value).
+- The script uses [dask](https://www.dask.org/) to parallelize its task. By default, it will start a local cluster with a single worker using 8 threads. The `nworkers` parameter controls the number of workers in that local cluster (default 1), and `threads-p-worker` controls the number of threads per worker (default 8) — use `nworkers` to get several worker processes instead of a single multi-threaded one.
 - Optinally, a [dask scheduler and workers](https://docs.dask.org/en/stable/deploying-cli.html) can be started in separate terminal windows, and their IP provided to the script via the `scheduler` parameter.
 
 It can also be **run as a module** with the CLI, but from any other project or directory, as long as `impresso_essentials` is installed in the user's environment. The same arguments apply:
 
 ```bash
 # the env where impresso_essentials is installed should be active
-python -m impresso_essentials.versioning.compute_manifest --config-file=<cf> --log-file=<lf> [--scheduler=<sch> --nworkers=<nw> --verbose]
+python -m impresso_essentials.versioning.compute_manifest --config-file=<cf> --log-file=<lf> [--scheduler=<sch> --nworkers=<nw> --threads-p-worker=<tpw> --verbose --as_df]
 ```
 
 Finally, one can prefer to **directly incorporate this computation within their code**. That can be done by calling the `create_manifest` function, performing the main logic in the following way:
