@@ -259,21 +259,20 @@ def get_files_to_consider(config: dict[str, Any]) -> Optional[dict[str, dict[str
             provider, alias = extract_provider_alias_key(
                 s3_key, config["output_bucket"], prov_included=incl_provider
             )
-            if alias not in blacklist:
-                # add the provider as a first level key
-                if provider in s3_files and provider != "SUB":  # prevent SUB
-                    if alias in s3_files[provider]:
-                        s3_files[provider][alias].append(s3_key)
+            if provider != "SUB":  # prevent SUB
+                if alias not in blacklist:
+                    # add the provider as a first level key
+                    if provider in s3_files:
+                        if alias in s3_files[provider]:
+                            s3_files[provider][alias].append(s3_key)
+                        else:
+                            s3_files[provider][alias] = [s3_key]
                     else:
-                        s3_files[provider][alias] = [s3_key]
+                        s3_files[provider] = {alias: [s3_key]}
                 else:
-                    s3_files[provider] = {alias: [s3_key]}
-            else:
-                msg = (
-                    f"Skipping the processing of alias {alias} since it's part of the blacklist..."
-                )
-                print(msg)
-                logger.info(msg)
+                    msg = f"Skipping the processing of alias {alias} since it's part of the blacklist..."
+                    print(msg)
+                    logger.info(msg)
 
     else:
         # here only add files for aliases in media_aliases instead
