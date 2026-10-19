@@ -252,9 +252,7 @@ def get_files_to_consider(config: dict[str, Any]) -> Optional[dict[str, dict[str
             logger.info(msg)
 
         # Ensure blacklist is defined and a list in the case there is any alias to exclude
-        blacklist = blacklist = (
-            config["alias_blacklist"] if config["alias_blacklist"] is not None else []
-        )
+        blacklist = config["alias_blacklist"] if config["alias_blacklist"] is not None else []
         s3_files = {}
         for s3_key in files:
 
@@ -263,7 +261,7 @@ def get_files_to_consider(config: dict[str, Any]) -> Optional[dict[str, dict[str
             )
             if alias not in blacklist:
                 # add the provider as a first level key
-                if provider in s3_files:
+                if provider in s3_files and provider != "SUB":  # prevent SUB
                     if alias in s3_files[provider]:
                         s3_files[provider][alias].append(s3_key)
                     else:

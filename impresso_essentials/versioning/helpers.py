@@ -271,7 +271,13 @@ def media_list_from_mft_json(json_mft: dict[str, Any]) -> dict[str, dict]:
     manifest = copy.deepcopy(json_mft)
     new_media_list = {}
     for media in manifest["media_list"]:
-        if media["media_title"] not in ["0002088", "0002244"]:
+        if media["data_provider"] == "BNF-EN":
+            # fix the BNF-EN problem
+            print(f"{media['media_title']} - changing the provider form BNF-EN to BNF")
+            media["data_provider"] = "BNF"
+        if (
+            media["media_title"] not in ["0002088", "0002244"] and media["data_provider"] != "SUB"
+        ):  # prevent SUB
             yearly_media_stats = {
                 year_stats["element"].split("-")[1]: year_stats
                 for year_stats in media["media_statistics"]
