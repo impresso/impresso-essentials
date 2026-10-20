@@ -140,7 +140,7 @@ class DataManifest:
             DataStage.REBUILT,
             DataStage.PASSIM,
             DataStage.MYSQL_CIS,
-            DataStage.EMB_IMAGES,
+            DataStage.CLASSIF_IMAGES,
         ]:
             # check whether the input data is canonical or consolidated
             if "canonical-consolidated" in self.input_bucket_name and all(
@@ -153,7 +153,7 @@ class DataManifest:
             DataStage.CANONICAL,
             DataStage.PASSIM,  # if input isn't consolidated, use canonical
             DataStage.MYSQL_CIS,
-            DataStage.EMB_IMAGES,
+            DataStage.CLASSIF_IMAGES,
             DataStage.LANGIDENT_OCRQA,
         ]:
             # datastages that directly follow or use canonical data
@@ -161,6 +161,9 @@ class DataManifest:
         if self.stage in [DataStage.CAN_CONSOLIDATED]:
             # canonical consolidated uses the output of langid-ocrqa
             return DataStage.LANGIDENT_OCRQA
+        if self.stage in [DataStage.EMB_IMAGES]:
+            # image embeddings uses the output of image classification
+            return DataStage.CLASSIF_IMAGES
         if self.stage in [DataStage.TEXT_REUSE]:
             # text reuse uses passim rebuilt text
             return DataStage.PASSIM
