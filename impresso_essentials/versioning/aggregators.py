@@ -1542,30 +1542,22 @@ def compute_stats_in_classif_img_bag(
             "year": ci["ci_id"].split("-")[1],
             "issues": ci["ci_id"].split("-i")[0],
             "content_items_out": 1,
-            "images": 1,
-            "img_level0_class_fd": (
-                "image" if ci["level3_predictions"][0]["class"] != "not_image" else "not_image"
-            ),  # identify the number of listed "images" which are actually predicted to be images
+            "images": int(
+                min(ci["level0_predictions"], key=lambda p: p["pred_number"])["class"] == "image"
+            ),
+            "img_level0_class_fd": min(ci["level0_predictions"], key=lambda p: p["pred_number"])[
+                "class"
+            ],  # identify the number of listed "images" which are actually predicted to be images
             # not all CIs have level 1 and level 2 preds
-            "img_level1_class_fd": (
-                (
-                    "not_image"
-                    if ci["level3_predictions"][0]["class"] == "not_image"
-                    else "not_inferred"
-                )
-                if "level1_predictions" not in ci
-                else ci["level1_predictions"][0]["class"]
-            ),
-            "img_level2_class_fd": (
-                (
-                    "not_image"
-                    if ci["level3_predictions"][0]["class"] == "not_image"
-                    else "not_inferred"
-                )
-                if "level2_predictions" not in ci
-                else ci["level2_predictions"][0]["class"]
-            ),
-            "img_level3_class_fd": ci["level3_predictions"][0]["class"],
+            "img_level1_class_fd": min(ci["level1_predictions"], key=lambda p: p["pred_number"])[
+                "class"
+            ],
+            "img_level2_class_fd": min(ci["level2_predictions"], key=lambda p: p["pred_number"])[
+                "class"
+            ],
+            "img_level3_class_fd": min(ci["level3_predictions"], key=lambda p: p["pred_number"])[
+                "class"
+            ],
         }
     ).to_dataframe(
         meta={
