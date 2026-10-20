@@ -58,7 +58,7 @@ msgpack==1.1.0
 multidict==6.1.0
 myst-parser==4.0.0
 nest_asyncio @ file:///home/conda/feedstock_root/build_artifacts/nest-asyncio_1705850609492/work
-nltk==3.9.1
+nltk==3.10.3
 numpy==2.1.1
 packaging @ file:///home/conda/feedstock_root/build_artifacts/packaging_1718189413536/work
 pandas==2.2.2
