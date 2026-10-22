@@ -213,6 +213,8 @@ class MediaStatistics(DataStatistics):
         "images",
         "ne_mentions",
         "ne_entities",
+        "title_ne_mentions",
+        "title_ne_entities",
         "embeddings_el",
         "topics",
         "topics_fd",  # '_fd' suffix signifies a frenquency dict
@@ -237,7 +239,12 @@ class MediaStatistics(DataStatistics):
             "lang_fd",
         ],
         DataStage.REBUILT: ["ft_tokens"],
-        DataStage.ENTITIES: ["ne_entities", "ne_mentions"],
+        DataStage.ENTITIES: [
+            "ne_entities",
+            "ne_mentions",
+            "title_ne_mentions",
+            "title_ne_entities",
+        ],
         DataStage.NEWS_AGENCIES: ["ne_entities", "ne_mentions"],
         DataStage.PASSIM: ["ft_tokens"],
         DataStage.LANGIDENT: ["images", "lang_fd"],

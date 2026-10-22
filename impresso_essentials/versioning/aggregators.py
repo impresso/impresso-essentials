@@ -611,12 +611,15 @@ def compute_stats_in_rebuilt_bag(
 
 
 def compute_stats_in_entities_bag(
-    s3_entities: Bag, client: Client | None = None, title: str | None = None
+    s3_entities: Bag,
+    client: Client | None = None,
+    title: str | None = None,
+    newsagencies: bool = False,
 ) -> list[dict[str, Any]]:
     """Compute stats on a dask bag of entities output content-items.
 
     A problem with the initial approach to explode and then sum the values of
-    `content_items_out` and `ne_mentions` was found: the summmed counts were
+    `content_items_out` and `ne_mentions` was found: the summed counts were
     multiplied by the length of `ne_entities`:
     - when len(`ne_entities`)=0, the row was omitted altogether
     - when len(`ne_entities`)>1, there was an overcounting of the number of CIs.
@@ -639,20 +642,25 @@ def compute_stats_in_entities_bag(
     logger.info("%s - Fetched all files, gathering desired information.", title)
 
     def _new_entities_stats(alias: str, year: str) -> dict[str, Any]:
-        return {
+        base_stats = {
             "media_alias": alias,
             "year": year,
             "issues": set(),
             "content_items_out": set(),
-            "ne_mentions": 0,
             "ne_entities": set(),
+            "ne_mentions": 0,
         }
+        if not newsagencies:
+            # updated NER and NEL process also looks inside the titles to find entites
+            base_stats["title_ne_entities"] = set()
+            base_stats["title_ne_mentions"] = 0
+        return base_stats
 
-    def _extract_entity_ids(ci: dict[str, Any]) -> set[str]:
+    def _extract_entity_ids(ci: dict[str, Any], title: bool = False) -> set[str]:
         return {
-            mention["wkd_id"]
-            for mention in ci.get("nes", [])
-            if "wkd_id" in mention and mention["wkd_id"] not in ["NIL", None]
+            mention["wkdata_qid"]
+            for mention in ci.get("nes" if not title else "tnes", [])
+            if "wkdata_qid" in mention and mention["wkdata_qid"] is not None
         }
 
     def _update_entities_stats(
@@ -665,8 +673,11 @@ def compute_stats_in_entities_bag(
 
         entry["issues"].add("-".join(ci_id.split("-")[:-1]))
         entry["content_items_out"].add(ci_id)
-        entry["ne_mentions"] += len(ci.get("nes", []))
         entry["ne_entities"].update(_extract_entity_ids(ci))
+        entry["ne_mentions"] += len(ci.get("nes", []))
+        if not newsagencies:
+            entry["title_ne_entities"].update(_extract_entity_ids(ci, title=True))
+            entry["title_ne_mentions"] += len(ci.get("tnes", []))
         return acc
 
     def _partition_entities_stats(records):
@@ -684,8 +695,11 @@ def compute_stats_in_entities_bag(
                 )
                 entry["issues"].update(values["issues"])
                 entry["content_items_out"].update(values["content_items_out"])
-                entry["ne_mentions"] += values["ne_mentions"]
                 entry["ne_entities"].update(values["ne_entities"])
+                entry["ne_mentions"] += values["ne_mentions"]
+                if not newsagencies:
+                    entry["title_ne_entities"].update(values["title_ne_entities"])
+                    entry["title_ne_mentions"] += values["title_ne_mentions"]
         return merged
 
     aggregated = s3_entities.reduction(
@@ -703,6 +717,23 @@ def compute_stats_in_entities_bag(
 
     aggregated_result = aggregated.compute()
 
+    if newsagencies:
+        return sorted(
+            [
+                {
+                    "media_alias": values["media_alias"],
+                    "year": values["year"],
+                    "issues": len(values["issues"]),
+                    "content_items_out": len(values["content_items_out"]),
+                    "ne_entities": len(values["ne_entities"]),
+                    "ne_mentions": values["ne_mentions"],
+                }
+                for values in aggregated_result.values()
+            ],
+            key=lambda row: (row["media_alias"], row["year"]),
+        )
+
+    # for NER and NEL we also have the title mentions
     return sorted(
         [
             {
@@ -710,8 +741,10 @@ def compute_stats_in_entities_bag(
                 "year": values["year"],
                 "issues": len(values["issues"]),
                 "content_items_out": len(values["content_items_out"]),
-                "ne_mentions": values["ne_mentions"],
                 "ne_entities": len(values["ne_entities"]),
+                "ne_mentions": values["ne_mentions"],
+                "title_ne_entities": len(values["title_ne_entities"]),
+                "title_ne_mentions": values["title_ne_mentions"],
             }
             for values in aggregated_result.values()
         ],
@@ -1542,22 +1575,26 @@ def compute_stats_in_classif_img_bag(
             "year": ci["ci_id"].split("-")[1],
             "issues": ci["ci_id"].split("-i")[0],
             "content_items_out": 1,
-            "images": int(
-                min(ci["level0_predictions"], key=lambda p: p["pred_number"])["class"] == "image"
+            "images": int(ci["level0_predictions"][0]["class"] == "image"),
+            # the higest confidence prediction is always the first
+            "img_level0_class_fd": ci["level0_predictions"][0]["class"],
+            # identify the number of listed "images" which are actually predicted to be images
+            # if l0 class is not image, don't count the predicted class like the rest
+            "img_level1_class_fd": (
+                ci["level1_predictions"][0]["class"]
+                if ci["level0_predictions"][0]["class"] == "image"
+                else "not_image"
             ),
-            "img_level0_class_fd": min(ci["level0_predictions"], key=lambda p: p["pred_number"])[
-                "class"
-            ],  # identify the number of listed "images" which are actually predicted to be images
-            # not all CIs have level 1 and level 2 preds
-            "img_level1_class_fd": min(ci["level1_predictions"], key=lambda p: p["pred_number"])[
-                "class"
-            ],
-            "img_level2_class_fd": min(ci["level2_predictions"], key=lambda p: p["pred_number"])[
-                "class"
-            ],
-            "img_level3_class_fd": min(ci["level3_predictions"], key=lambda p: p["pred_number"])[
-                "class"
-            ],
+            "img_level2_class_fd": (
+                ci["level2_predictions"][0]["class"]
+                if ci["level0_predictions"][0]["class"] == "image"
+                else "not_image"
+            ),
+            "img_level3_class_fd": (
+                ci["level3_predictions"][0]["class"]
+                if ci["level0_predictions"][0]["class"] == "image"
+                else "not_image"
+            ),
         }
     ).to_dataframe(
         meta={
