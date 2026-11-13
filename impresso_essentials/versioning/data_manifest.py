@@ -167,7 +167,7 @@ class DataManifest:
         if self.stage in [DataStage.TEXT_REUSE]:
             # text reuse uses passim rebuilt text
             return DataStage.PASSIM
-        if self.stage in [DataStage.EMB_DOCS, DataStage.EMB_ENTITIES, DataStage.TOPICS]:
+        if self.stage in [DataStage.EMB_DOCS, DataStage.ENTITIES, DataStage.TOPICS]:
             return DataStage.LINGPROC
         # all other stages use the rebuilt as input
         return DataStage.REBUILT
