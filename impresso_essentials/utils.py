@@ -1644,3 +1644,36 @@ def disable_interrupts():
         yield
     finally:
         signal.signal(signal.SIGINT, original_handler)
+
+
+def compose_batches(
+    keys_sizes: dict[str, float],
+    threshold: float | int,
+    criteria: Literal["size", "count"] = "size",
+) -> list[tuple[float | int, list[str]]]:
+    """Group keys into batches bounded by cumulative size (MB) or by number of keys. ..."""
+    if criteria not in {"size", "count"}:
+        raise ValueError(f"Invalid criteria '{criteria}'; must be 'size' or 'count'.")
+    if threshold <= 0:
+        raise ValueError(f"threshold must be positive, got {threshold}.")
+
+    batches, current, current_total = [], [], 0
+    for key, size in keys_sizes.items():
+        weight = size if criteria == "size" else 1
+        # flush before adding if it would overflow (never flush an empty batch)
+        if current and current_total + weight > threshold:
+            batches.append((current_total, current))
+            current, current_total = [], 0
+        current.append(key)
+        current_total += weight
+    if current:
+        batches.append((current_total, current))
+    return batches
+
+
+def compose_batches_per_title(title_keys_sizes, threshold, criteria="size", titles=None):
+    """Apply `compose_batches` to each media title (or only to `titles`)."""
+    return {
+        t: compose_batches(title_keys_sizes[t], threshold, criteria)
+        for t in (titles or title_keys_sizes)
+    }
