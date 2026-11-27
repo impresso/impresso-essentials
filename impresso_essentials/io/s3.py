@@ -551,7 +551,7 @@ def read_s3_issues(
     # construct the various elements of the s3 path for canonical issues
     input_bucket = input_bucket if "s3://" in input_bucket else f"s3://{input_bucket}"
     # remove any possible tailing "/"
-    input_bucket = input_bucket[:-1] if input_bucket.endswith('/') else input_bucket
+    input_bucket = input_bucket[:-1] if input_bucket.endswith("/") else input_bucket
 
     path_parts = [input_bucket, alias, "issues", f"{alias}-{year}-issues.jsonl.bz2"]
 
@@ -634,6 +634,7 @@ def list_media_titles(
 def list_providers_and_aliases(bucket_name: str, prefix: str = "") -> list[str]:
     """Lists providers and their alias directories from an S3 bucket.
 
+    # TODO add possibility to give a filter??
     Traverses the given S3 bucket to identify provider directories and their associated alias
     subdirectories, under an optional prefix. Returns a dictionary mapping each provider
     to a sorted list of aliases.
@@ -661,6 +662,10 @@ def list_providers_and_aliases(bucket_name: str, prefix: str = "") -> list[str]:
     logger.info(msg)
     print(msg)
     s3 = get_s3_client()
+
+    # ensure we don't fail the search because of a missing backslash
+    if prefix and not prefix.endswith("/"):
+        prefix = prefix + "/"
     result = s3.list_objects_v2(Bucket=bucket_name, Prefix=prefix, Delimiter="/")
 
     prov_to_aliases = {}
@@ -710,6 +715,7 @@ def list_canonical_files(
     file_type: str = "issues",
     providers_filter: list[str] | None = None,
     aliases_filter: list[str] | None = None,
+    prefix: str = "",
 ) -> tuple[list[str] | None, list[str] | None]:
     """List the canonical files located in a given S3 bucket.
 
@@ -749,8 +755,13 @@ def list_canonical_files(
     issue_files, page_files, audio_files = None, None, None
     # initialize the output lists
     issue_files, page_files, audio_files = None, None, None
+
+    # add a trailing forward slash to the prefix if it's not already there
+    if prefix and not prefix.endswith("/"):
+        prefix = prefix + "/"
+
     # list all the providers and aliases in the bucket
-    all_present = list_providers_and_aliases(bucket_name)
+    all_present = list_providers_and_aliases(bucket_name, prefix)
     if providers_filter:
         # only keep the providers listed
         aliases_list = [
@@ -779,21 +790,27 @@ def list_canonical_files(
         issue_files = [
             file
             for prov, alias in aliases_list
-            for file in fixed_s3fs_glob(os.path.join(bucket_name, f"{prov}/{alias}/issues/*"))
+            for file in fixed_s3fs_glob(
+                os.path.join(bucket_name, f"{prefix}{prov}/{alias}/issues/*.bz2")
+            )
         ]
         print(f"{bucket_name} contains {len(issue_files)} .bz2 issue files {suffix}")
     if file_type in ["pages", "supports", "both"]:
         page_files = [
             file
             for prov, alias in aliases_list
-            for file in fixed_s3fs_glob(f"{os.path.join(bucket_name, f'{prov}/{alias}/pages/*')}")
+            for file in fixed_s3fs_glob(
+                f"{os.path.join(bucket_name, f'{prefix}{prov}/{alias}/pages/*.bz2')}"
+            )
         ]
         print(f"{bucket_name} contains {len(page_files)} .bz2 page files {suffix}")
     if file_type in ["audios", "supports", "both"]:
         audio_files = [
             file
             for prov, alias in aliases_list
-            for file in fixed_s3fs_glob(f"{os.path.join(bucket_name, f'{prov}/{alias}/audios/*')}")
+            for file in fixed_s3fs_glob(
+                f"{os.path.join(bucket_name, f'{prefix}{prov}/{alias}/audios/*.bz2')}"
+            )
         ]
         print(f"{bucket_name} contains {len(audio_files)} .bz2 audio files {suffix}")
 

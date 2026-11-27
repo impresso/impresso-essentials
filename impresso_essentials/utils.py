@@ -8,7 +8,7 @@ import os
 import logging
 import pathlib
 import time
-from typing import Any, Generator, Optional
+from typing import Any, Generator, Literal, Optional
 from datetime import timedelta, date
 import signal
 from contextlib import ExitStack, contextmanager
@@ -61,6 +61,7 @@ class DataStage(StrEnum):
     # EMBED_ARTICLES = "embeddings-article"
     ENTITIES = "entities"
     NEWS_AGENCIES = "newsagencies"
+    MEDIA_AGENCIES = "mediaagencies"
     LANGIDENT = "langident"
     LINGPROC = "lingproc"
     OCRQA = "ocrqa"
