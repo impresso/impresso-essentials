@@ -371,7 +371,7 @@ def compute_stats_for_stage(
             return aggregators.compute_stats_in_rebuilt_bag(files_bag, client=client, title=title)
         case DataStage.ENTITIES:
             return aggregators.compute_stats_in_entities_bag(files_bag, client=client, title=title)
-        case DataStage.NEWS_AGENCIES:
+        case DataStage.NEWS_AGENCIES | DataStage.MEDIA_AGENCIES:
             return aggregators.compute_stats_in_entities_bag(files_bag, client=client, title=title)
         case DataStage.PASSIM:
             return aggregators.compute_stats_in_rebuilt_bag(

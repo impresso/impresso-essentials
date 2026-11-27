@@ -61,6 +61,7 @@ class DataStage(StrEnum):
     # EMBED_ARTICLES = "embeddings-article"
     ENTITIES = "entities"
     NEWS_AGENCIES = "newsagencies"
+    MEDIA_AGENCIES = "mediaagencies"
     LANGIDENT = "langident"
     LINGPROC = "lingproc"
     OCRQA = "ocrqa"
