@@ -239,6 +239,7 @@ class MediaStatistics(DataStatistics):
         DataStage.REBUILT: ["ft_tokens"],
         DataStage.ENTITIES: ["ne_entities", "ne_mentions"],
         DataStage.NEWS_AGENCIES: ["ne_entities", "ne_mentions"],
+        DataStage.MEDIA_AGENCIES: ["ne_entities", "ne_mentions"],
         DataStage.PASSIM: ["ft_tokens"],
         DataStage.LANGIDENT: ["images", "lang_fd"],
         DataStage.TEXT_REUSE: ["text_reuse_clusters", "text_reuse_passages"],
