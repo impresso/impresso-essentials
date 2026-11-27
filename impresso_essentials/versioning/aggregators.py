@@ -649,11 +649,13 @@ def compute_stats_in_entities_bag(
         }
 
     def _extract_entity_ids(ci: dict[str, Any]) -> set[str]:
-        return {
-            mention["wkd_id"]
-            for mention in ci.get("nes", [])
-            if "wkd_id" in mention and mention["wkd_id"] not in ["NIL", None]
-        }
+        # entities use `wkd_id`, media agencies use `wkdata_qid`
+        ids = set()
+        for mention in ci.get("nes", []):
+            qid = mention.get("wkd_id", mention.get("wkdata_qid"))
+            if qid not in ["NIL", None]:
+                ids.add(qid)
+        return ids
 
     def _update_entities_stats(
         acc: dict[tuple[str, str], dict[str, Any]], ci: dict[str, Any]
